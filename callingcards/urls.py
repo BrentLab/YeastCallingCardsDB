@@ -7,10 +7,27 @@ from rest_framework.routers import DefaultRouter
 from rest_framework.authtoken import views
 
 from .users.views import UserViewSet, UserCreateViewSet
+from .callingcards.views import *
 
 router = DefaultRouter()
 router.register(r'users', UserViewSet)
 router.register(r'users', UserCreateViewSet)
+router.register(r'chrmap', ChrMapViewSet)
+router.register(r'genes', GeneViewSet)
+router.register(r'promoterregions', PromoterRegionsViewSet)
+router.register(r'harbisonchip', HarbisonChIPViewSet)
+router.register(r'kemmerentfko', KemmerenTFKOViewSet)
+router.register(r'mcisaaczev', McIsaacZEVViewSet)
+router.register(r'background', BackgroundViewSet)
+router.register(r'cctf', CCTFViewSet)
+router.register(r'ccexperiment', CCExperimentViewSet)
+router.register(r'hops', HopsViewSet)
+router.register(r'hopsreplicatesig', HopsReplicacteSigViewSet)
+router.register(r'qcmetrics', QcMetricsViewSet)
+router.register(r'qcmanualreview', QcManualReviewViewSet)
+router.register(r'qcr1tor2', QcR1ToR2ViewSet)
+router.register(r'qcr2tor1', QcR2ToR1ViewSet)
+router.register(r'qctftotransposon', QcTfToTransposonViewSet)
 
 urlpatterns = [
     path('admin/', admin.site.urls),

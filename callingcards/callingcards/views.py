@@ -10,12 +10,49 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 __all__ = ['ChrMapViewSet', 'GeneViewSet', 'PromoterRegionsViewSet',
            'HarbisonChIPViewSet', 'KemmerenTFKOViewSet', 'McIsaacZEVViewSet',
            'BackgroundViewSet', 'CCTFViewSet', 'CCExperimentViewSet',
-           'HopsViewSet', 'HopsRepliacteSigViewSet', 'QcAlignmentViewSet',
-           'QcHopsViewSet', 'QcManualReviewViewSet', 'QcR1ToR2ViewSet',
+           'HopsViewSet', 'HopsReplicacteSigViewSet', 'QcMetricsViewSet',
+           'QcManualReviewViewSet', 'QcR1ToR2ViewSet',
            'QcR2ToR1ViewSet', 'QcTfToTransposonViewSet']
 
+class UserCreateMixin:
+    """
+    By default the user field is "user" you can change it
+    to your model "user" field.
+    cite: https://xploit29.com/2016/09/15/django-rest-framework-auto-assign-current-user-on-creation/
 
-class ChrMapViewSet(viewsets.ModelViewSet):
+    Usage:
+    class PostViewSet(UserCreateMixin, viewsets.ModelViewSet):
+        # ViewsSet required info...
+        user_field = 'creator'
+    """
+
+    _user_field = None
+
+    @property
+    def user_field(self):
+        """user field is the field from the model that will be set to the current user.
+        defaults to "uploder" """
+        return self._user_field or 'uploader'
+
+    @user_field.setter
+    def user_field(self, value):
+        self._user_field = value
+
+    def perform_create(self, serializer):
+        """set the user field to the current user
+            args:
+                serializer: the serializer that will be used to save the model
+        """
+        kwargs = {
+            self.user_field: self.request.user
+        }
+
+        serializer.save(**kwargs)
+
+        super().perform_create(serializer)
+
+
+class ChrMapViewSet(UserCreateMixin, viewsets.ModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
     """
@@ -23,8 +60,14 @@ class ChrMapViewSet(viewsets.ModelViewSet):
     serializer_class = ChrMapSerializer  # noqa
     permission_classes = (AllowAny,)
 
+    # def perform_create(self, **kwargs):
+    #     super().perform_create(**kwargs)
 
-class GeneViewSet(viewsets.ModelViewSet):
+    # def perform_create(self, serializer):
+    #     serializer.save(uploader=self.request.user)
+
+
+class GeneViewSet(UserCreateMixin, viewsets.ModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
     """
@@ -33,7 +76,7 @@ class GeneViewSet(viewsets.ModelViewSet):
     permission_classes = (AllowAny,)
 
 
-class PromoterRegionsViewSet(viewsets.ModelViewSet):
+class PromoterRegionsViewSet(UserCreateMixin, viewsets.ModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
     """
@@ -42,7 +85,7 @@ class PromoterRegionsViewSet(viewsets.ModelViewSet):
     permission_classes = (AllowAny,)
 
 
-class HarbisonChIPViewSet(viewsets.ModelViewSet):
+class HarbisonChIPViewSet(UserCreateMixin, viewsets.ModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
     """
@@ -51,7 +94,7 @@ class HarbisonChIPViewSet(viewsets.ModelViewSet):
     permission_classes = (AllowAny,)
 
 
-class KemmerenTFKOViewSet(viewsets.ModelViewSet):
+class KemmerenTFKOViewSet(UserCreateMixin, viewsets.ModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
     """
@@ -60,7 +103,7 @@ class KemmerenTFKOViewSet(viewsets.ModelViewSet):
     permission_classes = (AllowAny,)
 
 
-class McIsaacZEVViewSet(viewsets.ModelViewSet):
+class McIsaacZEVViewSet(UserCreateMixin, viewsets.ModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
     """
@@ -69,7 +112,7 @@ class McIsaacZEVViewSet(viewsets.ModelViewSet):
     permission_classes = (AllowAny,)
 
 
-class BackgroundViewSet(viewsets.ModelViewSet):
+class BackgroundViewSet(UserCreateMixin, viewsets.ModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
     """
@@ -78,7 +121,7 @@ class BackgroundViewSet(viewsets.ModelViewSet):
     permission_classes = (AllowAny,)
 
 
-class CCTFViewSet(viewsets.ModelViewSet):
+class CCTFViewSet(UserCreateMixin, viewsets.ModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
     """
@@ -87,7 +130,7 @@ class CCTFViewSet(viewsets.ModelViewSet):
     permission_classes = (AllowAny,)
 
 
-class CCExperimentViewSet(viewsets.ModelViewSet):
+class CCExperimentViewSet(UserCreateMixin, viewsets.ModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
     """
@@ -96,7 +139,7 @@ class CCExperimentViewSet(viewsets.ModelViewSet):
     permission_classes = (AllowAny,)
 
 
-class HopsViewSet(viewsets.ModelViewSet):
+class HopsViewSet(UserCreateMixin, viewsets.ModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
     """
@@ -105,7 +148,7 @@ class HopsViewSet(viewsets.ModelViewSet):
     permission_classes = (AllowAny,)
 
 
-class HopsRepliacteSigViewSet(viewsets.ModelViewSet):
+class HopsReplicacteSigViewSet(UserCreateMixin, viewsets.ModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
     """
@@ -114,25 +157,16 @@ class HopsRepliacteSigViewSet(viewsets.ModelViewSet):
     permission_classes = (AllowAny,)
 
 
-class QcAlignmentViewSet(viewsets.ModelViewSet):
+class QcMetricsViewSet(UserCreateMixin, viewsets.ModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
     """
-    queryset = QcAlignment.objects.all()  # noqa
-    serializer_class = QcAlignmentSerializer  # noqa
+    queryset = QcMetrics.objects.all()  # noqa
+    serializer_class = QcMetricsSerializer  # noqa
     permission_classes = (AllowAny,)
 
 
-class QcHopsViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint that allows users to be viewed or edited.
-    """
-    queryset = QcHops.objects.all()  # noqa
-    serializer_class = QcHopsSerializer  # noqa
-    permission_classes = (AllowAny,)
-
-
-class QcManualReviewViewSet(viewsets.ModelViewSet):
+class QcManualReviewViewSet(UserCreateMixin, viewsets.ModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
     """
@@ -141,7 +175,7 @@ class QcManualReviewViewSet(viewsets.ModelViewSet):
     permission_classes = (AllowAny,)
 
 
-class QcR1ToR2ViewSet(viewsets.ModelViewSet):
+class QcR1ToR2ViewSet(UserCreateMixin, viewsets.ModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
     """
@@ -150,7 +184,7 @@ class QcR1ToR2ViewSet(viewsets.ModelViewSet):
     permission_classes = (AllowAny,)
 
 
-class QcR2ToR1ViewSet(viewsets.ModelViewSet):
+class QcR2ToR1ViewSet(UserCreateMixin, viewsets.ModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
     """
@@ -159,7 +193,7 @@ class QcR2ToR1ViewSet(viewsets.ModelViewSet):
     permission_classes = (AllowAny,)
 
 
-class QcTfToTransposonViewSet(viewsets.ModelViewSet):
+class QcTfToTransposonViewSet(UserCreateMixin, viewsets.ModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
     """

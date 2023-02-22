@@ -1,0 +1,46 @@
+name: Test and Coverage
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8, 3.9]
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+        project-name: yeastCallingCardsDBgit
+
+    - name: Install Poetry
+      run: curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | python -
+
+    - name: Install dependencies
+      run: poetry install
+    
+    - name: Create .env file
+      env:
+          ENV_FILE_CONTENTS: ${{ secrets.ENV_FILE_CONTENTS }}
+      run: echo "$ENV_FILE_CONTENTS" > .env
+    
+    - name: Generate coverage report
+      run: |
+        poetry run pytest --cov=./ --cov-report=xml
+    
+    - name: Upload reports to codecov
+      env:
+        CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
+      run: | 
+       curl -Os https://uploader.codecov.io/latest/linux/codecov
+       find . -iregex "codecov.*"
+       chmod +x codecov 
+       ./codecov -t ${CODECOV_TOKEN}

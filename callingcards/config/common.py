@@ -30,6 +30,7 @@ class Common(Configuration):
 
         # Your apps
         'callingcards.users',
+        'callingcards.callingcards'
 
     )
 

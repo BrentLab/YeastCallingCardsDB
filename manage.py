@@ -2,10 +2,14 @@
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
+from dotenv import load_dotenv
 
 
 def main():
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "callingcards.config")
+
+    load_dotenv() 
+    
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", 'callingcards.config')
     os.environ.setdefault("DJANGO_CONFIGURATION", "Local")
 
     try:

@@ -9,16 +9,12 @@ class Local(Common):
 
     # Testing
     INSTALLED_APPS = Common.INSTALLED_APPS
-    INSTALLED_APPS += ('django_nose',)
-    TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
-    NOSE_ARGS = [
-        BASE_DIR,
-        '-s',
-        '--nologcapture',
-        '--with-coverage',
-        '--with-progressive',
-        '--cover-package=callingcards'
-    ]
+    INSTALLED_APPS += ('pytest_django',)
+    TEST_RUNNER = 'callingcards.PytestTestRunner.PytestTestRunner'
+    # settings for pytest
+    # create a pytest.ini file in your project root directory and add the following content
+    # [pytest]
+    # addopts = --cov=callingcards --cov-report=html
 
     # Mail
     EMAIL_HOST = 'localhost'
@@ -31,6 +27,6 @@ class Local(Common):
     DATABASES = {
         'default': {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR + "/qc_db_v2.sqlite",
+            "NAME": BASE_DIR + "/test.sqlite",
         }
     }

@@ -1,5 +1,7 @@
 import logging
+
 from rest_framework import serializers
+
 from .models import *
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
@@ -8,13 +10,13 @@ __all__ = ['ChrMapSerializer', 'GeneSerializer', 'PromoterRegionsSerializer',
            'HarbisonChIPSerializer', 'KemmerenTFKOSerializer',
            'McIsaacZEVSerailizer', 'BackgroundSerializer',
            'CCTFSerializer', 'CCExperimentSerializer', 'HopsSerializer',
-           'HopsReplicateSigSerializer', 'QcAlignmentSerializer',
-           'QcHopsSerializer', 'QcManualReviewSerializer',
+           'HopsReplicateSigSerializer', 'QcMetricsSerializer',
+           'QcManualReviewSerializer',
            'QcR1ToR2TfSerializer', 'QcR2ToR1TfSerializer',
            'QcTfToTransposonSerializer']
 
 
-class ChrMapSerializer(serializers.ModelSerializers):
+class ChrMapSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
 
     class Meta:
@@ -22,7 +24,7 @@ class ChrMapSerializer(serializers.ModelSerializers):
         fields = '__all__'
 
 
-class GeneSerializer(serializers.ModelSerializers):
+class GeneSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
 
     class Meta:
@@ -30,7 +32,7 @@ class GeneSerializer(serializers.ModelSerializers):
         fields = '__all__'
 
 
-class PromoterRegionsSerializer(serializers.ModelSerializers):
+class PromoterRegionsSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
 
     class Meta:
@@ -38,7 +40,7 @@ class PromoterRegionsSerializer(serializers.ModelSerializers):
         fields = '__all__'
 
 
-class HarbisonChIPSerializer(serializers.ModelSerializers):
+class HarbisonChIPSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
 
     class Meta:
@@ -46,7 +48,7 @@ class HarbisonChIPSerializer(serializers.ModelSerializers):
         fields = '__all__'
 
 
-class KemmerenTFKOSerializer(serializers.ModelSerializers):
+class KemmerenTFKOSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
 
     class Meta:
@@ -54,7 +56,7 @@ class KemmerenTFKOSerializer(serializers.ModelSerializers):
         fields = '__all__'
 
 
-class McIsaacZEVSerailizer(serializers.ModelSerializers):
+class McIsaacZEVSerailizer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
 
     class Meta:
@@ -62,7 +64,7 @@ class McIsaacZEVSerailizer(serializers.ModelSerializers):
         fields = '__all__'
 
 
-class BackgroundSerializer(serializers.ModelSerializers):
+class BackgroundSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
 
     class Meta:
@@ -70,7 +72,7 @@ class BackgroundSerializer(serializers.ModelSerializers):
         fields = '__all__'
 
 
-class CCTFSerializer(serializers.ModelSerializers):
+class CCTFSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
 
     class Meta:
@@ -78,7 +80,7 @@ class CCTFSerializer(serializers.ModelSerializers):
         fields = '__all__'
 
 
-class CCExperimentSerializer(serializers.ModelSerializers):
+class CCExperimentSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
 
     class Meta:
@@ -86,7 +88,7 @@ class CCExperimentSerializer(serializers.ModelSerializers):
         fields = '__all__'
 
 
-class HopsSerializer(serializers.ModelSerializers):
+class HopsSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
 
     class Meta:
@@ -94,7 +96,7 @@ class HopsSerializer(serializers.ModelSerializers):
         fields = '__all__'
 
 
-class HopsReplicateSigSerializer(serializers.ModelSerializers):
+class HopsReplicateSigSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
 
     class Meta:
@@ -102,23 +104,14 @@ class HopsReplicateSigSerializer(serializers.ModelSerializers):
         fields = '__all__'
 
 
-class QcAlignmentSerializer(serializers.ModelSerializers):
+class QcMetricsSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
 
     class Meta:
-        model = QcAlignment  # noqa
+        model = QcMetrics  # noqa
         fields = '__all__'
 
-
-class QcHopsSerializer(serializers.ModelSerializers):
-    uploader = serializers.ReadOnlyField(source='uploader.username')
-
-    class Meta:
-        model = QcHops  # noqa
-        fields = '__all__'
-
-
-class QcManualReviewSerializer(serializers.ModelSerializers):
+class QcManualReviewSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
 
     class Meta:
@@ -126,7 +119,7 @@ class QcManualReviewSerializer(serializers.ModelSerializers):
         fields = '__all__'
 
 
-class QcR1ToR2TfSerializer(serializers.ModelSerializers):
+class QcR1ToR2TfSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
 
     class Meta:
@@ -134,7 +127,7 @@ class QcR1ToR2TfSerializer(serializers.ModelSerializers):
         fields = '__all__'
 
 
-class QcR2ToR1TfSerializer(serializers.ModelSerializers):
+class QcR2ToR1TfSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
 
     class Meta:
@@ -142,7 +135,7 @@ class QcR2ToR1TfSerializer(serializers.ModelSerializers):
         fields = '__all__'
 
 
-class QcTfToTransposonSerializer(serializers.ModelSerializers):
+class QcTfToTransposonSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
 
     class Meta:

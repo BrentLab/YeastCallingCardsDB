@@ -11,7 +11,7 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 __all__ = ['ChrMap', 'Gene', 'PromoterRegions', 'HarbisonChIP', 'KemmerenTFKO',
            'McIsaacZEV', 'Background', 'CCTF', 'CCExperiment', 'Hops',
-           'HopsReplicateSig', 'QcAlignment', 'QcHops', 'QcManualReview',
+           'HopsReplicateSig', 'QcMetrics', 'QcManualReview',
            'QcR1ToR2Tf', 'QcR2ToR1Tf', 'QcTfToTransposon']
 
 class Strand(Enum):
@@ -25,13 +25,13 @@ STRAND_CHOICES = ((Strand.POSITIVE.value, '+'),
                   (Strand.UNSTRANDED.value, '*'))
 
 class BaseModel(models.Model):
-    uploader = models.ForeignKey(settings.AUTH_USER_MODEL, 
-                                 related_name='capsule_image_uploader', 
-                                 on_delete=models.PROTECT)
+    uploader = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT)
     uploadDate = models.DateField(auto_now_add=True)
     # record when the record is modified
     # note: this only updates with model.save(), not queryset.update
-    #       see docs -- may need to write some code to update this field 
+    #       see docs -- may need to write some code to update this field
     #       for update statement when only certain fields are changed?
     modified = models.DateTimeField(auto_now=True)
 
@@ -41,19 +41,19 @@ class BaseModel(models.Model):
 
 class ChrMap(BaseModel):
     refseq = models.CharField(
-        max_length=10)
+        max_length=12)
     igenomes = models.CharField(
-        max_length=10)
+        max_length=6)
     ensembl = models.CharField(
-        max_length=10)
+        max_length=6)
     ucsc = models.CharField(
-        max_length=10)
+        max_length=8)
     mitra = models.CharField(
-        max_length=10)
+        max_length=15)
     seqlength = models.PositiveIntegerField()
     numbered = models.PositiveSmallIntegerField()
     chr = models.CharField(
-        max_length=10)
+        max_length=6)
 
     class Meta:
         managed = True
@@ -64,22 +64,22 @@ class Gene(BaseModel):
 
     chr = models.ForeignKey(
         'ChrMap',
-        models.PROTECT,
-        blank=True,
-        null=True)
+        models.PROTECT)
     start = models.PositiveIntegerField()
     # TODO put constraint on end cannot be past end of chr
     end = models.IntegerField()
-    strand = models.Charfield(
+    strand = models.CharField(
         max_length=1,
         choices=STRAND_CHOICES,
         default=Strand.UNSTRANDED.value)
     feature_ontology = models.CharField(
-        blank=True,
-        null=True)
+        max_length=20,
+        default='unknown'
+    )
     biotype = models.CharField(
-        blank=True,
-        null=True)
+        max_length=20,
+        default='unknown'
+    )
     systematic = models.CharField(
         unique=True,
         max_length=20)
@@ -94,13 +94,20 @@ class Gene(BaseModel):
 
 
 class PromoterRegions(BaseModel):
+
+    NOT_ORF = 'not_orf'
+    YIMING = 'yiming'
+
+    SOURCE_CHOICES = ((NOT_ORF, 'not_orf'),
+                      (YIMING, 'yiming'))
+
     chr = models.ForeignKey(
-        'chr_map',
+        'ChrMap',
         models.PROTECT)
     start = models.IntegerField()
     # TODO put constraint on end cannot be past end of chr
     end = models.IntegerField()
-    strand = models.Charfield(
+    strand = models.CharField(
         max_length=1,
         choices=STRAND_CHOICES,
         default=Strand.UNSTRANDED.value)
@@ -111,34 +118,28 @@ class PromoterRegions(BaseModel):
         default=100,
         validators=[MaxValueValidator(100)]
     )
+    source = models.CharField(
+        max_length=10,
+        choices=SOURCE_CHOICES
+    )
 
     class Meta:
         managed = True
-        db_table = 'Regions'
+        db_table = 'promoter_regions'
 
 
 class HarbisonChIP(BaseModel):
-    CHIP_CHIP = 'chip_chip'
-    CHIP_EXO = 'chip_exo'
-
-    TYPE_CHOICES = ((CHIP_CHIP, 'chip_chip'),
-                    (CHIP_EXO, 'chip_exo'))
 
     gene = models.ForeignKey(
-        'gene',
+        'Gene',
         models.PROTECT)
-    effect = models.FloatField(
-        null=True)
+    effect = models.FloatField()
     pval = models.FloatField(
         validators=[MinValueValidator(0), MaxValueValidator(1)]
     )
     tf = models.ForeignKey(
-        'gene',
+        'Gene',
         models.PROTECT)
-    type = models.CharField(
-        choices=TYPE_CHOICES)
-    source = models.CharField(
-        max_length=50)
 
     class Meta:
         managed = True
@@ -147,15 +148,14 @@ class HarbisonChIP(BaseModel):
 
 class KemmerenTFKO(BaseModel):
     gene = models.ForeignKey(
-        'gene',
+        'Gene',
         models.PROTECT)
     effect = models.FloatField()
     padj = models.FloatField(
-        null=True,
-        validators=[MinValueValidator(0), MaxValueValidator(1)]
-    )
-    tf = models.CharField(blank=True, null=True)
-    source = models.CharField(blank=True, null=True)
+        validators=[MinValueValidator(0), MaxValueValidator(1)])
+    tf = models.ForeignKey(
+        'Gene',
+        models.PROTECT)
 
     class Meta:
         managed = True
@@ -164,11 +164,12 @@ class KemmerenTFKO(BaseModel):
 
 class McIsaacZEV(BaseModel):
     gene = models.ForeignKey(
-        'gene',
+        'Gene',
         models.PROTECT)
     effect = models.FloatField()
-    tf = models.CharField(blank=True, null=True)
-    source = models.CharField(blank=True, null=True)
+    tf = models.ForeignKey(
+        'Gene',
+        models.PROTECT)
 
     class Meta:
         managed = True
@@ -187,12 +188,13 @@ class Background(BaseModel):
     start = models.IntegerField()
     # TODO put constraint on end cannot be past end of chr
     end = models.IntegerField()
-    strand = models.Charfield(
+    strand = models.CharField(
         max_length=1,
         choices=STRAND_CHOICES,
         default=Strand.UNSTRANDED.value)
     depth = models.PositiveIntegerField()
     source = models.CharField(
+        max_length=5,
         choices=SOURCE_CHOICES)
 
     class Meta:
@@ -204,7 +206,7 @@ class CCTF(BaseModel):
     """this table is used to store a list of the transcription factors
      interrogated with calling cards"""
     tf = models.ForeignKey(
-        'gene',
+        'Gene',
         models.PROTECT)
     strain = models.CharField(
         max_length=20,
@@ -226,10 +228,12 @@ class CCExperiment(BaseModel):
      in which a given set of transcription factors were interrogated with 
      calling cards"""
     # likely a run number, eg run_1234
-    batch = models.CharField()
+    batch = models.CharField(
+        max_length=15
+    )
     # id of a record in the gene table
     tf = models.ForeignKey(
-        'cc_tf',
+        'CCTF',
         models.CASCADE)
     # when the same tf is used in multiple experiments, each sample should be
     # uniquely identified by batch_replicate
@@ -243,19 +247,19 @@ class CCExperiment(BaseModel):
 
 
 class Hops(BaseModel):
-    chr = models.foreignKey(
-        'chr_map',
+    chr = models.ForeignKey(
+        'ChrMap',
         models.PROTECT)
     start = models.IntegerField()
     # TODO put constraint on end cannot be past end of chr
     end = models.IntegerField()
-    strand = models.Charfield(
+    strand = models.CharField(
         max_length=1,
         choices=STRAND_CHOICES,
         default=Strand.UNSTRANDED.value)
     depth = models.PositiveIntegerField()
     experiment = models.ForeignKey(
-        'cc_experiment',
+        'CCExperiment',
         models.CASCADE)
 
     class Meta:
@@ -264,22 +268,24 @@ class Hops(BaseModel):
 
 
 class HopsReplicateSig(BaseModel):
-    """Significance of a HOPS peak in single replicate for a given background and promoter region definition """
-    chr = models.foreignKey(
-        'chr_map',
+    """Significance of a HOPS peak in single replicate for a given
+     background and promoter region definition"""
+    
+    experiment = models.ForeignKey(
+        'CCExperiment',
+        models.CASCADE)
+    chr = models.ForeignKey(
+        'ChrMap',
         models.PROTECT)
     start = models.IntegerField()
     # TODO put constraint on end cannot be past end of chr
     end = models.IntegerField()
-    strand = models.Charfield(
+    strand = models.CharField(
         max_length=1,
         choices=STRAND_CHOICES,
         default=Strand.UNSTRANDED.value)
     bg_hops = models.PositiveIntegerField()
     expr_hops = models.PositiveIntegerField()
-    experiment = models.ForeignKey(
-        'cc_experiment',
-        models.CASCADE)
     poisson_pval = models.FloatField(
         validators=[MinValueValidator(0), MaxValueValidator(1)]
     )
@@ -290,9 +296,9 @@ class HopsReplicateSig(BaseModel):
         max_length=10,
         choices=Background.SOURCE_CHOICES
     )
-    promoter_regions = models.CharField(
+    promoters = models.CharField(
         max_length=20,
-        choices=PromoterRegions.TYPE_CHOICES
+        choices=PromoterRegions.SOURCE_CHOICES
     )
 
     class Meta:
@@ -300,41 +306,69 @@ class HopsReplicateSig(BaseModel):
         db_table = 'hops_replicate_sig'
 
 
-class QcAlignment(BaseModel):
-    experiment = models.ForeignKey(Batch, models.DO_NOTHING, blank=True, null=True)
-    total_reads = models.IntegerField(blank=True, null=True)
-    hpaii = models.IntegerField(blank=True, null=True)
-    hinp1i = models.IntegerField(blank=True, null=True)
-    taqai = models.IntegerField(blank=True, null=True)
-    undet = models.IntegerField(blank=True, null=True)
-    genome_mapped = models.IntegerField(blank=True, null=True)
-    plasmid_mapped = models.IntegerField(blank=True, null=True)
-    unmapped = models.IntegerField(blank=True, null=True)
-    multimapped = models.IntegerField(blank=True, null=True)
+class QcMetrics(BaseModel):
+    
+    experiment = models.ForeignKey(
+        'CCExperiment',
+        models.CASCADE)
+    total_aligned = models.PositiveIntegerField()
+    unmapped = models.PositiveIntegerField()
+    multimapped = models.PositiveIntegerField()
+    genome_mapped = models.PositiveIntegerField()
+    plasmid_mapped = models.PositiveIntegerField()
+    # note the sum of the hops is total hops
+    genome_hops = models.PositiveIntegerField()
+    plasmid_hops = models.PositiveIntegerField()
+    hpaii = models.PositiveIntegerField()
+    hinp1i = models.PositiveIntegerField()
+    taqai = models.PositiveIntegerField()
+    undet = models.PositiveIntegerField()
 
     class Meta:
         managed = True
         db_table = 'qc_alignment'
 
-
-class QcHops(BaseModel):
-    batch = models.ForeignKey(Batch, models.DO_NOTHING, blank=True, null=True)
-    total = models.IntegerField()
-    transpositions = models.IntegerField()
-    plasmid_transpositions = models.IntegerField()
-
-    class Meta:
-        managed = True
-        db_table = 'qc_hops'
-
-
 class QcManualReview(BaseModel):
-    batch = models.ForeignKey(Batch, models.DO_NOTHING, blank=True, null=True)
-    rank_recall = models.CharField(blank=True, null=True)
-    chip_better = models.CharField(blank=True, null=True)
-    data_usable = models.CharField(blank=True, null=True)
-    passing_replicate = models.CharField(blank=True, null=True)
-    notes = models.CharField(blank=True, null=True)
+
+    PASS = 'pass'
+    FAIL = 'fail'
+
+    YES = 'yes'
+    NO = 'no'
+
+    UNREVIEWED = 'unreviewed'
+
+    PASS_FAIL = ((PASS, 'pass'),
+                 (FAIL, 'fail'),
+                 (UNREVIEWED, 'unreviewed'))
+
+    YES_NO = ((YES, 'yes'),
+              (NO, 'no'),
+              (UNREVIEWED, 'unreviewed'))
+
+    experiment = models.ForeignKey(
+        'CCExperiment',
+        models.CASCADE)
+    rank_recall = models.CharField(
+        max_length=10,
+        choices=PASS_FAIL,
+        default=UNREVIEWED)
+    chip_better = models.CharField(
+        max_length=10,
+        choices=YES_NO,
+        default=UNREVIEWED)
+    data_usable = models.CharField(
+        max_length=10,
+        choices=YES_NO,
+        default=UNREVIEWED)
+    passing_replicate = models.CharField(
+        max_length=10,
+        choices=YES_NO,
+        default=UNREVIEWED)
+    notes = models.CharField(
+        max_length=100,
+        default='none'
+    )
 
     class Meta:
         managed = True
@@ -342,9 +376,11 @@ class QcManualReview(BaseModel):
 
 
 class QcR1ToR2Tf(BaseModel):
-    batch = models.ForeignKey(Batch, models.DO_NOTHING, blank=True, null=True)
-    edit_dist = models.IntegerField()
-    tally = models.IntegerField()
+    experiment = models.ForeignKey(
+        'CCExperiment',
+        models.CASCADE)
+    edit_dist = models.PositiveSmallIntegerField()
+    tally = models.PositiveSmallIntegerField()
 
     class Meta:
         managed = True
@@ -352,7 +388,9 @@ class QcR1ToR2Tf(BaseModel):
 
 
 class QcR2ToR1Tf(BaseModel):
-    batch = models.ForeignKey(Batch, models.DO_NOTHING, blank=True, null=True)
+    experiment = models.ForeignKey(
+        'CCExperiment',
+        models.CASCADE)
     edit_dist = models.IntegerField()
     tally = models.IntegerField()
 
@@ -362,7 +400,9 @@ class QcR2ToR1Tf(BaseModel):
 
 
 class QcTfToTransposon(BaseModel):
-    batch = models.ForeignKey(Batch, models.DO_NOTHING, blank=True, null=True)
+    experiment = models.ForeignKey(
+        'CCExperiment',
+        models.CASCADE)
     edit_dist = models.IntegerField()
     tally = models.IntegerField()
 
