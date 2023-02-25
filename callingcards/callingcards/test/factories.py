@@ -5,7 +5,7 @@ from ..models import *  # pylint: disable=W0401,W0614 # noqa
 
 __all__ = ['ChrMapFactory', 'GeneFactory', 'PromoterRegionsFactory',
            'HarbisonChIPFactory', 'KemmerenTFKOFactory',
-           'BackgroundFactory', 'CCTFFactory',
+           'McIsaacZEVFactory', 'BackgroundFactory', 'CCTFFactory',
            'CCExperimentFactory', 'HopsFactory',
            'HopsReplicateSigFactory', 'QcMetricsFactory',
            'QcManualReviewFactory', 'QcR1ToR2TfFactory',
@@ -91,6 +91,18 @@ class KemmerenTFKOFactory(factory.django.DjangoModelFactory):
     padj = 0.05
     tf = factory.SubFactory(GeneFactory)
 
+
+class McIsaacZEVFactory(factory.django.DjangoModelFactory):
+
+    class Meta:
+        model = 'callingcards.McIsaacZEV'
+
+    uploader = factory.SubFactory(UserFactory)
+    uploadDate = factory.Faker('date_time')
+    modified = factory.Faker('date_time')
+    gene = factory.SubFactory(GeneFactory)
+    effect = 3.5
+    tf = factory.SubFactory(GeneFactory)
 
 class BackgroundFactory(factory.django.DjangoModelFactory):
 

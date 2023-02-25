@@ -108,7 +108,7 @@ class McIsaacZEVViewSet(UserCreateMixin, viewsets.ModelViewSet):
     API endpoint that allows users to be viewed or edited.
     """
     queryset = McIsaacZEV.objects.all()  # noqa
-    serializer_class = McIsaacZEVSerailizer  # noqa
+    serializer_class = McIsaacZEVSerializer  # noqa
     permission_classes = (AllowAny,)
 
 
