@@ -8,7 +8,7 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 __all__ = ['ChrMapSerializer', 'GeneSerializer', 'PromoterRegionsSerializer',
            'HarbisonChIPSerializer', 'KemmerenTFKOSerializer',
-           'McIsaacZEVSerailizer', 'BackgroundSerializer',
+           'McIsaacZEVSerializer', 'BackgroundSerializer',
            'CCTFSerializer', 'CCExperimentSerializer', 'HopsSerializer',
            'HopsReplicateSigSerializer', 'QcMetricsSerializer',
            'QcManualReviewSerializer',
@@ -56,7 +56,7 @@ class KemmerenTFKOSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class McIsaacZEVSerailizer(serializers.ModelSerializer):
+class McIsaacZEVSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
 
     class Meta:

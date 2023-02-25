@@ -94,6 +94,25 @@ class TestKemmerenTFKO(TestCase):
         assert serializer.is_valid() is True
 
 
+class TestMcIsaacZEV(TestCase):
+
+    def setUp(self):
+        chr_record = ChrMapFactory()
+        gene_record = GeneFactory(chr=chr_record)
+
+        self.mcisaac_data = model_to_dict(
+            McIsaacZEVFactory.build(gene=gene_record,
+                                    tf=gene_record))  # noqa
+
+    def test_serializer_with_empty_data(self):
+        serializer = McIsaacZEVSerializer(data={})  # noqa
+        assert serializer.is_valid() is False
+
+    def test_serializer_with_valid_data(self):
+        serializer = McIsaacZEVSerializer(data=self.mcisaac_data)  # noqa
+        assert serializer.is_valid() is True
+
+
 class TestBackground(TestCase):
 
     def setUp(self):
