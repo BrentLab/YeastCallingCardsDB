@@ -74,10 +74,6 @@ pytest = "^7.2.2"
 pytest-django = "^4.5.2"
 ipykernel = "^6.21.3"
 
-[tool.poetry.extras]
-testing = ["argcomplete", "hypothesis (>=3.56)", "mock", "pytest", "pytest-django", "pygments (>=2.7.2)", "requests", "xmlschema"]
-
-
 
 [tool.poetry.group.dev.dependencies]
 pytest-runner = "^6.0.0"
