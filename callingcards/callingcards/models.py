@@ -43,17 +43,19 @@ class ChrMap(BaseModel):
     refseq = models.CharField(
         max_length=12)
     igenomes = models.CharField(
-        max_length=6)
+        max_length=12)
     ensembl = models.CharField(
-        max_length=6)
+        max_length=12)
     ucsc = models.CharField(
-        max_length=8)
+        max_length=12)
     mitra = models.CharField(
         max_length=15)
     seqlength = models.PositiveIntegerField()
-    numbered = models.PositiveSmallIntegerField()
+    numbered = models.CharField(
+        max_length=12
+    )
     chr = models.CharField(
-        max_length=6)
+        max_length=12)
 
     class Meta:
         managed = True
@@ -72,26 +74,54 @@ class Gene(BaseModel):
         max_length=1,
         choices=STRAND_CHOICES,
         default=Strand.UNSTRANDED.value)
-    feature_ontology = models.CharField(
+    type = models.CharField(
         max_length=20,
         default='unknown'
     )
-    biotype = models.CharField(
+    gene_biotype = models.CharField(
         max_length=20,
         default='unknown'
     )
-    systematic = models.CharField(
+    # note: in the save method below, a unique integer is appended to the
+    # default value if the this field is left blank on input
+    locus_tag = models.CharField(
         unique=True,
-        max_length=20)
-    name = models.CharField(
-        max_length=20)
+        max_length=20,
+        default='unknown')
+    # note: in the save method below, a unique integer is appended to the
+    # default value if the this field is left blank on input
+    gene = models.CharField(
+        max_length=20,
+        default='unknown')
     source = models.CharField(
-        max_length=20)
+        max_length=30)
+    # note: in the save method below, a unique integer is appended to the
+    # default value if the this field is left blank on input
     alias = models.CharField(
-        max_length=20)
+        max_length=20,
+        default='unknown')
     tf = models.BooleanField(
         default=False)
+    
+    def save(self, *args, **kwargs):
 
+        # Get the maximum value of the auto-incremented field in the table
+        max_id = Gene.objects.aggregate(models.Max('id'))['id__max'] or 0
+        # Check if the systematic field has the default value
+        if self.locus_tag == 'unknown':
+            self.locus_tag = f'unknown_{max_id + 1}'
+        
+        if self.gene == 'unknown':
+            self.gene = f'unknown_{max_id + 1}'
+        
+        if self.alias == 'unknown':
+            self.alias = f'unknown_{max_id + 1}'
+        
+        super().save(*args, **kwargs)
+    
+    class Meta:
+        managed = True
+        db_table = 'gene'
 
 class PromoterRegions(BaseModel):
 
@@ -114,6 +144,11 @@ class PromoterRegions(BaseModel):
     associated_feature = models.ForeignKey(
         'gene',
         models.PROTECT)
+    associated_direction = models.CharField(
+        max_length=1,
+        choices=STRAND_CHOICES,
+        default=Strand.UNSTRANDED.value
+    )
     score = models.PositiveSmallIntegerField(
         default=100,
         validators=[MaxValueValidator(100)]
@@ -132,14 +167,16 @@ class HarbisonChIP(BaseModel):
 
     gene = models.ForeignKey(
         'Gene',
-        models.PROTECT)
+        models.PROTECT,
+        related_name='harbison_chip_gene')
     effect = models.FloatField()
     pval = models.FloatField(
         validators=[MinValueValidator(0), MaxValueValidator(1)]
     )
     tf = models.ForeignKey(
         'Gene',
-        models.PROTECT)
+        models.PROTECT,
+        related_name='harbison_chip_tf')
 
     class Meta:
         managed = True
@@ -149,13 +186,15 @@ class HarbisonChIP(BaseModel):
 class KemmerenTFKO(BaseModel):
     gene = models.ForeignKey(
         'Gene',
-        models.PROTECT)
+        models.PROTECT,
+        related_name='kemmeren_tfko_gene')
     effect = models.FloatField()
     padj = models.FloatField(
         validators=[MinValueValidator(0), MaxValueValidator(1)])
     tf = models.ForeignKey(
         'Gene',
-        models.PROTECT)
+        models.PROTECT,
+        related_name='kemmeren_tfko_tf')
 
     class Meta:
         managed = True
@@ -165,11 +204,13 @@ class KemmerenTFKO(BaseModel):
 class McIsaacZEV(BaseModel):
     gene = models.ForeignKey(
         'Gene',
-        models.PROTECT)
+        models.PROTECT,
+        related_name='mcisaac_zev_gene')
     effect = models.FloatField()
     tf = models.ForeignKey(
         'Gene',
-        models.PROTECT)
+        models.PROTECT,
+        related_name='mcisaac_zev_tf')
 
     class Meta:
         managed = True
