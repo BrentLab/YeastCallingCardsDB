@@ -57,6 +57,8 @@ class Common(Configuration):
         ('Author', 'chasem@wustl.edu'),
     )
 
+    DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
     # General
     APPEND_SLASH = False
     TIME_ZONE = 'UTC'
@@ -183,8 +185,8 @@ class Common(Configuration):
 
     # Django Rest Framework
     REST_FRAMEWORK = {
-        'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-        'PAGE_SIZE': int(os.getenv('DJANGO_PAGINATION_LIMIT', 10)),
+        'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+        'PAGE_SIZE': int(os.getenv('DJANGO_PAGINATION_LIMIT', 1000)),
         'DATETIME_FORMAT': '%Y-%m-%dT%H:%M:%S%z',
         'DEFAULT_RENDERER_CLASSES': (
             'rest_framework.renderers.JSONRenderer',

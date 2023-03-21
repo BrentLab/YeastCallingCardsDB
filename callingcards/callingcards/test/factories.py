@@ -32,7 +32,7 @@ class GeneFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'callingcards.Gene'
-        django_get_or_create = ('systematic',)
+        django_get_or_create = ('locus_tag',)
 
     uploader = factory.SubFactory(UserFactory)
     uploadDate = factory.Faker('date_time')
@@ -41,13 +41,14 @@ class GeneFactory(factory.django.DjangoModelFactory):
     start = 100
     end = 200
     strand = '+'
-    feature_ontology = 'gene'
-    biotype = 'protein_coding'
-    systematic = factory.Faker('pystr', min_chars=10, max_chars=15)
-    name = factory.Faker('pystr', min_chars=10, max_chars=15)
+    type = 'unknown'
+    gene_biotype = 'unknown'
+    locus_tag = factory.Faker('pystr', min_chars=10, max_chars=15)
+    gene = factory.Faker('pystr', min_chars=10, max_chars=15)
     source = 'ensembl'
     alias = factory.Faker('pystr', min_chars=10, max_chars=15)
     tf = True
+
 
 class PromoterRegionsFactory(factory.django.DjangoModelFactory):
 

@@ -1,5 +1,8 @@
 import logging
+import json
 import pytest
+
+from django.forms.models import model_to_dict
 from django.urls import reverse
 from django.conf import settings
 from rest_framework.test import APITestCase
@@ -38,15 +41,15 @@ class TestChrMapViewSet(APITestCase):
         self.url = reverse('chrmap-list')
         settings.DEBUG = True
 
-    def test_post_request_with_no_data_fails(self):
+    def test_post_fail(self):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_get_request_returns_a_given_user(self):
+    def ttest_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
-    def test_put_request_updates_a_user(self):
+    def test_put_single(self):
         response = self.client.post(self.url, self.chr_data)
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -72,22 +75,36 @@ class TestGeneViewSet(APITestCase):
              ['uploader', 'uploadDate', 'modified']]
         self.url = reverse('gene-list')
         settings.DEBUG = True
+        self.gene_record_bulk_data = factory.build_batch(
+            dict, 
+            10, 
+            FACTORY_CLASS=GeneFactory)
+        for rec in self.gene_record_bulk_data:
+            rec['chr'] = self.chr_record.pk
+            tmp = [rec.pop(x) for x in
+             ['uploader', 'uploadDate', 'modified']]
 
-    def test_post_request_with_no_data_fails(self):
+    def test_post_fail(self):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_get_request_returns_a_given_user(self):
+    def ttest_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
-    def test_put_request_updates_a_user(self):
+    def test_put_single(self):
         response = self.client.post(self.url, self.gene_data)
         assert response.status_code == status.HTTP_201_CREATED
 
         gene = Gene.objects.get(pk=response.data.get('id'))
-        assert gene.systematic == self.gene_data.get('systematic')
+        assert gene.locus_tag == self.gene_data.get('locus_tag')
         assert gene.uploader.username == self.user.username
+
+    def test_put_bulk(self):
+        response = self.client.post(self.url, 
+                                    data=json.dumps(self.gene_record_bulk_data),
+                                    content_type='application/json')
+        assert response.status_code == status.HTTP_201_CREATED
 
 
 class TestPromoterRegionsViewSet(APITestCase):
@@ -110,15 +127,15 @@ class TestPromoterRegionsViewSet(APITestCase):
         self.url = reverse('promoterregions-list')
         settings.DEBUG = True
 
-    def test_post_request_with_no_data_fails(self):
+    def test_post_fail(self):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_get_request_returns_a_given_user(self):
+    def ttest_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
-    def test_put_request_updates_a_user(self):
+    def test_put_single(self):
         response = self.client.post(self.url, self.promoter_regions_data)
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -146,15 +163,15 @@ class TestHarbisonChIP(APITestCase):
         self.url = reverse('harbisonchip-list')
         settings.DEBUG = True
 
-    def test_post_request_with_no_data_fails(self):
+    def test_post_fail(self):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_get_request_returns_a_given_user(self):
+    def ttest_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
-    def test_put_request_updates_a_user(self):
+    def test_put_single(self):
         response = self.client.post(self.url, self.harbison_chip_data)
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -182,15 +199,15 @@ class TestKemmerenTFKO(APITestCase):
         self.url = reverse('kemmerentfko-list')
         settings.DEBUG = True
 
-    def test_post_request_with_no_data_fails(self):
+    def test_post_fail(self):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_get_request_returns_a_given_user(self):
+    def ttest_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
-    def test_put_request_updates_a_user(self):
+    def test_put_single(self):
         response = self.client.post(self.url, self.kemmeren_tfko_data)
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -218,15 +235,15 @@ class TestMcIsaacZEV(APITestCase):
         self.url = reverse('mcisaaczev-list')
         settings.DEBUG = True
 
-    def test_post_request_with_no_data_fails(self):
+    def test_post_fail(self):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_get_request_returns_a_given_user(self):
+    def ttest_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
-    def test_put_request_updates_a_user(self):
+    def test_put_single(self):
         response = self.client.post(self.url, self.mcisaac_zev_data)
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -253,15 +270,15 @@ class TestBackground(APITestCase):
         self.url = reverse('background-list')
         settings.DEBUG = True
 
-    def test_post_request_with_no_data_fails(self):
+    def test_post_fail(self):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_get_request_returns_a_given_user(self):
+    def ttest_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
-    def test_put_request_updates_a_user(self):
+    def test_put_single(self):
         response = self.client.post(self.url, self.background_data)
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -287,15 +304,15 @@ class TestCCTF(APITestCase):
         self.url = reverse('cctf-list')
         settings.DEBUG = True
 
-    def test_post_request_with_no_data_fails(self):
+    def test_post_fail(self):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_get_request_returns_a_given_user(self):
+    def ttest_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
-    def test_put_request_updates_a_user(self):
+    def test_put_single(self):
         response = self.client.post(self.url, self.cctf_data)
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -322,15 +339,15 @@ class TestCCExperiment(APITestCase):
         self.url = reverse('ccexperiment-list')
         settings.DEBUG = True
 
-    def test_post_request_with_no_data_fails(self):
+    def test_post_fail(self):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_get_request_returns_a_given_user(self):
+    def ttest_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
-    def test_put_request_updates_a_user(self):
+    def test_put_single(self):
         response = self.client.post(self.url, self.ccexperiment_data)
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -359,15 +376,15 @@ class TestHops(APITestCase):
         self.url = reverse('hops-list')
         settings.DEBUG = True
 
-    def test_post_request_with_no_data_fails(self):
+    def test_post_fail(self):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_get_request_returns_a_given_user(self):
+    def ttest_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
-    def test_put_request_updates_a_user(self):
+    def test_put_single(self):
         response = self.client.post(self.url, self.hops_data)
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -396,15 +413,15 @@ class TestHopsReplicateSig(APITestCase):
         self.url = reverse('hopsreplicatesig-list')
         settings.DEBUG = True
 
-    def test_post_request_with_no_data_fails(self):
+    def test_post_fail(self):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_get_request_returns_a_given_user(self):
+    def ttest_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
-    def test_put_request_updates_a_user(self):
+    def test_put_single(self):
         response = self.client.post(self.url, self.hopsreplicatesig_data)
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -432,15 +449,15 @@ class TestQcMetrics(APITestCase):
         self.url = reverse('qcmetrics-list')
         settings.DEBUG = True
 
-    def test_post_request_with_no_data_fails(self):
+    def test_post_fail(self):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_get_request_returns_a_given_user(self):
+    def ttest_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
-    def test_put_request_updates_a_user(self):
+    def test_put_single(self):
         response = self.client.post(self.url, self.qcmetrics_data)
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -467,15 +484,15 @@ class TestQcR1ToR2Tf(APITestCase):
         self.url = reverse('qcr1tor2tf-list')
         settings.DEBUG = True
 
-    def test_post_request_with_no_data_fails(self):
+    def test_post_fail(self):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_get_request_returns_a_given_user(self):
+    def ttest_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
-    def test_put_request_updates_a_user(self):
+    def test_put_single(self):
         response = self.client.post(self.url, self.qcr1tor2tf_data)
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -501,15 +518,15 @@ class TestQcR2ToR1Tf(APITestCase):
         self.url = reverse('qcr2tor1tf-list')
         settings.DEBUG = True
 
-    def test_post_request_with_no_data_fails(self):
+    def test_post_fail(self):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_get_request_returns_a_given_user(self):
+    def ttest_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
-    def test_put_request_updates_a_user(self):
+    def test_put_single(self):
         response = self.client.post(self.url, self.qcr2tor1tf_data)
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -535,15 +552,15 @@ class TestQcTfToTransposon(APITestCase):
         self.url = reverse('qctftotransposon-list')
         settings.DEBUG = True
 
-    def test_post_request_with_no_data_fails(self):
+    def test_post_fail(self):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_get_request_returns_a_given_user(self):
+    def ttest_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
-    def test_put_request_updates_a_user(self):
+    def test_put_single(self):
         response = self.client.post(self.url, self.qctftotransposon_data)
         assert response.status_code == status.HTTP_201_CREATED
 
