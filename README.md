@@ -42,3 +42,17 @@ note the pytest.ini in this package of course.
 
 I then rmeoved all the nose imports from the test scripts and replaced them with 
 assert statements for pytest and removed nose from the dependencies
+
+# some additional deps
+
+django-extensions added
+
+add to config/common `INSTALLED_APPS` 'django_extensions
+
+which makes this work easily:
+
+```bash
+poetry run python manage.py shell_plus --ipython
+```
+
+and can get a jupyter interface working, too

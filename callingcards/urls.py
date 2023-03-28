@@ -9,6 +9,7 @@ from rest_framework.authtoken import views
 from .users.views import UserViewSet, UserCreateViewSet
 from .callingcards.views import *
 
+
 router = DefaultRouter()
 router.register(r'users', UserViewSet)
 router.register(r'users', UserCreateViewSet)
@@ -22,12 +23,20 @@ router.register(r'background', BackgroundViewSet)
 router.register(r'cctf', CCTFViewSet)
 router.register(r'ccexperiment', CCExperimentViewSet)
 router.register(r'hops', HopsViewSet)
-router.register(r'hopsreplicatesig', HopsReplicacteSigViewSet)
+router.register(r'hopsreplicatesig',
+                HopsReplicacteSigViewSet,
+                basename='hopsreplicatesig')
 router.register(r'qcmetrics', QcMetricsViewSet)
 router.register(r'qcmanualreview', QcManualReviewViewSet)
 router.register(r'qcr1tor2', QcR1ToR2ViewSet)
 router.register(r'qcr2tor1', QcR2ToR1ViewSet)
 router.register(r'qctftotransposon', QcTfToTransposonViewSet)
+router.register(r'qcr1tor2summary', QcR1ToR2TfSummaryViewSet,
+                basename='qc_r1_to_r2_summary')
+router.register(r'qc_review', QcReviewViewSet, basename='qc_review')
+router.register(r'expression', ExpressionViewSetViewSet,
+                basename='expression')
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),

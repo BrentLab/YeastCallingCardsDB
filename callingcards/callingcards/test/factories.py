@@ -1,4 +1,7 @@
+import random
+from math import floor
 import factory
+
 
 from callingcards.users.test.factories import UserFactory
 from ..models import *  # pylint: disable=W0401,W0614 # noqa
@@ -11,13 +14,59 @@ __all__ = ['ChrMapFactory', 'GeneFactory', 'PromoterRegionsFactory',
            'QcManualReviewFactory', 'QcR1ToR2TfFactory',
            'QcR2ToR1TfFactory', 'QcTfToTransposonFactory']
 
-class ChrMapFactory(factory.django.DjangoModelFactory):
+
+def close_value(value, min_diff=0.0001, max_diff=0.01):
+    """
+    Generate a value close to the input value within a specified range.
+
+    Args:
+        value (float): The input value to generate a close value for.
+        min_diff (float, optional): The minimum difference between the
+          input value and the generated value. Defaults to 0.0001.
+        max_diff (float, optional): The maximum difference between the
+          input value and the generated value. Defaults to 0.01.
+
+    Returns:
+        float: A value within the specified range of the input value.
+    """
+    # Generate a random difference within the range [min_diff, max_diff]
+    diff = random.uniform(min_diff, max_diff)
+
+    # Randomly choose the sign of the difference (-1 or 1)
+    sign = random.choice([-1, 1])
+
+    # Calculate and return the new value within the specified range of the
+    # input value
+    return round(value + sign * diff, 5)
+
+
+class BaseModelFactoryMixin:
+
+    @classmethod
+    def _create(cls, model_class, *args, **kwargs):
+        uploader = kwargs.pop('uploader', None)
+        if not uploader:
+            uploader = UserFactory.create()
+        instance = model_class(*args, **kwargs)
+        instance.uploader = uploader
+        instance.save()
+        return instance
+
+    uploader = factory.SubFactory(UserFactory)
+    uploadDate = factory.Faker('date_time_between',
+                               start_date='-30d',
+                               end_date='now')
+    modified = factory.LazyAttribute(lambda o: factory.Faker( #pylint: disable=E1101 # noqa
+        'date_time_between',
+        start_date=o.uploadDate,
+        end_date='now').generate({}))
+
+
+class ChrMapFactory(BaseModelFactoryMixin,
+                    factory.django.DjangoModelFactory):
     class Meta:
         model = 'callingcards.ChrMap'
 
-    uploader = factory.SubFactory(UserFactory)
-    uploadDate = factory.Faker('date_time')
-    modified = factory.Faker('date_time')
     refseq = 'NC_001133.9'
     igenomes = 'I'
     ensembl = 'I'
@@ -28,224 +77,208 @@ class ChrMapFactory(factory.django.DjangoModelFactory):
     seqlength = 230218
 
 
-class GeneFactory(factory.django.DjangoModelFactory):
+class GeneFactory(BaseModelFactoryMixin,
+                  factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'callingcards.Gene'
         django_get_or_create = ('locus_tag',)
 
-    uploader = factory.SubFactory(UserFactory)
-    uploadDate = factory.Faker('date_time')
-    modified = factory.Faker('date_time')
     chr = factory.SubFactory(ChrMapFactory)
-    start = 100
-    end = 200
-    strand = '+'
+    start = factory.Sequence(lambda n: n * 100)
+    end = factory.Sequence(lambda n: n * 100 + 50)
+    strand = factory.Iterator(['+', '-', '*'])
     type = 'unknown'
     gene_biotype = 'unknown'
-    locus_tag = factory.Faker('pystr', min_chars=10, max_chars=15)
-    gene = factory.Faker('pystr', min_chars=10, max_chars=15)
-    source = 'ensembl'
-    alias = factory.Faker('pystr', min_chars=10, max_chars=15)
-    tf = True
+    locus_tag = factory.Sequence(lambda n: f'unknown_{n}')
+    gene = factory.Sequence(lambda n: f'unknown_{n}')
+    source = 'source'
+    alias = factory.Sequence(lambda n: f'unknown_{n}')
+    note = 'none'
 
-
-class PromoterRegionsFactory(factory.django.DjangoModelFactory):
+class PromoterRegionsFactory(BaseModelFactoryMixin,
+                             factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'callingcards.PromoterRegions'
 
-    uploader = factory.SubFactory(UserFactory)
-    uploadDate = factory.Faker('date_time')
-    modified = factory.Faker('date_time')
     chr = factory.SubFactory(ChrMapFactory)
-    start = 1
-    end = 100
-    strand = '+'
+    start = factory.Sequence(lambda n: n * 200)
+    end = factory.Sequence(lambda n: n * 200 + 100)
+    strand = factory.Iterator(['+', '-', '*'])
     associated_feature = factory.SubFactory(GeneFactory)
-    score = 100.0
-    source = 'yiming'
+    associated_direction = factory.Iterator(['+', '-', '*'])
+    score = 100
+    source = factory.Iterator(['not_orf', 'yiming'])
 
-class HarbisonChIPFactory(factory.django.DjangoModelFactory):
+class HarbisonChIPFactory(BaseModelFactoryMixin,
+                          factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'callingcards.HarbisonChIP'
 
-    uploader = factory.SubFactory(UserFactory)
-    uploadDate = factory.Faker('date_time')
-    modified = factory.Faker('date_time')
     gene = factory.SubFactory(GeneFactory)
-    effect = 3.5
-    pval = 0.0001
     tf = factory.SubFactory(GeneFactory)
+    pval = factory.LazyFunction(lambda: round(random.random(), 3))
 
-class KemmerenTFKOFactory(factory.django.DjangoModelFactory):
+
+class KemmerenTFKOFactory(BaseModelFactoryMixin,
+                          factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'callingcards.KemmerenTFKO'
 
-    uploader = factory.SubFactory(UserFactory)
-    uploadDate = factory.Faker('date_time')
-    modified = factory.Faker('date_time')
     gene = factory.SubFactory(GeneFactory)
-    effect = 3.5
-    padj = 0.05
+    effect = factory.LazyFunction(lambda: round(random.uniform(-10, 10), 2))
+    padj = factory.LazyFunction(lambda: round(random.random(), 3))
     tf = factory.SubFactory(GeneFactory)
 
 
-class McIsaacZEVFactory(factory.django.DjangoModelFactory):
+class McIsaacZEVFactory(BaseModelFactoryMixin,
+                        factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'callingcards.McIsaacZEV'
 
-    uploader = factory.SubFactory(UserFactory)
-    uploadDate = factory.Faker('date_time')
-    modified = factory.Faker('date_time')
     gene = factory.SubFactory(GeneFactory)
-    effect = 3.5
+    effect = factory.LazyFunction(lambda: round(random.uniform(-5, 5), 2))
     tf = factory.SubFactory(GeneFactory)
 
-class BackgroundFactory(factory.django.DjangoModelFactory):
+class BackgroundFactory(BaseModelFactoryMixin,
+                        factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'callingcards.Background'
 
-    uploader = factory.SubFactory(UserFactory)
-    uploadDate = factory.Faker('date_time')
-    modified = factory.Faker('date_time')
     chr = factory.SubFactory(ChrMapFactory)
     start = 1
     end = 100
     depth = 100
     source = 'adh1'
 
-class CCTFFactory(factory.django.DjangoModelFactory):
+class CCTFFactory(BaseModelFactoryMixin,
+                  factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'callingcards.CCTF'
 
-    uploader = factory.SubFactory(UserFactory)
-    uploadDate = factory.Faker('date_time')
-    modified = factory.Faker('date_time')
     tf = factory.SubFactory(GeneFactory)
-    strain = 'some_strain'
+    strain = 'unknown'
     under_development = True
-    notes = 'some notes'
+    notes = 'none'
 
-class CCExperimentFactory(factory.django.DjangoModelFactory):
+class CCExperimentFactory(BaseModelFactoryMixin,
+                          factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'callingcards.CCExperiment'
 
-    uploader = factory.SubFactory(UserFactory)
-    uploadDate = factory.Faker('date_time')
-    modified = factory.Faker('date_time')
     tf = factory.SubFactory(CCTFFactory)
     batch = 'run_1234'
     batch_replicate = 1
 
-class HopsFactory(factory.django.DjangoModelFactory):
+class HopsFactory(BaseModelFactoryMixin,
+                  factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'callingcards.Hops'
 
-    uploader = factory.SubFactory(UserFactory)
-    uploadDate = factory.Faker('date_time')
-    modified = factory.Faker('date_time')
     chr = factory.SubFactory(ChrMapFactory)
-    start = 1
-    end = 100
-    depth = 200
+    start = factory.Sequence(lambda n: n * 100)
+    end = factory.LazyAttribute(lambda o: o.start+1)
+    depth = factory.Sequence(lambda n: floor(random.uniform(1, 200)))
     experiment = factory.SubFactory(CCExperimentFactory)
 
-class HopsReplicateSigFactory(factory.django.DjangoModelFactory):
+class HopsReplicateSigFactory(BaseModelFactoryMixin,
+                              factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'callingcards.HopsReplicateSig'
 
-    uploader = factory.SubFactory(UserFactory)
-    uploadDate = factory.Faker('date_time')
-    modified = factory.Faker('date_time')
     experiment = factory.SubFactory(CCExperimentFactory)
-    chr = factory.SubFactory(ChrMapFactory)
-    start = 1
-    end = 100
-    bg_hops = 100
-    expr_hops = 200
-    poisson_pval = 0.0001
-    hypergeom_pval = 0.0001
-    background = 'adh1'
-    promoters = 'yiming'
+    promoter = factory.SubFactory(PromoterRegionsFactory)
+    bg_hops = factory.Sequence(lambda n: floor(random.uniform(0, 200)))
+    expr_hops = factory.Sequence(lambda n: floor(random.uniform(0, 200)))
+    poisson_pval = factory.Sequence(lambda n: round(random.uniform(0, 1), 5))
+    hypergeom_pval = factory.LazyAttribute(lambda o: close_value(o.poisson_pval))
+    background = factory.Iterator(['adh1'])
 
-class QcMetricsFactory(factory.django.DjangoModelFactory):
+class QcMetricsFactory(BaseModelFactoryMixin,
+                       factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'callingcards.QcMetrics'
 
-    uploader = factory.SubFactory(UserFactory)
-    uploadDate = factory.Faker('date_time')
-    modified = factory.Faker('date_time')
+    # uploader = factory.SubFactory(UserFactory)
+    # uploadDate = factory.Faker('date_time')
+    # modified = factory.Faker('date_time')
     experiment = factory.SubFactory(CCExperimentFactory)
-    total_aligned = 3e6
+    total_reads = 3e6
     unmapped = 3e6
     multimapped = 3e6
     genome_mapped = 3e6
     plasmid_mapped = 3e6
-    # note the sum of the hops is total hops
-    genome_hops = 3e6
-    plasmid_hops = 3e6
     hpaii = 3e6
     hinp1i = 3e6
     taqai = 3e6
     undet = 3e6
+    note = 'some notes'
 
-class QcManualReviewFactory(factory.django.DjangoModelFactory):
+class QcManualReviewFactory(BaseModelFactoryMixin,
+                            factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'callingcards.QcManualReview'
 
-    uploader = factory.SubFactory(UserFactory)
-    uploadDate = factory.Faker('date_time')
-    modified = factory.Faker('date_time')
+    # uploader = factory.SubFactory(UserFactory)
+    # uploadDate = factory.Faker('date_time')
+    # modified = factory.Faker('date_time')
     experiment = factory.SubFactory(CCExperimentFactory)
     rank_recall = 'unreviewed'
     chip_better = 'yes'
     data_usable = 'no'
     passing_replicate = 'unreviewed'
-    notes = 'arrrr mate-y harrrr be sea monsters!'
+    note = 'arrrr mate-y harrrr be sea monsters!'
 
-class QcR1ToR2TfFactory(factory.django.DjangoModelFactory):
+class QcR1ToR2TfFactory(BaseModelFactoryMixin,
+                        factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'callingcards.QcR1ToR2Tf'
 
-    uploader = factory.SubFactory(UserFactory)
-    uploadDate = factory.Faker('date_time')
-    modified = factory.Faker('date_time')
+    # uploader = factory.SubFactory(UserFactory)
+    # uploadDate = factory.Faker('date_time')
+    # modified = factory.Faker('date_time')
     experiment = factory.SubFactory(CCExperimentFactory)
     edit_dist = 0
     tally = 4
+    note = 'some notes'
 
-class QcR2ToR1TfFactory(factory.django.DjangoModelFactory):
+class QcR2ToR1TfFactory(BaseModelFactoryMixin,
+                        factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'callingcards.QcR2ToR1Tf'
 
-    uploader = factory.SubFactory(UserFactory)
-    uploadDate = factory.Faker('date_time')
-    modified = factory.Faker('date_time')
+    # uploader = factory.SubFactory(UserFactory)
+    # uploadDate = factory.Faker('date_time')
+    # modified = factory.Faker('date_time')
     experiment = factory.SubFactory(CCExperimentFactory)
     edit_dist = 0
     tally = 4
+    note = 'some notes'
 
-class QcTfToTransposonFactory(factory.django.DjangoModelFactory):
+
+class QcTfToTransposonFactory(BaseModelFactoryMixin,
+                              factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'callingcards.QcTfToTransposon'
 
-    uploader = factory.SubFactory(UserFactory)
-    uploadDate = factory.Faker('date_time')
-    modified = factory.Faker('date_time')
+    # uploader = factory.SubFactory(UserFactory)
+    # uploadDate = factory.Faker('date_time')
+    # modified = factory.Faker('date_time')
     experiment = factory.SubFactory(CCExperimentFactory)
     edit_dist = 0
     tally = 4
+    note = 'some notes'
