@@ -6,14 +6,17 @@ from .models import *
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
-__all__ = ['ChrMapSerializer', 'GeneSerializer', 'PromoterRegionsSerializer',
-           'HarbisonChIPSerializer', 'KemmerenTFKOSerializer',
-           'McIsaacZEVSerializer', 'BackgroundSerializer',
-           'CCTFSerializer', 'CCExperimentSerializer', 'HopsSerializer',
-           'HopsReplicateSigSerializer', 'QcMetricsSerializer',
-           'QcManualReviewSerializer',
+__all__ = ['ChrMapSerializer', 'GeneSerializer', 'GeneWithEffectsSerializer',
+           'PromoterRegionsSerializer', 'HarbisonChIPSerializer',
+           'HarbisonChIPAnnotatedSerializer',
+           'KemmerenTFKOSerializer', 'McIsaacZEVSerializer',
+           'BackgroundSerializer', 'CCTFSerializer', 'CCExperimentSerializer',
+           'HopsSerializer', 'HopsReplicateSigSerializer',
+           'QcMetricsSerializer', 'QcManualReviewSerializer',
            'QcR1ToR2TfSerializer', 'QcR2ToR1TfSerializer',
-           'QcTfToTransposonSerializer']
+           'QcTfToTransposonSerializer', 'BarcodeComponentsSummarySerializer',
+           'QcReviewSerializer', 'ExpressionViewSetSerializer',
+           'HopsReplicateSigAnnotatedSerializer']
 
 
 class ChrMapSerializer(serializers.ModelSerializer):
@@ -32,6 +35,16 @@ class GeneSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class GeneWithEffectsSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    locus_tag = serializers.CharField()
+    mcisaac_zev_effect = serializers.FloatField(allow_null=True)
+    mcisaac_zev_p = serializers.FloatField()
+    kemmeren_tfko_effect = serializers.FloatField(allow_null=True)
+    kemmeren_tfko_p = serializers.FloatField(allow_null=True)
+    harbison_chip = serializers.FloatField(allow_null=True)
+
+
 class PromoterRegionsSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
 
@@ -46,6 +59,16 @@ class HarbisonChIPSerializer(serializers.ModelSerializer):
     class Meta:
         model = HarbisonChIP  # noqa
         fields = '__all__'
+
+
+class HarbisonChIPAnnotatedSerializer(serializers.Serializer):
+    tf_locus_tag = serializers.CharField()
+    tf_gene = serializers.CharField()
+    target_locus_tag = serializers.CharField()
+    target_gene = serializers.CharField()
+    pval = serializers.FloatField()
+    gene_id = serializers.IntegerField()
+    tf_id = serializers.IntegerField()
 
 
 class KemmerenTFKOSerializer(serializers.ModelSerializer):
@@ -141,3 +164,51 @@ class QcTfToTransposonSerializer(serializers.ModelSerializer):
     class Meta:
         model = QcTfToTransposon  # noqa
         fields = '__all__'
+
+class BarcodeComponentsSummarySerializer(serializers.Serializer):
+    experiment_id = serializers.IntegerField()
+    r1_r2_status = serializers.CharField()
+    r2_r1_status = serializers.CharField()
+
+
+class QcReviewSerializer(serializers.Serializer):
+    experiment_id = serializers.IntegerField()
+    tf_alias = serializers.CharField()
+    batch = serializers.CharField()
+    batch_replicate = serializers.IntegerField()
+    r1_r2_status = serializers.CharField()
+    r2_r1_status = serializers.CharField()
+    map_unmap_ratio = serializers.FloatField()
+    num_hops = serializers.IntegerField()
+    rank_recall = serializers.CharField()
+    chip_better = serializers.CharField()
+    data_usable = serializers.CharField()
+    passing_replicate = serializers.CharField()
+    note = serializers.CharField()
+
+class ExpressionViewSetSerializer(serializers.Serializer):
+    tf_id_alias = serializers.IntegerField()
+    tf_locus_tag = serializers.CharField()
+    tf_gene = serializers.CharField()
+    target_gene_id = serializers.IntegerField()
+    target_locus_tag = serializers.CharField()
+    target_gene = serializers.CharField()
+    effect_expr = serializers.FloatField()
+    p_expr = serializers.FloatField()
+    source_expr = serializers.CharField()
+
+class HopsReplicateSigAnnotatedSerializer(serializers.Serializer):
+    tf_locus_tag = serializers.CharField()
+    tf_gene = serializers.CharField()
+    target_locus_tag = serializers.CharField()
+    target_gene = serializers.CharField()
+    bg_hops = serializers.IntegerField()
+    expr_hops = serializers.IntegerField()
+    poisson_pval = serializers.FloatField()
+    hypergeom_pval = serializers.FloatField()
+    experiment = serializers.IntegerField()
+    experiment_batch = serializers.CharField()
+    experiment_batch_replicate = serializers.IntegerField()
+    background = serializers.CharField()
+    promoter_id = serializers.IntegerField()
+    promoter_source = serializers.CharField()

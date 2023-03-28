@@ -1,11 +1,10 @@
-import pytest
 from django.test import TestCase
 from django.forms.models import model_to_dict
 
 from callingcards.users.test.factories import UserFactory
 from .factories import *  # pylint: disable=W0401,W0614 # noqa
 from ..serializers import *  # pylint: disable=W0401,W0614 # noqa
-
+from ..models import HarbisonChIP
 
 class TestCreateChrMap(TestCase):
 
@@ -28,8 +27,10 @@ class TestCreateGene(TestCase):
         # note that this instantiates and saves to the DB
         # must set systematic to something unique as a result
         # probably worth a post to github
-        chr_record = ChrMapFactory()
-        self.gene_data = model_to_dict(GeneFactory.build(chr=chr_record))  # noqa
+        user = UserFactory()
+        chr_record = ChrMapFactory.create(uploader=user)
+        self.gene_data = model_to_dict(GeneFactory.build(uploader=user,
+                                                         chr=chr_record))  # noqa
 
     def test_serializer_with_empty_data(self):
         serializer = GeneSerializer(data={})  # noqa
@@ -42,10 +43,13 @@ class TestCreateGene(TestCase):
 class TestCreatePromoterRegions(TestCase):
 
     def setUp(self):
-        chr_record = ChrMapFactory()
-        gene_record = GeneFactory(chr=chr_record)
+        user = UserFactory()
+        chr_record = ChrMapFactory(uploader=user)
+        gene_record = GeneFactory(uploader=user,
+                                  chr=chr_record)
         self.promoter_data = model_to_dict(
-            PromoterRegionsFactory.build(chr=chr_record,
+            PromoterRegionsFactory.build(uploader=user,
+                                         chr=chr_record,
                                          associated_feature=gene_record))  # noqa
 
     def test_serializer_with_empty_data(self):
@@ -59,12 +63,15 @@ class TestCreatePromoterRegions(TestCase):
 class TestHarbisonChIP(TestCase):
 
     def setUp(self):
-        chr_record = ChrMapFactory()
-        gene_record = GeneFactory(chr=chr_record)
-
-        self.harbison_data = model_to_dict(
-            HarbisonChIPFactory.build(gene=gene_record,
-                                      tf=gene_record))  # noqa
+        user = UserFactory()
+        chr_record = ChrMapFactory(uploader=user)
+        gene_record = GeneFactory(uploader=user,
+                                  chr=chr_record)
+        self.harbisonchip_record = \
+            HarbisonChIPFactory.build(uploader=user,
+                                      gene=gene_record,
+                                      tf=gene_record)
+        self.harbison_data = model_to_dict(self.harbisonchip_record)  # noqa
 
     def test_serializer_with_empty_data(self):
         serializer = HarbisonChIPSerializer(data={})  # noqa
@@ -74,15 +81,25 @@ class TestHarbisonChIP(TestCase):
         serializer = HarbisonChIPSerializer(data=self.harbison_data)  # noqa
         assert serializer.is_valid() is True
 
+    def test_annotated_serializer_with_valid_data(self):
+        self.harbisonchip_record.save()
+        annotated_data = HarbisonChIP.objects.with_annotations()\
+            .get(pk=self.harbisonchip_record.pk)
+        serializer = HarbisonChIPAnnotatedSerializer(data=annotated_data)
+        assert serializer.is_valid() is True
+
 
 class TestKemmerenTFKO(TestCase):
 
     def setUp(self):
-        chr_record = ChrMapFactory()
-        gene_record = GeneFactory(chr=chr_record)
+        user = UserFactory()
+        chr_record = ChrMapFactory(uploader=user)
+        gene_record = GeneFactory(uploader=user,
+                                  chr=chr_record)
 
         self.kemmeren_data = model_to_dict(
-            KemmerenTFKOFactory.build(gene=gene_record,
+            KemmerenTFKOFactory.build(uploader=user,
+                                      gene=gene_record,
                                       tf=gene_record))  # noqa
 
     def test_serializer_with_empty_data(self):
@@ -97,8 +114,10 @@ class TestKemmerenTFKO(TestCase):
 class TestMcIsaacZEV(TestCase):
 
     def setUp(self):
-        chr_record = ChrMapFactory()
-        gene_record = GeneFactory(chr=chr_record)
+        user = UserFactory()
+        chr_record = ChrMapFactory(uploader=user)
+        gene_record = GeneFactory(uploader=user,
+                                  chr=chr_record)
 
         self.mcisaac_data = model_to_dict(
             McIsaacZEVFactory.build(gene=gene_record,
@@ -116,10 +135,12 @@ class TestMcIsaacZEV(TestCase):
 class TestBackground(TestCase):
 
     def setUp(self):
-        chr_record = ChrMapFactory()
+        user = UserFactory()
+        chr_record = ChrMapFactory(uploader=user)
 
         self.background_data = model_to_dict(
-            BackgroundFactory.build(chr=chr_record))  # noqa
+            BackgroundFactory.build(uploader=user,
+                                    chr=chr_record))  # noqa
 
     def test_serializer_with_empty_data(self):
         serializer = BackgroundSerializer(data={})  # noqa
@@ -133,11 +154,14 @@ class TestBackground(TestCase):
 class TestCCTF(TestCase):
 
     def setUp(self):
-        chr_record = ChrMapFactory()
-        gene_record = GeneFactory(chr=chr_record)
+        user = UserFactory()
+        chr_record = ChrMapFactory(uploader=user)
+        gene_record = GeneFactory(uploader=user,
+                                  chr=chr_record)
 
         self.cctf_data = model_to_dict(
-            CCTFFactory.build(tf=gene_record))  # noqa
+            CCTFFactory.build(uploader=user,
+                              tf=gene_record))  # noqa
 
     def test_serializer_with_empty_data(self):
         serializer = CCTFSerializer(data={})  # noqa
@@ -151,9 +175,12 @@ class TestCCTF(TestCase):
 class TestCCExperiment(TestCase):
 
     def setUp(self):
-        chr_record = ChrMapFactory()
-        gene_record = GeneFactory(chr=chr_record)
-        cctf_record = CCTFFactory(tf=gene_record)
+        user = UserFactory()
+        chr_record = ChrMapFactory(uploader=user)
+        gene_record = GeneFactory(uploader=user,
+                                  chr=chr_record)
+        cctf_record = CCTFFactory(uploader=user,
+                                  tf=gene_record)
 
         self.ccexp_data = model_to_dict(
             CCExperimentFactory.build(tf=cctf_record))  # noqa
@@ -170,10 +197,14 @@ class TestCCExperiment(TestCase):
 class TestHops(TestCase):
 
     def setUp(self):
-        chr_record = ChrMapFactory()
-        gene_record = GeneFactory(chr=chr_record)
-        cctf_record = CCTFFactory(tf=gene_record)
-        expr_record = CCExperimentFactory(tf=cctf_record)
+        user = UserFactory()
+        chr_record = ChrMapFactory(uploader=user)
+        gene_record = GeneFactory(uploader=user,
+                                  chr=chr_record)
+        cctf_record = CCTFFactory(uploader=user,
+                                  tf=gene_record)
+        expr_record = CCExperimentFactory(uploader=user,
+                                          tf=cctf_record)
 
         self.hops_data = model_to_dict(HopsFactory.build(  # noqa
             chr=chr_record, experiment=expr_record))
@@ -190,13 +221,15 @@ class TestHops(TestCase):
 class TestHopsReplicateSig(TestCase):
 
     def setUp(self):
-        chr_record = ChrMapFactory()
-        gene_record = GeneFactory(chr=chr_record)
-        cctf_record = CCTFFactory(tf=gene_record)
-        expr_record = CCExperimentFactory(tf=cctf_record)
+        user = UserFactory()
+        chr_record = ChrMapFactory(uploader=user)
+        gene_record = GeneFactory(chr=chr_record, uploader=user)
+        cctf_record = CCTFFactory(tf=gene_record, uploader=user)
+        expr_record = CCExperimentFactory(tf=cctf_record, uploader=user)
+        promoter_record = PromoterRegionsFactory(chr=chr_record, uploader=user)
 
-        self.hops_rep_data = model_to_dict(HopsReplicateSigFactory.build(  # noqa
-            chr=chr_record, experiment=expr_record))
+        self.hops_rep_data = model_to_dict(HopsReplicateSigFactory.build(
+            promoter=promoter_record, experiment=expr_record))
 
     def test_serializer_with_empty_data(self):
         serializer = HopsReplicateSigSerializer(data={})  # noqa
@@ -210,10 +243,14 @@ class TestHopsReplicateSig(TestCase):
 class TestQcMetrics(TestCase):
 
     def setUp(self):
-        chr_record = ChrMapFactory()
-        gene_record = GeneFactory(chr=chr_record)
-        cctf_record = CCTFFactory(tf=gene_record)
-        expr_record = CCExperimentFactory(tf=cctf_record)
+        user = UserFactory()
+        chr_record = ChrMapFactory(uploader=user)
+        gene_record = GeneFactory(uploader=user,
+                                  chr=chr_record)
+        cctf_record = CCTFFactory(uploader=user,
+                                  tf=gene_record)
+        expr_record = CCExperimentFactory(uploader=user,
+                                          tf=cctf_record)
 
         self.qc_data = model_to_dict(QcMetricsFactory.build(  # noqa
             experiment=expr_record))
@@ -230,10 +267,14 @@ class TestQcMetrics(TestCase):
 class TestQcManifest(TestCase):
 
     def setUp(self):
-        chr_record = ChrMapFactory()
-        gene_record = GeneFactory(chr=chr_record)
-        cctf_record = CCTFFactory(tf=gene_record)
-        expr_record = CCExperimentFactory(tf=cctf_record)
+        user = UserFactory()
+        chr_record = ChrMapFactory(uploader=user)
+        gene_record = GeneFactory(uploader=user,
+                                  chr=chr_record)
+        cctf_record = CCTFFactory(uploader=user,
+                                  tf=gene_record)
+        expr_record = CCExperimentFactory(uploader=user,
+                                          tf=cctf_record)
 
         self.qc_manifest_data = model_to_dict(QcManualReviewFactory.build(  # noqa
             experiment=expr_record))
@@ -250,10 +291,14 @@ class TestQcManifest(TestCase):
 class TestQcR1ToR2Tf(TestCase):
 
     def setUp(self):
-        chr_record = ChrMapFactory()
-        gene_record = GeneFactory(chr=chr_record)
-        cctf_record = CCTFFactory(tf=gene_record)
-        expr_record = CCExperimentFactory(tf=cctf_record)
+        user = UserFactory()
+        chr_record = ChrMapFactory(uploader=user)
+        gene_record = GeneFactory(uploader=user,
+                                  chr=chr_record)
+        cctf_record = CCTFFactory(uploader=user,
+                                  tf=gene_record)
+        expr_record = CCExperimentFactory(uploader=user,
+                                          tf=cctf_record)
 
         self.qc_r1_to_r2_data = model_to_dict(QcR1ToR2TfFactory.build(  # noqa
             experiment=expr_record))
@@ -270,10 +315,14 @@ class TestQcR1ToR2Tf(TestCase):
 class TestQcR1ToR2Tf(TestCase):
 
     def setUp(self):
-        chr_record = ChrMapFactory()
-        gene_record = GeneFactory(chr=chr_record)
-        cctf_record = CCTFFactory(tf=gene_record)
-        expr_record = CCExperimentFactory(tf=cctf_record)
+        user = UserFactory()
+        chr_record = ChrMapFactory(uploader=user)
+        gene_record = GeneFactory(uploader=user,
+                                  chr=chr_record)
+        cctf_record = CCTFFactory(uploader=user,
+                                  tf=gene_record)
+        expr_record = CCExperimentFactory(uploader=user,
+                                          tf=cctf_record)
 
         self.qc_r1_to_r2_data = model_to_dict(QcR1ToR2TfFactory.build(  # noqa
             experiment=expr_record))
@@ -290,10 +339,14 @@ class TestQcR1ToR2Tf(TestCase):
 class TestQcTfToTransposon(TestCase):
 
     def setUp(self):
-        chr_record = ChrMapFactory()
-        gene_record = GeneFactory(chr=chr_record)
-        cctf_record = CCTFFactory(tf=gene_record)
-        expr_record = CCExperimentFactory(tf=cctf_record)
+        user = UserFactory()
+        chr_record = ChrMapFactory(uploader=user)
+        gene_record = GeneFactory(uploader=user,
+                                  chr=chr_record)
+        cctf_record = CCTFFactory(uploader=user,
+                                  tf=gene_record)
+        expr_record = CCExperimentFactory(uploader=user,
+                                          tf=cctf_record)
 
         self.qc_tf_to_transposon_data = model_to_dict(  # noqa
             QcTfToTransposonFactory.build(experiment=expr_record))
@@ -305,4 +358,74 @@ class TestQcTfToTransposon(TestCase):
     def test_serializer_with_valid_data(self):
         serializer = QcTfToTransposonSerializer(
             data=self.qc_tf_to_transposon_data)
+        assert serializer.is_valid() is True
+
+class ExpressionViewSetSerializerTestCase(TestCase):
+
+    def setUp(self):
+        self.serializer = ExpressionViewSetSerializer()
+
+    def test_serializer_with_valid_data(self):
+        data = {
+            'tf_alias': 1,
+            'tf_locus_tag': 'yhr123',
+            'tf_gene': 'tf_gene',
+            'target_gene_id': 2,
+            'target_locus_tag': 'yhr456',
+            'target_gene': 'target_gene',
+            'effect_expr': 0.5,
+            'p_expr': 0.01,
+            'source_expr': 'test'
+        }
+
+        self.assertEqual(self.serializer.validate(data), data)
+
+    def test_serializer_with_invalid_data(self):
+        data = {
+            'tf_alias': 123,
+            'effect_expr': 'invalid',
+            'p_expr': -100,
+            'source_expr': 123
+        }
+        serializer = ExpressionViewSetSerializer(data=data)
+        assert serializer.is_valid() is False
+
+
+class TestHopsReplicateSigAnnotatedSerializer(TestCase):
+
+    def setUp(self):
+        user = UserFactory()
+        chr_record = ChrMapFactory(uploader=user)
+        gene_record_1 = GeneFactory(chr=chr_record, uploader=user)
+        gene_record_2 = GeneFactory(chr=chr_record, uploader=user)
+        cctf_record = CCTFFactory(uploader=user, tf=gene_record_1)
+        experiment_record = CCExperimentFactory(uploader=user, tf=cctf_record)
+        promoter_region = PromoterRegionsFactory(
+            chr=chr_record, uploader=user, associated_feature=gene_record_2)
+        hops_replicate_sig = HopsReplicateSigFactory(
+            uploader=user, promoter=promoter_region, experiment=experiment_record)
+
+        self.hops_replicate_sig_query_data = {
+            'tf_locus_tag': gene_record_1.locus_tag,
+            'tf_gene': gene_record_1.gene,
+            'target_locus_tag': gene_record_2.locus_tag,
+            'target_gene': gene_record_2.gene,
+            'bg_hops': hops_replicate_sig.bg_hops,
+            'expr_hops': hops_replicate_sig.expr_hops,
+            'poisson_pval': hops_replicate_sig.poisson_pval,
+            'hypergeom_pval': hops_replicate_sig.hypergeom_pval,
+            'experiment': experiment_record.id,
+            'experiment_batch': experiment_record.batch,
+            'experiment_batch_replicate': experiment_record.batch_replicate,
+            'background': hops_replicate_sig.background,
+            'promoter_id': promoter_region.id,
+            'promoter_source': promoter_region.source,
+        }
+
+    def test_serializer_with_empty_data(self):
+        serializer = HopsReplicateSigAnnotatedSerializer(data={})
+        assert serializer.is_valid() is False
+
+    def test_serializer_with_valid_data(self):
+        serializer = HopsReplicateSigAnnotatedSerializer(data=self.hops_replicate_sig_query_data)
         assert serializer.is_valid() is True

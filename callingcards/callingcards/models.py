@@ -1,3 +1,5 @@
+"""models for the callingcards app"""
+
 # pylint: disable=missing-docstring
 from enum import Enum
 import logging
@@ -5,6 +7,8 @@ import logging
 from django.db import models  # pylint: disable=import-error # noqa # type: ignore
 from django.core.validators import MinValueValidator, MaxValueValidator  # pylint: disable=import-error # noqa # type: ignore
 from django.conf import settings  # pylint: disable=import-error # noqa # type: ignore
+
+from .querysets import HopsReplicateSigQuerySet, HarbisonChIPQuerySet   # noqa # type: ignore
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
@@ -38,8 +42,33 @@ class BaseModel(models.Model):
     class Meta:
         abstract = True
 
+class GenonomicCoordinatesMixin(models.Model):
+    class Meta:
+        abstract = True
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(end__lte=models.F('chr__seqlength')),
+                name='end_cannot_exceed_chromosome_length',
+            )
+        ]
+
 
 class ChrMap(BaseModel):
+    """
+    ChrMap model represents chromosome mapping information, including various
+    IDs and names used in different genome databases and the chromosome's 
+    length.
+
+    Fields:
+        refseq (CharField): RefSeq ID for the chromosome.
+        igenomes (CharField): iGenomes ID for the chromosome.
+        ensembl (CharField): Ensembl ID for the chromosome.
+        ucsc (CharField): UCSC ID for the chromosome.
+        mitra (CharField): Mitra ID for the chromosome.
+        seqlength (PositiveIntegerField): Length of the chromosome sequence.
+        numbered (CharField): Numbered name for the chromosome.
+        chr (CharField): Chromosome name.
+    """
     refseq = models.CharField(
         max_length=12)
     igenomes = models.CharField(
@@ -62,11 +91,12 @@ class ChrMap(BaseModel):
         db_table = 'chr_map'
 
 
-class Gene(BaseModel):
+class Gene(GenonomicCoordinatesMixin, BaseModel):
 
     chr = models.ForeignKey(
         'ChrMap',
-        models.PROTECT)
+        models.PROTECT,
+        db_index=True)
     start = models.PositiveIntegerField()
     # TODO put constraint on end cannot be past end of chr
     end = models.IntegerField()
@@ -75,7 +105,7 @@ class Gene(BaseModel):
         choices=STRAND_CHOICES,
         default=Strand.UNSTRANDED.value)
     type = models.CharField(
-        max_length=20,
+        max_length=30,
         default='unknown'
     )
     gene_biotype = models.CharField(
@@ -94,15 +124,16 @@ class Gene(BaseModel):
         max_length=20,
         default='unknown')
     source = models.CharField(
-        max_length=30)
+        max_length=50)
     # note: in the save method below, a unique integer is appended to the
     # default value if the this field is left blank on input
     alias = models.CharField(
-        max_length=20,
+        max_length=150,
         default='unknown')
-    tf = models.BooleanField(
-        default=False)
-    
+    note = models.CharField(
+        max_length=1000,
+        default='none')
+
     def save(self, *args, **kwargs):
 
         # Get the maximum value of the auto-incremented field in the table
@@ -110,20 +141,21 @@ class Gene(BaseModel):
         # Check if the systematic field has the default value
         if self.locus_tag == 'unknown':
             self.locus_tag = f'unknown_{max_id + 1}'
-        
+
         if self.gene == 'unknown':
             self.gene = f'unknown_{max_id + 1}'
-        
+
         if self.alias == 'unknown':
             self.alias = f'unknown_{max_id + 1}'
-        
+
         super().save(*args, **kwargs)
-    
+
     class Meta:
         managed = True
         db_table = 'gene'
 
-class PromoterRegions(BaseModel):
+
+class PromoterRegions(GenonomicCoordinatesMixin, BaseModel):
 
     NOT_ORF = 'not_orf'
     YIMING = 'yiming'
@@ -133,9 +165,9 @@ class PromoterRegions(BaseModel):
 
     chr = models.ForeignKey(
         'ChrMap',
-        models.PROTECT)
-    start = models.IntegerField()
-    # TODO put constraint on end cannot be past end of chr
+        models.PROTECT,
+        db_index=True)
+    start = models.PositiveBigIntegerField()
     end = models.IntegerField()
     strand = models.CharField(
         max_length=1,
@@ -143,7 +175,9 @@ class PromoterRegions(BaseModel):
         default=Strand.UNSTRANDED.value)
     associated_feature = models.ForeignKey(
         'gene',
-        models.PROTECT)
+        models.PROTECT,
+        db_index=True,
+        related_name='promoter_regions')
     associated_direction = models.CharField(
         max_length=1,
         choices=STRAND_CHOICES,
@@ -165,22 +199,27 @@ class PromoterRegions(BaseModel):
 
 class HarbisonChIP(BaseModel):
 
+    # note that foreignkey fields automatically
+    # create an index on the field
     gene = models.ForeignKey(
         'Gene',
         models.PROTECT,
-        related_name='harbison_chip_gene')
-    effect = models.FloatField()
-    pval = models.FloatField(
-        validators=[MinValueValidator(0), MaxValueValidator(1)]
-    )
+        related_name='harbison_chip_gene',
+        db_index=True)
     tf = models.ForeignKey(
         'Gene',
         models.PROTECT,
-        related_name='harbison_chip_tf')
+        related_name='harbison_chip_tf',
+        db_index=True)
+    pval = models.FloatField(
+        validators=[MinValueValidator(0), MaxValueValidator(1)]
+    )
 
     class Meta:
         managed = True
         db_table = 'harbison_chip'
+
+    objects = HarbisonChIPQuerySet.as_manager()
 
 
 class KemmerenTFKO(BaseModel):
@@ -194,7 +233,8 @@ class KemmerenTFKO(BaseModel):
     tf = models.ForeignKey(
         'Gene',
         models.PROTECT,
-        related_name='kemmeren_tfko_tf')
+        related_name='kemmeren_tfko_tf',
+        db_index=True)
 
     class Meta:
         managed = True
@@ -210,7 +250,8 @@ class McIsaacZEV(BaseModel):
     tf = models.ForeignKey(
         'Gene',
         models.PROTECT,
-        related_name='mcisaac_zev_tf')
+        related_name='mcisaac_zev_tf',
+        db_index=True)
 
     class Meta:
         managed = True
@@ -225,7 +266,8 @@ class Background(BaseModel):
                       (ADH1, 'adh1'))
 
     chr = models.ForeignKey(
-        'ChrMap', models.PROTECT)
+        'ChrMap', models.PROTECT,
+        db_index=True)
     start = models.IntegerField()
     # TODO put constraint on end cannot be past end of chr
     end = models.IntegerField()
@@ -248,7 +290,8 @@ class CCTF(BaseModel):
      interrogated with calling cards"""
     tf = models.ForeignKey(
         'Gene',
-        models.PROTECT)
+        models.PROTECT,
+        db_index=True)
     strain = models.CharField(
         max_length=20,
         default='unknown'
@@ -275,7 +318,8 @@ class CCExperiment(BaseModel):
     # id of a record in the gene table
     tf = models.ForeignKey(
         'CCTF',
-        models.CASCADE)
+        models.CASCADE,
+        db_index=True)
     # when the same tf is used in multiple experiments, each sample should be
     # uniquely identified by batch_replicate
     batch_replicate = models.PositiveSmallIntegerField(
@@ -290,7 +334,8 @@ class CCExperiment(BaseModel):
 class Hops(BaseModel):
     chr = models.ForeignKey(
         'ChrMap',
-        models.PROTECT)
+        models.PROTECT,
+        db_index=True)
     start = models.IntegerField()
     # TODO put constraint on end cannot be past end of chr
     end = models.IntegerField()
@@ -301,7 +346,8 @@ class Hops(BaseModel):
     depth = models.PositiveIntegerField()
     experiment = models.ForeignKey(
         'CCExperiment',
-        models.CASCADE)
+        models.CASCADE,
+        db_index=True)
 
     class Meta:
         managed = True
@@ -311,20 +357,15 @@ class Hops(BaseModel):
 class HopsReplicateSig(BaseModel):
     """Significance of a HOPS peak in single replicate for a given
      background and promoter region definition"""
-    
+
     experiment = models.ForeignKey(
         'CCExperiment',
-        models.CASCADE)
-    chr = models.ForeignKey(
-        'ChrMap',
-        models.PROTECT)
-    start = models.IntegerField()
-    # TODO put constraint on end cannot be past end of chr
-    end = models.IntegerField()
-    strand = models.CharField(
-        max_length=1,
-        choices=STRAND_CHOICES,
-        default=Strand.UNSTRANDED.value)
+        models.CASCADE,
+        db_index=True)
+    promoter = models.ForeignKey(
+        'PromoterRegions',
+        models.PROTECT,
+        db_index=True)
     bg_hops = models.PositiveIntegerField()
     expr_hops = models.PositiveIntegerField()
     poisson_pval = models.FloatField(
@@ -337,10 +378,8 @@ class HopsReplicateSig(BaseModel):
         max_length=10,
         choices=Background.SOURCE_CHOICES
     )
-    promoters = models.CharField(
-        max_length=20,
-        choices=PromoterRegions.SOURCE_CHOICES
-    )
+
+    objects = HopsReplicateSigQuerySet.as_manager()
 
     class Meta:
         managed = True
@@ -348,22 +387,26 @@ class HopsReplicateSig(BaseModel):
 
 
 class QcMetrics(BaseModel):
-    
+
     experiment = models.ForeignKey(
         'CCExperiment',
-        models.CASCADE)
-    total_aligned = models.PositiveIntegerField()
+        models.CASCADE,
+        db_index=True)
+    total_reads = models.PositiveIntegerField()
     unmapped = models.PositiveIntegerField()
     multimapped = models.PositiveIntegerField()
     genome_mapped = models.PositiveIntegerField()
-    plasmid_mapped = models.PositiveIntegerField()
-    # note the sum of the hops is total hops
-    genome_hops = models.PositiveIntegerField()
-    plasmid_hops = models.PositiveIntegerField()
+    plasmid_mapped = models.IntegerField(
+        validators=[MinValueValidator(-1)]
+    )
     hpaii = models.PositiveIntegerField()
     hinp1i = models.PositiveIntegerField()
     taqai = models.PositiveIntegerField()
     undet = models.PositiveIntegerField()
+    note = models.CharField(
+        max_length=50,
+        default='none'
+    )
 
     class Meta:
         managed = True
@@ -376,20 +419,24 @@ class QcManualReview(BaseModel):
 
     YES = 'yes'
     NO = 'no'
+    NOTE = 'note'
 
     UNREVIEWED = 'unreviewed'
 
     PASS_FAIL = ((PASS, 'pass'),
                  (FAIL, 'fail'),
-                 (UNREVIEWED, 'unreviewed'))
+                 (UNREVIEWED, 'unreviewed'),
+                 (NOTE, 'note'))
 
     YES_NO = ((YES, 'yes'),
               (NO, 'no'),
-              (UNREVIEWED, 'unreviewed'))
+              (UNREVIEWED, 'unreviewed'),
+              (NOTE, 'note'))
 
     experiment = models.ForeignKey(
         'CCExperiment',
-        models.CASCADE)
+        models.CASCADE,
+        db_index=True)
     rank_recall = models.CharField(
         max_length=10,
         choices=PASS_FAIL,
@@ -406,7 +453,7 @@ class QcManualReview(BaseModel):
         max_length=10,
         choices=YES_NO,
         default=UNREVIEWED)
-    notes = models.CharField(
+    note = models.CharField(
         max_length=100,
         default='none'
     )
@@ -419,9 +466,16 @@ class QcManualReview(BaseModel):
 class QcR1ToR2Tf(BaseModel):
     experiment = models.ForeignKey(
         'CCExperiment',
-        models.CASCADE)
+        models.CASCADE,
+        db_index=True)
     edit_dist = models.PositiveSmallIntegerField()
-    tally = models.PositiveSmallIntegerField()
+    tally = models.SmallIntegerField(
+        validators=[MinValueValidator(-1)]
+    )
+    note = models.CharField(
+        max_length=100,
+        default='none'
+    )
 
     class Meta:
         managed = True
@@ -431,9 +485,16 @@ class QcR1ToR2Tf(BaseModel):
 class QcR2ToR1Tf(BaseModel):
     experiment = models.ForeignKey(
         'CCExperiment',
-        models.CASCADE)
+        models.CASCADE,
+        db_index=True)
     edit_dist = models.IntegerField()
-    tally = models.IntegerField()
+    tally = models.SmallIntegerField(
+        validators=[MinValueValidator(-1)]
+    )
+    note = models.CharField(
+        max_length=100,
+        default='none'
+    )
 
     class Meta:
         managed = True
@@ -443,9 +504,16 @@ class QcR2ToR1Tf(BaseModel):
 class QcTfToTransposon(BaseModel):
     experiment = models.ForeignKey(
         'CCExperiment',
-        models.CASCADE)
+        models.CASCADE,
+        db_index=True)
     edit_dist = models.IntegerField()
-    tally = models.IntegerField()
+    tally = models.SmallIntegerField(
+        validators=[MinValueValidator(-1)]
+    )
+    note = models.CharField(
+        max_length=100,
+        default='none'
+    )
 
     class Meta:
         managed = True

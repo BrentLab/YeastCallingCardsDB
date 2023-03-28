@@ -3,7 +3,6 @@ from os.path import join
 from distutils.util import strtobool
 
 from dotenv import load_dotenv
-import dj_database_url
 
 from configurations import Configuration
 
@@ -27,6 +26,7 @@ class Common(Configuration):
         'rest_framework',            # utilities for rest apis
         'rest_framework.authtoken',  # token authentication
         'django_filters',            # for filtering rest endpoints
+        'django_extensions',         # additional tools added to manage.py
 
         # Your apps
         'callingcards.users',
@@ -185,6 +185,7 @@ class Common(Configuration):
 
     # Django Rest Framework
     REST_FRAMEWORK = {
+        'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
         'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
         'PAGE_SIZE': int(os.getenv('DJANGO_PAGINATION_LIMIT', 1000)),
         'DATETIME_FORMAT': '%Y-%m-%dT%H:%M:%S%z',
