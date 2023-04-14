@@ -143,7 +143,7 @@ class CustomCreateMixin:
         """
         many_flag = True if isinstance(request.data, list) else False
         kwargs = {
-            self.user_field: self.request.user,
+            self.user_field: self.request.user.pk,
             'serializer_class_path': f'{self.serializer_class.__module__}'
                                      f'.{self.serializer_class.__name__}'
         }
