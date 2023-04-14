@@ -30,6 +30,6 @@ class Local(Common):
     DATABASES = {
         'default': {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR + "/test_new.sqlite",
+            "NAME": BASE_DIR + "/test.sqlite",
         }
     }
