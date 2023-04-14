@@ -156,11 +156,20 @@ class Common(Configuration):
             'mail_admins': {
                 'level': 'ERROR',
                 'class': 'django.utils.log.AdminEmailHandler'
-            }
+            },
+            'file': {
+                'level': 'DEBUG',
+                'class': 'logging.handlers.RotatingFileHandler',
+                'filename': 'django.log',
+                'maxBytes': 1024 * 1024 * 10,  # Limit file size to 10 MB
+                'backupCount': 5,  # Keep up to 5 backup files
+                'formatter': 'verbose',
+            },
         },
         'loggers': {
             'django': {
-                'handlers': ['console'],
+                'handlers': ['console', 'file'],
+                'level': 'INFO',
                 'propagate': True,
             },
             'django.server': {
@@ -169,13 +178,18 @@ class Common(Configuration):
                 'propagate': False,
             },
             'django.request': {
-                'handlers': ['mail_admins', 'console'],
+                'handlers': ['mail_admins', 'console', 'file'],
                 'level': 'ERROR',
                 'propagate': False,
             },
             'django.db.backends': {
-                'handlers': ['console'],
+                'handlers': ['console', 'file'],
                 'level': 'INFO'
+            },
+            'callingcards.callingcards.views': {
+                'handlers': ['console', 'file'],
+                'level': 'INFO',
+                'propagate': False,
             },
         }
     }

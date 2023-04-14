@@ -8,15 +8,20 @@ from django.db import models  # pylint: disable=import-error # noqa # type: igno
 from django.core.validators import MinValueValidator, MaxValueValidator  # pylint: disable=import-error # noqa # type: ignore
 from django.conf import settings  # pylint: disable=import-error # noqa # type: ignore
 
-from .querysets import HopsReplicateSigQuerySet, HarbisonChIPQuerySet   # noqa # type: ignore
+from .querysets import (HopsReplicateSigQuerySet, 
+                        PromoterRegionsQuerySet,
+                        HarbisonChIPQuerySet,
+                        CCTFQuerySet)
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
+# eg 0.0000010400103010033001040302
+P_VAL_MAX_DIGITS = 29
+P_VAL_DECIMAL_PLACES = 28
 
-__all__ = ['ChrMap', 'Gene', 'PromoterRegions', 'HarbisonChIP', 'KemmerenTFKO',
-           'McIsaacZEV', 'Background', 'CCTF', 'CCExperiment', 'Hops',
-           'HopsReplicateSig', 'QcMetrics', 'QcManualReview',
-           'QcR1ToR2Tf', 'QcR2ToR1Tf', 'QcTfToTransposon']
+# eg 99999.0000010400103010033001040302
+EFFECT_MAX_DIGITS = 33
+EFFECT_DECIMAL_PLACES = 28
 
 class Strand(Enum):
     POSITIVE = '+'
@@ -27,6 +32,7 @@ class Strand(Enum):
 STRAND_CHOICES = ((Strand.POSITIVE.value, '+'),
                   (Strand.NEGATIVE.value, '-'),
                   (Strand.UNSTRANDED.value, '*'))
+
 
 class BaseModel(models.Model):
     uploader = models.ForeignKey(
@@ -90,7 +96,6 @@ class ChrMap(BaseModel):
         managed = True
         db_table = 'chr_map'
 
-
 class Gene(GenonomicCoordinatesMixin, BaseModel):
 
     chr = models.ForeignKey(
@@ -98,7 +103,6 @@ class Gene(GenonomicCoordinatesMixin, BaseModel):
         models.PROTECT,
         db_index=True)
     start = models.PositiveIntegerField()
-    # TODO put constraint on end cannot be past end of chr
     end = models.IntegerField()
     strand = models.CharField(
         max_length=1,
@@ -155,7 +159,10 @@ class Gene(GenonomicCoordinatesMixin, BaseModel):
         db_table = 'gene'
 
 
-class PromoterRegions(GenonomicCoordinatesMixin, BaseModel):
+class PromoterRegions(GenonomicCoordinatesMixin,
+                      BaseModel):
+
+    objects = PromoterRegionsQuerySet.as_manager()
 
     NOT_ORF = 'not_orf'
     YIMING = 'yiming'
@@ -177,7 +184,7 @@ class PromoterRegions(GenonomicCoordinatesMixin, BaseModel):
         'gene',
         models.PROTECT,
         db_index=True,
-        related_name='promoter_regions')
+        related_name='genepromoter')
     associated_direction = models.CharField(
         max_length=1,
         choices=STRAND_CHOICES,
@@ -199,41 +206,48 @@ class PromoterRegions(GenonomicCoordinatesMixin, BaseModel):
 
 class HarbisonChIP(BaseModel):
 
+    objects = HarbisonChIPQuerySet.as_manager()
+
     # note that foreignkey fields automatically
     # create an index on the field
     gene = models.ForeignKey(
         'Gene',
         models.PROTECT,
-        related_name='harbison_chip_gene',
+        related_name='harbisonchip_target',
         db_index=True)
     tf = models.ForeignKey(
         'Gene',
         models.PROTECT,
-        related_name='harbison_chip_tf',
+        related_name='harbisonchip_tf',
         db_index=True)
-    pval = models.FloatField(
-        validators=[MinValueValidator(0), MaxValueValidator(1)]
+    pval = models.DecimalField(
+        validators=[MinValueValidator(0), MaxValueValidator(1)],
+        max_digits=P_VAL_MAX_DIGITS,
+        decimal_places=P_VAL_DECIMAL_PLACES
     )
 
     class Meta:
         managed = True
         db_table = 'harbison_chip'
 
-    objects = HarbisonChIPQuerySet.as_manager()
-
 
 class KemmerenTFKO(BaseModel):
     gene = models.ForeignKey(
         'Gene',
         models.PROTECT,
-        related_name='kemmeren_tfko_gene')
-    effect = models.FloatField()
-    padj = models.FloatField(
-        validators=[MinValueValidator(0), MaxValueValidator(1)])
+        related_name='kemmerentfko_target')
+    effect = models.DecimalField(
+        max_digits=EFFECT_MAX_DIGITS,
+        decimal_places=EFFECT_DECIMAL_PLACES
+    )
+    padj = models.DecimalField(
+        validators=[MinValueValidator(0), MaxValueValidator(1)],
+        max_digits=P_VAL_MAX_DIGITS,
+        decimal_places=P_VAL_DECIMAL_PLACES)
     tf = models.ForeignKey(
         'Gene',
         models.PROTECT,
-        related_name='kemmeren_tfko_tf',
+        related_name='kemmerentfko_tf',
         db_index=True)
 
     class Meta:
@@ -245,12 +259,21 @@ class McIsaacZEV(BaseModel):
     gene = models.ForeignKey(
         'Gene',
         models.PROTECT,
-        related_name='mcisaac_zev_gene')
-    effect = models.FloatField()
+        related_name='mcisaaczev_target')
+    effect = models.DecimalField(
+        max_digits=EFFECT_MAX_DIGITS,
+        decimal_places=EFFECT_DECIMAL_PLACES
+    )
+    pval = models.DecimalField(
+        validators=[MinValueValidator(0), MaxValueValidator(1)],
+        default=0.0,
+        null=False,
+        max_digits=P_VAL_MAX_DIGITS,
+        decimal_places=P_VAL_DECIMAL_PLACES)
     tf = models.ForeignKey(
         'Gene',
         models.PROTECT,
-        related_name='mcisaac_zev_tf',
+        related_name='mcisaaczev_tf',
         db_index=True)
 
     class Meta:
@@ -288,6 +311,9 @@ class Background(BaseModel):
 class CCTF(BaseModel):
     """this table is used to store a list of the transcription factors
      interrogated with calling cards"""
+    
+    objects = CCTFQuerySet.as_manager()
+
     tf = models.ForeignKey(
         'Gene',
         models.PROTECT,
@@ -306,6 +332,7 @@ class CCTF(BaseModel):
     class Meta:
         managed = True
         db_table = 'cc_tf'
+
 
 class CCExperiment(BaseModel):
     """this table is used to keep a record of the batches (most likely runs)
@@ -358,6 +385,8 @@ class HopsReplicateSig(BaseModel):
     """Significance of a HOPS peak in single replicate for a given
      background and promoter region definition"""
 
+    objects = HopsReplicateSigQuerySet.as_manager()
+
     experiment = models.ForeignKey(
         'CCExperiment',
         models.CASCADE,
@@ -368,18 +397,20 @@ class HopsReplicateSig(BaseModel):
         db_index=True)
     bg_hops = models.PositiveIntegerField()
     expr_hops = models.PositiveIntegerField()
-    poisson_pval = models.FloatField(
-        validators=[MinValueValidator(0), MaxValueValidator(1)]
+    poisson_pval = models.DecimalField(
+        validators=[MinValueValidator(0), MaxValueValidator(1)],
+        max_digits=P_VAL_MAX_DIGITS,
+        decimal_places=P_VAL_DECIMAL_PLACES
     )
-    hypergeom_pval = models.FloatField(
-        validators=[MinValueValidator(0), MaxValueValidator(1)]
+    hypergeom_pval = models.DecimalField(
+        validators=[MinValueValidator(0), MaxValueValidator(1)],
+        max_digits=P_VAL_MAX_DIGITS,
+        decimal_places=P_VAL_DECIMAL_PLACES
     )
     background = models.CharField(
         max_length=10,
         choices=Background.SOURCE_CHOICES
     )
-
-    objects = HopsReplicateSigQuerySet.as_manager()
 
     class Meta:
         managed = True

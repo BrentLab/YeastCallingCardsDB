@@ -1,30 +1,36 @@
+# pylint: disable=E1101
 import logging
 import json
 
-from rest_framework.settings import api_settings
 from django.urls import reverse
 from django.conf import settings
+from rest_framework.settings import api_settings
 from rest_framework.authtoken.models import Token
-from rest_framework.test import APITestCase, APIRequestFactory
+from rest_framework.test import APITestCase
 from rest_framework import status
 from faker import Faker
 import factory
 
 from callingcards.users.test.factories import UserFactory
 
-from callingcards.callingcards.models import ChrMap, Gene, PromoterRegions, \
-    HarbisonChIP, KemmerenTFKO, McIsaacZEV, Background, CCTF, \
-    CCExperiment, Hops, HopsReplicateSig, QcMetrics, QcManualReview, \
-    QcR1ToR2Tf, QcR2ToR1Tf, QcTfToTransposon
+from callingcards.callingcards.models import (ChrMap, Gene, PromoterRegions,
+                                              HarbisonChIP, KemmerenTFKO,
+                                              McIsaacZEV, Background, CCTF,
+                                              CCExperiment, Hops,
+                                              HopsReplicateSig, QcMetrics,
+                                              QcR1ToR2Tf, QcR2ToR1Tf,
+                                              QcTfToTransposon)
 
-from callingcards.callingcards.serializers import HarbisonChIPSerializer, \
-    HarbisonChIPAnnotatedSerializer
+from callingcards.callingcards.serializers import (HarbisonChIPSerializer,
+                                                   HarbisonChIPAnnotatedSerializer)  # noqa
 
-from .factories import ChrMapFactory, GeneFactory, PromoterRegionsFactory, \
-    HarbisonChIPFactory, KemmerenTFKOFactory, McIsaacZEVFactory, \
-    BackgroundFactory, CCTFFactory, CCExperimentFactory, HopsFactory, \
-    HopsReplicateSigFactory, QcMetricsFactory, QcManualReviewFactory, \
-    QcR1ToR2TfFactory, QcR2ToR1TfFactory, QcTfToTransposonFactory
+from .factories import (ChrMapFactory, GeneFactory, PromoterRegionsFactory,
+                        HarbisonChIPFactory, KemmerenTFKOFactory,
+                        McIsaacZEVFactory, BackgroundFactory, CCTFFactory,
+                        CCExperimentFactory, HopsFactory,
+                        HopsReplicateSigFactory, QcMetricsFactory,
+                        QcR1ToR2TfFactory, QcR2ToR1TfFactory,
+                        QcTfToTransposonFactory)
 
 from ..views import ExpressionViewSetViewSet
 
@@ -53,7 +59,7 @@ class TestChrMapViewSet(APITestCase):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def ttest_get_url(self):
+    def test_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
@@ -61,9 +67,9 @@ class TestChrMapViewSet(APITestCase):
         response = self.client.post(self.url, self.chr_data)
         assert response.status_code == status.HTTP_201_CREATED
 
-        chr = ChrMap.objects.get(pk=response.data.get('id'))
-        assert chr.chr == self.chr_data.get('chr')
-        assert chr.uploader.username == self.user.username
+        chr_record = ChrMap.objects.get(pk=response.data.get('id'))
+        assert chr_record.chr == self.chr_data.get('chr')
+        assert chr_record.uploader.username == self.user.username
 
 
 class TestGeneViewSet(APITestCase):
@@ -78,10 +84,9 @@ class TestGeneViewSet(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
         self.gene_data = factory.build(dict, FACTORY_CLASS=GeneFactory)
         self.gene_data['chr'] = self.chr_record.pk
-        # tmp, self.uploadDate, self.modified = \
-        #     [self.gene_data.pop(x) for x in
-        #      ['uploader', 'uploadDate', 'modified']]
+
         self.url = reverse('gene-list')
+
         settings.DEBUG = True
         self.gene_record_bulk_data = factory.build_batch(
             dict,
@@ -89,14 +94,12 @@ class TestGeneViewSet(APITestCase):
             FACTORY_CLASS=GeneFactory)
         for rec in self.gene_record_bulk_data:
             rec['chr'] = self.chr_record.pk
-            # tmp = [rec.pop(x) for x in
-            #        ['uploader', 'uploadDate', 'modified']]
 
     def test_post_fail(self):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def ttest_get_url(self):
+    def test_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
@@ -113,6 +116,25 @@ class TestGeneViewSet(APITestCase):
                                     data=json.dumps(self.gene_record_bulk_data),
                                     content_type='application/json')
         assert response.status_code == status.HTTP_201_CREATED
+
+    def test_get_fields(self):
+        response = self.client.get(reverse('gene-fields'))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('readable', response.data)
+        self.assertIn('writable', response.data)
+        self.assertIn('automatically_generated', response.data)
+        self.assertIn('filter', response.data)
+
+    def test_get_pagination_info(self):
+        response = self.client.get(reverse('gene-pagination-info'))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('default_page_size', response.data)
+        self.assertIn('page_size_limit', response.data)
+
+    def test_get_count(self):
+        response = self.client.get(reverse('gene-count'))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('count', response.data)
 
 
 class TestPromoterRegionsViewSet(APITestCase):
@@ -136,7 +158,7 @@ class TestPromoterRegionsViewSet(APITestCase):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def ttest_get_url(self):
+    def test_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
@@ -148,6 +170,38 @@ class TestPromoterRegionsViewSet(APITestCase):
         assert promoter_regions.associated_feature.pk == \
             self.promoter_regions_data.get('associated_feature')
         assert promoter_regions.uploader.username == self.user.username
+
+    def test_targets_endpoint(self):
+        # Create a PromoterRegions instance to have some data to test with
+        PromoterRegionsFactory.create(uploader=self.user,
+                                      associated_feature=self.gene_record)
+
+        targets_url = reverse('promoterregions-targets')
+        response = self.client.get(targets_url)
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_targets_count_endpoint(self):
+        count_url = reverse('promoterregions-targets-count')
+        response = self.client.get(count_url)
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data == {'count': PromoterRegions.objects.count()}
+
+    def test_targets_pagination_info_endpoint(self):
+        pagination_info_url = \
+            reverse('promoterregions-targets-pagination-info')
+        response = self.client.get(pagination_info_url)
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data == {
+            'default_page_size': api_settings.PAGE_SIZE,
+            'page_size_limit': settings.REST_FRAMEWORK.get('PAGE_SIZE', None)
+        }
+
+    def test_targets_fields_endpoint(self):
+        fields_url = reverse('promoterregions-targets-fields')
+        response = self.client.get(fields_url)
+        assert response.status_code == status.HTTP_200_OK
+        assert set(response.data.keys()) == \
+            {'readable', 'writable', 'automatically_generated', 'filter'}
 
 
 class TestHarbisonChIP(APITestCase):
@@ -232,15 +286,17 @@ class TestHarbisonChIP(APITestCase):
     def test_harbison_chip_fields_endpoint(self):
         response = self.client.get(reverse('harbisonchip-fields'))
         assert response.status_code == status.HTTP_200_OK
-        assert set(response.data.keys()) == {'readable', 'writable', 'automatically_generated', 'filter'}
+        assert set(response.data.keys()) == \
+            {'readable', 'writable', 'automatically_generated', 'filter'}
 
     def test_harbison_chip_with_annote_fields_endpoint(self):
         response = self.client.get(reverse('harbisonchip-with-annote-fields'))
         assert response.status_code == status.HTTP_200_OK
 
         expected_fields = {
-            'readable': ['tf_locus_tag', 'tf_gene', 'target_locus_tag',
-                         'target_gene', 'pval', 'gene_id', 'tf_id'],
+            'readable': ['tf_id', 'tf_locus_tag', 'tf_gene', 'target_gene_id',
+                         'target_locus_tag', 'target_gene',
+                         'binding_signal', 'experiment'],
             'writable': None,
             'automatically_generated': None,
             'filter': HarbisonChIPFilter.Meta.fields
@@ -296,7 +352,7 @@ class TestKemmerenTFKO(APITestCase):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def ttest_get_url(self):
+    def test_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
@@ -332,7 +388,7 @@ class TestMcIsaacZEV(APITestCase):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def ttest_get_url(self):
+    def test_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
@@ -367,7 +423,7 @@ class TestBackground(APITestCase):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def ttest_get_url(self):
+    def test_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
@@ -387,13 +443,10 @@ class TestCCTF(APITestCase):
     def setUp(self):
         logging.basicConfig(level=logging.DEBUG)
         self.user = UserFactory.create()
-        self.gene_record = GeneFactory.create()
+        self.gene_record = GeneFactory.create(uploader=self.user)
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
         self.cctf_data = factory.build(dict, FACTORY_CLASS=CCTFFactory)
         self.cctf_data['tf'] = self.gene_record.pk
-        # tmp, self.uploadDate, self.modified = \
-        #     [self.cctf_data.pop(x) for x in
-        #      ['uploader', 'uploadDate', 'modified']]
         self.url = reverse('cctf-list')
         settings.DEBUG = True
 
@@ -401,7 +454,7 @@ class TestCCTF(APITestCase):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def ttest_get_url(self):
+    def test_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
@@ -412,6 +465,15 @@ class TestCCTF(APITestCase):
         cctf = CCTF.objects.get(pk=response.data.get('id'))
         assert cctf.tf.pk == self.cctf_data.get('tf')
         assert cctf.uploader.username == self.user.username
+
+    def test_tf_list(self):
+        # Make a request to the tf_list endpoint
+        CCTFFactory.create(uploader=self.user, tf=self.gene_record)
+        response = self.client.get(reverse('cctf-tf-list'))
+        assert response.status_code == status.HTTP_200_OK
+
+        # Check if the returned data matches the expected data
+        assert self.gene_record.gene == response.data['results'][0].get('tf_gene')
 
 
 class TestCCExperiment(APITestCase):
@@ -436,7 +498,7 @@ class TestCCExperiment(APITestCase):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def ttest_get_url(self):
+    def test_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
@@ -473,7 +535,7 @@ class TestHops(APITestCase):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def ttest_get_url(self):
+    def test_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
@@ -500,9 +562,6 @@ class TestHopsReplicateSig(APITestCase):
         self.hopsreplicatesig_data = factory.build(dict, FACTORY_CLASS=HopsReplicateSigFactory)
         self.hopsreplicatesig_data['experiment'] = self.experiment_record.pk
         self.hopsreplicatesig_data['promoter'] = self.promoter_record.pk
-        # tmp, self.uploadDate, self.modified = \
-        #     [self.hopsreplicatesig_data.pop(x) for x in
-        #      ['uploader', 'uploadDate', 'modified']]
         self.url = reverse('hopsreplicatesig-list')
         settings.DEBUG = True
 
@@ -510,7 +569,7 @@ class TestHopsReplicateSig(APITestCase):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def ttest_get_url(self):
+    def test_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
@@ -524,7 +583,7 @@ class TestHopsReplicateSig(APITestCase):
         assert hopsreplicatesig.uploader.username == self.user.username
 
 
-class TestHopsReplicateSigViewSet(APITestCase):
+class TestHopsReplicateSigAnnotatedViewSet(APITestCase):
     """
     Tests /hops_replicate_sig with_annotations operations.
     """
@@ -627,7 +686,7 @@ class TestQcMetrics(APITestCase):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def ttest_get_url(self):
+    def test_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
@@ -652,17 +711,14 @@ class TestQcR1ToR2Tf(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
         self.qcr1tor2tf_data = factory.build(dict, FACTORY_CLASS=QcR1ToR2TfFactory)
         self.qcr1tor2tf_data['experiment'] = self.experiment_record.pk
-        # tmp, self.uploadDate, self.modified = \
-        #     [self.qcr1tor2tf_data.pop(x) for x in
-        #      ['uploader', 'uploadDate', 'modified']]
-        self.url = reverse('qcr1tor2tf-list')
+        self.url = reverse('qcr1tor2-list')
         settings.DEBUG = True
 
     def test_post_fail(self):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def ttest_get_url(self):
+    def test_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
@@ -686,17 +742,14 @@ class TestQcR2ToR1Tf(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
         self.qcr2tor1tf_data = factory.build(dict, FACTORY_CLASS=QcR2ToR1TfFactory)
         self.qcr2tor1tf_data['experiment'] = self.experiment_record.pk
-        # tmp, self.uploadDate, self.modified = \
-        #     [self.qcr2tor1tf_data.pop(x) for x in
-        #      ['uploader', 'uploadDate', 'modified']]
-        self.url = reverse('qcr2tor1tf-list')
+        self.url = reverse('qcr2tor1-list')
         settings.DEBUG = True
 
     def test_post_fail(self):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def ttest_get_url(self):
+    def test_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
@@ -720,9 +773,6 @@ class TestQcTfToTransposon(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
         self.qctftotransposon_data = factory.build(dict, FACTORY_CLASS=QcTfToTransposonFactory)
         self.qctftotransposon_data['experiment'] = self.experiment_record.pk
-        # tmp, self.uploadDate, self.modified = \
-        #     [self.qctftotransposon_data.pop(x) for x in
-        #      ['uploader', 'uploadDate', 'modified']]
         self.url = reverse('qctftotransposon-list')
         settings.DEBUG = True
 
@@ -730,7 +780,7 @@ class TestQcTfToTransposon(APITestCase):
         response = self.client.post(self.url, {})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def ttest_get_url(self):
+    def test_get_url(self):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_200_OK
 
@@ -743,6 +793,56 @@ class TestQcTfToTransposon(APITestCase):
         assert qctftotransposon.uploader.username == self.user.username
 
 
+class TestQcReviewViewSet(APITestCase):
+    """
+    Tests QcReviewViewSet operations.
+    """
+
+    def setUp(self):
+        self.user = UserFactory.create()
+        self.chr_record = ChrMapFactory.create()
+        self.experiment_record = CCExperimentFactory.create()
+        self.hops_record = HopsFactory.create(
+            uploader=self.user,
+            experiment=self.experiment_record)
+        self.qcr1tor2tf_record = QcR1ToR2TfFactory.create(
+            uploader=self.user,
+            experiment=self.experiment_record)
+        self.qcr2tor1tf_record = QcR2ToR1TfFactory.create(
+            uploader=self.user,
+            experiment=self.experiment_record)
+        self.unknown_feature = GeneFactory.create(
+            chr=self.chr_record,
+            uploader=self.user,
+            locus_tag='undetermined')
+
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
+
+        self.url = reverse('qcreview-list')
+
+    def test_get_url(self):
+        response = self.client.get(self.url)
+        assert response.status_code == status.HTTP_200_OK
+
+    # def test_put_single(self):
+    #     # Prepare update data
+    #     update_data = {
+    #         'rank_recall': 0.95,
+    #         'chip_better': True,
+    #         'data_usable': True,
+    #         'passing_replicate': True,
+    #         'note': 'Test note'
+    #     }
+
+    #     # Send a PUT request to update the QcManualReview related to the QcReview
+    #     response = self.client.put(f"{self.url}/", update_data)
+    #     assert response.status_code == status.HTTP_201_CREATED
+
+    #     # Check if the updated fields in the response match the input data
+    #     for key, value in update_data.items():
+    #         assert response.data[key] == value
+
 class TestExpressionViewSetViewSet(APITestCase):
     def setUp(self):
         self.view = ExpressionViewSetViewSet.as_view({'get': 'list'})
@@ -753,11 +853,11 @@ class TestExpressionViewSetViewSet(APITestCase):
         # Create some test data
         chr_record = ChrMapFactory.create(uploader=user)
         gene_record = GeneFactory.create(chr=chr_record, uploader=user)
-        experiment_record = CCExperimentFactory.create(uploader=user)
-        mcisaac_zev_record = McIsaacZEVFactory.create(gene=gene_record,
-                                                      uploader=user)
-        kemmeren_tfko_record = KemmerenTFKOFactory.create(tf=gene_record,
-                                                          uploader=user)
+        CCExperimentFactory.create(uploader=user)
+        McIsaacZEVFactory.create(gene=gene_record,
+                                 uploader=user)
+        KemmerenTFKOFactory.create(tf=gene_record,
+                                   uploader=user)
 
         # Set up request query parameters
         self.query_params = {

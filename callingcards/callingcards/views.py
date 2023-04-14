@@ -1,54 +1,75 @@
+# pylint: disable=E1101,W0212
 """Calling Cards API Views
 
 To interact with this model via a RESTful API, you can perform the following
     CRUD actions:
 
     1. Create (POST): To create a new ChrMap object, send a POST request to the
-       appropriate API endpoint (e.g., /api/chrmaps/) with the required fields
+       appropriate API endpoint (e.g., /api/chrmap/) with the required fields
        in the request body as JSON.
 
-    2. Read (GET): To retrieve an existing ChrMap object, send a GET request to
-       the specific API endpoint (e.g., /api/chrmaps/<id>/) using the object's ID.
-       To list all ChrMap objects, send a GET request to the list endpoint (e.g.,
-       /api/chrmaps/).
+    2. Read (GET): To retrieve an existing ChrMap object, send a GET request
+      to the specific API endpoint (e.g., /api/chrmap/<id>/) using the
+      object's ID. To list all ChrMap objects, send a GET request to the
+      list endpoint (e.g., /api/chrmap/).
 
     3. Update (PUT/PATCH): To update an existing ChrMap object, send a PUT (for
-       a complete update) or PATCH (for a partial update) request to the specific
-       API endpoint (e.g., /api/chrmaps/<id>/) with the updated fields in the
-       request body as JSON.
+       a complete update) or PATCH (for a partial update) request to the
+       specific API endpoint (e.g., /api/chrmap/<id>/) with the updated
+       fields in the request body as JSON.
 
     4. Delete (DELETE): To delete an existing ChrMap object, send a DELETE
-       request to the specific API endpoint (e.g., /api/chrmaps/<id>/).
+       request to the specific API endpoint (e.g., /api/chrmap/<id>/).
 """
 import logging
 
 from django_filters import rest_framework as filters
-from rest_framework.filters import OrderingFilter, SearchFilter
 from django.conf import settings
+from django.db.models import (Max, F, Q, Subquery, OuterRef,
+                              Count, Value, Case, When, CharField)
 from rest_framework.settings import api_settings
-from rest_framework.serializers import ModelSerializer
+from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.decorators import action
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework import viewsets
 from rest_framework.permissions import AllowAny
-from django.db.models import Max, F, Q, Subquery, OuterRef,\
-    Count, Value, Case, When, CharField
 
-from .filters import McIsaacZevFilter, KemmerenTfkoFilter, \
-    CCExperimentFilter, HopsReplicateSigFilter, GeneFilter, \
-    PromoterRegionsFilter, HarbisonChIPFilter
+from .filters import (McIsaacZevFilter, KemmerenTfkoFilter,
+                      CCExperimentFilter, HopsReplicateSigFilter, GeneFilter,
+                      PromoterRegionsFilter, HarbisonChIPFilter)
 
-from .models import *
+from .models import (ChrMap, Gene, PromoterRegions, HarbisonChIP,
+                     KemmerenTFKO, McIsaacZEV, Background, CCTF,
+                     CCExperiment, Hops, HopsReplicateSig, QcMetrics,
+                     QcManualReview, QcR1ToR2Tf, QcR2ToR1Tf,
+                     QcTfToTransposon)
 
-from .serializers import *
+from .serializers import (ChrMapSerializer, GeneSerializer,
+                          PromoterRegionsSerializer,
+                          PromoterRegionsTargetsOnlySerializer,
+                          HarbisonChIPSerializer,
+                          HarbisonChIPAnnotatedSerializer,
+                          KemmerenTFKOSerializer, McIsaacZEVSerializer,
+                          BackgroundSerializer, CCTFSerializer,
+                          CCTFListSerializer,
+                          CCExperimentSerializer, HopsSerializer,
+                          HopsReplicateSigSerializer,
+                          HopsReplicateSigAnnotatedSerializer,
+                          QcMetricsSerializer, QcManualReviewSerializer,
+                          QcR1ToR2TfSerializer, QcR2ToR1TfSerializer,
+                          QcTfToTransposonSerializer,
+                          BarcodeComponentsSummarySerializer,
+                          QcReviewSerializer, ExpressionViewSetSerializer)
 
-logging.getLogger(__name__).addHandler(logging.NullHandler())
+from .utils import queryset_to_string
+
+logger = logging.getLogger(__name__)
 
 __all__ = ['ChrMapViewSet', 'GeneViewSet', 'PromoterRegionsViewSet',
            'HarbisonChIPViewSet', 'KemmerenTFKOViewSet', 'McIsaacZEVViewSet',
            'BackgroundViewSet', 'CCTFViewSet', 'CCExperimentViewSet',
-           'HopsViewSet', 'HopsReplicacteSigViewSet', 'QcMetricsViewSet',
+           'HopsViewSet', 'HopsReplicateSigViewSet', 'QcMetricsViewSet',
            'QcManualReviewViewSet', 'QcR1ToR2ViewSet',
            'QcR2ToR1ViewSet', 'QcTfToTransposonViewSet',
            'QcR1ToR2TfSummaryViewSet', 'QcReviewViewSet',
@@ -77,7 +98,7 @@ class CustomCreateMixin:
     @property
     def user_field(self):
         """user field is the field from the model that will be
-          set to the current user. defaults to "uploder" """
+          set to the current user. defaults to "uploader" """
         return self._user_field or 'uploader'
 
     @user_field.setter
@@ -85,7 +106,7 @@ class CustomCreateMixin:
         self._user_field = value
 
     def create(self, request, *args, **kwargs):
-        """ overwrite default create to accept either single or mulitple
+        """ overwrite default create to accept either single or multiple
         records on create/update
             cite: https://stackoverflow.com/a/65078963/9708266
             accept either an array or a single object,
@@ -102,7 +123,11 @@ class CustomCreateMixin:
         serializer = self.get_serializer(data=request.data, many=many_flag)
         serializer.is_valid(raise_exception=True)
         serializer.save(**kwargs)
-        headers = self.get_success_headers(serializer.data)
+
+        if many_flag:
+            headers = None
+        else:
+            headers = self.get_success_headers(serializer.data)
 
         return Response(
             serializer.data,
@@ -125,14 +150,6 @@ class CountModelMixin(object):
         content = {'count': queryset.count()}
         return Response(content)
 
-class ViewRowCountMixin(object):
-    """this will add a count action to viewsets which are not model viewsets"""
-    @action(detail=False, methods=['get'])
-    def count(self, request, *args, **kwargs):
-        response = self.list(request, *args, **kwargs)
-        count = len(response.data)
-        return Response({"count": count})
-
 
 class PageSizeModelMixin(object):
     """
@@ -154,39 +171,34 @@ class PageSizeModelMixin(object):
 class ListModelFieldsMixin:
     @action(detail=False, methods=['get'])
     def fields(self, request, *args, **kwargs):
-        # Define a dummy serializer class for the model
-        # associated with the viewset
-        class DummySerializer(ModelSerializer):
-            class Meta:
-                model = self.queryset.model
-                fields = '__all__'
 
         # Get the _readable_fields attribute of the dummy serializer instance
         readable = [field.source for field in
-                    DummySerializer()._readable_fields]
+                    self.get_serializer()._readable_fields]
         writable = [field.source for field in
-                    DummySerializer()._writable_fields]
+                    self.get_serializer()._writable_fields]
         automatically_generated = ['id',
                                    'uploader',
                                    'uploadDate',
                                    'modified']
 
-        try:
-            filter_columns = self.filterset_class.Meta.fields
-        except AttributeError:
-            # Use the custom_filter_columns attribute if available
-            # this needs to be set in the viewset class when there is no
-            # filterset_class
-            filter_columns = getattr(self, 'custom_filter_columns', None)
+        filter_fields = kwargs.get('filter_fields', None)
+        if not filter_fields:
+            try:
+                filter_fields = self.filterset_class.Meta.fields
+            except AttributeError:
+                # Use the custom_filter_columns attribute if available
+                # this needs to be set in the viewset class when there is no
+                # filterset_class
+                filter_fields = getattr(self, 'custom_filter_columns', None)
 
         # Return the readable fields as a JSON response
         return Response({"readable": readable,
                          "writable": writable,
                          "automatically_generated":
                          automatically_generated,
-                         "filter": filter_columns},
+                         "filter": filter_fields},
                         status=status.HTTP_200_OK)
-
 
 class ChrMapViewSet(ListModelFieldsMixin,
                     CustomCreateMixin,
@@ -194,31 +206,38 @@ class ChrMapViewSet(ListModelFieldsMixin,
                     viewsets.ModelViewSet,
                     CountModelMixin):
     """
-    ChrMapViewSet is a Django viewset for the ChrMap model. It provides a RESTful
-    API for clients to interact with ChrMap objects, including creating, reading,
-    updating, and deleting instances.
+    ChrMapViewSet is a Django viewset for the ChrMap model. It provides 
+      a RESTful API for clients to interact with ChrMap objects, including 
+      creating, reading, updating, and deleting instances.
 
     Inheritance:
-        ListModelFieldsMixin: Provides a mixin to list all available fields for the model.
+        ListModelFieldsMixin: Provides a mixin to list all available fields 
+          for the model.
         CustomCreateMixin: Allows for custom creation of instances.
-        PageSizeModelMixin: Provides a mixin to handle pagination and page size.
+        PageSizeModelMixin: Provides a mixin to handle pagination and 
+          page size.
         viewsets.ModelViewSet: A base class for generic model viewsets.
-        CountModelMixin: Provides a mixin to return the total count of objects.
+        CountModelMixin: Provides a mixin to return the total count 
+          of objects.
 
     Attributes:
-        queryset: The base queryset for this viewset. Retrieves all ChrMap objects
-                  and orders them by their ID.
-        serializer_class: The serializer to use for handling ChrMap objects. In this
-                          case, it's the ChrMapSerializer.
+        queryset: The base queryset for this viewset. Retrieves all ChrMap 
+          objects and orders them by their ID.
+        serializer_class: The serializer to use for handling ChrMap objects. 
         permission_classes: Defines the permission classes for this viewset.
                             Allows any user to access this viewset.
 
     API Endpoints:
-        1. List: GET /api/chrmaps/ - Retrieves a paginated list of all ChrMap objects.
-        2. Create: POST /api/chrmaps/ - Creates a new ChrMap object with the provided data.
-        3. Retrieve: GET /api/chrmaps/<id>/ - Retrieves a specific ChrMap object by ID.
-        4. Update: PUT/PATCH /api/chrmaps/<id>/ - Updates a specific ChrMap object by ID.
-        5. Delete: DELETE /api/chrmaps/<id>/ - Deletes a specific ChrMap object by ID.
+        1. List: GET /api/chrmap/ - Retrieves a paginated list of all 
+           ChrMap objects.
+        2. Create: POST /api/chrmap/ - Creates a new ChrMap object with 
+          the provided data.
+        3. Retrieve: GET /api/chrmap/<id>/ - Retrieves a specific ChrMap 
+          object by ID.
+        4. Update: PUT/PATCH /api/chrmap/<id>/ - Updates a specific ChrMap 
+          object by ID.
+        5. Delete: DELETE /api/chrmap/<id>/ - Deletes a specific ChrMap 
+          object by ID.
     """
     queryset = ChrMap.objects.all().order_by('id')  # noqa
     serializer_class = ChrMapSerializer  # noqa
@@ -233,12 +252,56 @@ class GeneViewSet(ListModelFieldsMixin,
     """
     API endpoint that allows users to be viewed or edited.
     """
-    queryset = Gene.objects.all().order_by('id')  # noqa
-    serializer_class = GeneSerializer  # noqa
+    queryset = Gene.objects.all().order_by('id')
+    serializer_class = GeneSerializer
     permission_classes = (AllowAny,)
+
     filterset_class = GeneFilter
     filter_backends = [filters.DjangoFilterBackend, SearchFilter]
     search_fields = ['locus_tag', 'gene']
+    # leaving this here for now -- spent a lot of time getting the effects
+    # action to work -- this reduces the repeated code
+    # @action(detail=False, methods=['get'], url_path='effects',
+    #         url_name='effects')
+    # def effects(self, request, *args, **kwargs):
+    #     queryset = self.get_queryset()
+
+    #     page = self.paginate_queryset(queryset)
+    #     if page is not None:
+    #         serializer = self.get_serializer(page, many=True)
+    #         return self.get_paginated_response(serializer.data)
+
+    #     serializer = self.get_serializer(queryset, many=True)
+    #     return Response(serializer.data)
+
+    # @action(detail=False, url_path='effects/count',
+    #         url_name='effects-count')
+    # def effects_count(self, request, *args, **kwargs) -> Response:
+    #     return self.count(request, *args, **kwargs)
+
+    # @action(detail=False, url_path='effects/pagination_info',
+    #         url_name='effects-pagination-info')
+    # def effects_pagination_info(self, request,
+    #                             *args, **kwargs) -> Response:
+    #     return self.pagination_info(request, *args, **kwargs)
+
+    # @action(detail=False, methods=['get'], url_path='effects/fields',
+    #         url_name='effects-fields')
+    # def effects_fields(self, request, *args, **kwargs):
+    #     filter_fields = ['tf_gene', 'promoter_source', 'background']
+    #     return self.fields(request, *args, filter_fields=filter_fields)
+
+    # def get_queryset(self):
+    #     if 'effects' in self.request.path_info:
+    #         return Gene.objects.effects(**self.request.query_params)
+    #     else:
+    #         return Gene.objects.all().order_by('id')
+
+    # def get_serializer_class(self):
+    #     if 'effects' in self.request.path_info:
+    #         return GeneWithEffectsSerializer
+    #     else:
+    #         return GeneSerializer
 
 
 class PromoterRegionsViewSet(ListModelFieldsMixin,
@@ -253,6 +316,62 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
     serializer_class = PromoterRegionsSerializer  # noqa
     permission_classes = (AllowAny,)
     filterset_class = PromoterRegionsFilter
+
+    filter_backends = [filters.DjangoFilterBackend, SearchFilter]
+    search_fields = ['associated_feature__locus_tag',
+                     'associated_feature__gene', 'source']
+
+    @action(detail=False, methods=['get'], url_path='targets',
+            url_name='targets')
+    def targets(self, request, *args, **kwargs):
+        targets_queryset = PromoterRegions.objects\
+            .targets()\
+            .order_by('id')
+
+        # Apply the filtering
+        filtered_queryset = self.filter_queryset(targets_queryset)
+
+        page = self.paginate_queryset(filtered_queryset)
+        if page is not None:
+            serializer = PromoterRegionsTargetsOnlySerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = PromoterRegionsTargetsOnlySerializer(filtered_queryset,
+                                                          many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, url_path='targets/count',
+            url_name='targets-count')
+    def targets_count(self, request, *args, **kwargs) -> Response:
+        annote_qs = PromoterRegions.objects.targets()
+        annote_qs_fltr = PromoterRegionsFilter(
+            self.request.GET,
+            queryset=annote_qs)
+        content = {'count': self.get_count(annote_qs_fltr.qs)}
+        return Response(content)
+
+    @action(detail=False, url_path='targets/pagination_info',
+            url_name='targets-pagination-info')
+    def targets_pagination_info(self, request,
+                                *args, **kwargs) -> Response:
+        return self.pagination_info(request, *args, **kwargs)
+
+    @action(detail=False, methods=['get'], url_path='targets/fields',
+            url_name='targets-fields')
+    def targets_fields(self, request, *args, **kwargs):
+        readable = [field.source for field in
+                    PromoterRegionsTargetsOnlySerializer()._readable_fields]
+        writable = None
+        automatically_generated = None
+        filter_columns = PromoterRegionsFilter.Meta.fields
+
+        # Return the readable fields as a JSON response
+        return Response({"readable": readable,
+                         "writable": writable,
+                         "automatically_generated":
+                         automatically_generated,
+                         "filter": filter_columns},
+                        status=status.HTTP_200_OK)
 
 
 class HarbisonChIPViewSet(ListModelFieldsMixin,
@@ -269,11 +388,14 @@ class HarbisonChIPViewSet(ListModelFieldsMixin,
     filterset_class = HarbisonChIPFilter
 
     filter_backends = [filters.DjangoFilterBackend, SearchFilter]
-    search_fields = ['tf__locus_tag', 'gene__gene']
+    search_fields = ['associated_feature__locus_tag',
+                     'associated_feature__gene', 'source']
 
-    @action(detail=False, methods=['get'], url_path='with_annote', url_name='with-annote')
+    @action(detail=False, methods=['get'], url_path='with_annote',
+            url_name='with-annote')
     def with_annotations(self, request, *args, **kwargs):
-        annotated_queryset = HarbisonChIP.objects.with_annotations().order_by('id')
+        annotated_queryset = HarbisonChIP.objects\
+            .with_annotations().order_by('id')
 
         # Apply the filtering
         filtered_queryset = self.filter_queryset(annotated_queryset)
@@ -283,10 +405,12 @@ class HarbisonChIPViewSet(ListModelFieldsMixin,
             serializer = HarbisonChIPAnnotatedSerializer(page, many=True)
             return self.get_paginated_response(serializer.data)
 
-        serializer = HarbisonChIPAnnotatedSerializer(filtered_queryset, many=True)
+        serializer = HarbisonChIPAnnotatedSerializer(
+            filtered_queryset, many=True)
         return Response(serializer.data)
 
-    @action(detail=False, url_path='with_annote/count', url_name='with-annote-count')
+    @action(detail=False, url_path='with_annote/count',
+            url_name='with-annote-count')
     def with_annotations_count(self, request, *args, **kwargs) -> Response:
         annote_qs = HarbisonChIP.objects.with_annotations()
         annote_qs_fltr = HarbisonChIPFilter(
@@ -295,13 +419,17 @@ class HarbisonChIPViewSet(ListModelFieldsMixin,
         content = {'count': self.get_count(annote_qs_fltr.qs)}
         return Response(content)
 
-    @action(detail=False, url_path='with_annote/pagination_info', url_name='with-annote-pagination-info')
-    def with_annotations_pagination_info(self, request, *args, **kwargs) -> Response:
+    @action(detail=False, url_path='with_annote/pagination_info',
+            url_name='with-annote-pagination-info')
+    def with_annotations_pagination_info(self, request,
+                                         *args, **kwargs) -> Response:
         return self.pagination_info(request, *args, **kwargs)
 
-    @action(detail=False, methods=['get'], url_path='with_annote/fields', url_name='with-annote-fields')
+    @action(detail=False, methods=['get'], url_path='with_annote/fields',
+            url_name='with-annote-fields')
     def with_annotation_fields(self, request, *args, **kwargs):
-        # Get the _readable_fields attribute of the HarbisonChIPAnnotatedSerializer instance
+        # Get the _readable_fields attribute of the
+        # HarbisonChIPAnnotatedSerializer instance
         readable = [field.source for field in
                     HarbisonChIPAnnotatedSerializer()._readable_fields]
         writable = None
@@ -329,6 +457,12 @@ class KemmerenTFKOViewSet(ListModelFieldsMixin,
     serializer_class = KemmerenTFKOSerializer  # noqa
     permission_classes = (AllowAny,)
 
+    filter_backends = [filters.DjangoFilterBackend, SearchFilter]
+    search_fields = ['tf__locus_tag', 'tf__gene',
+                     'gene__locus_tag', 'gene__gene']
+
+    filterset_class = KemmerenTfkoFilter
+
 
 class McIsaacZEVViewSet(ListModelFieldsMixin,
                         CustomCreateMixin,
@@ -341,6 +475,11 @@ class McIsaacZEVViewSet(ListModelFieldsMixin,
     queryset = McIsaacZEV.objects.all().order_by('id')  # noqa
     serializer_class = McIsaacZEVSerializer  # noqa
     permission_classes = (AllowAny,)
+    filterset_class = McIsaacZevFilter
+
+    filter_backends = [filters.DjangoFilterBackend, SearchFilter]
+    search_fields = ['tf__locus_tag', 'tf__gene',
+                     'gene__locus_tag', 'gene__gene']
 
 
 class BackgroundViewSet(ListModelFieldsMixin,
@@ -367,6 +506,48 @@ class CCTFViewSet(ListModelFieldsMixin,
     queryset = CCTF.objects.all().order_by('id')  # noqa
     serializer_class = CCTFSerializer  # noqa
     permission_classes = (AllowAny,)
+
+    @action(detail=False, methods=['get'], url_path='tf_list',
+            url_name='tf-list')
+    def tf_list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, url_path='tf_list/count',
+            url_name='tf-list-count')
+    def effects_count(self, request, *args, **kwargs) -> Response:
+        return self.count(request, *args, **kwargs)
+
+    @action(detail=False, url_path='tf_list/pagination_info',
+            url_name='tf-list-pagination-info')
+    def effects_pagination_info(self, request,
+                                *args, **kwargs) -> Response:
+        return self.pagination_info(request, *args, **kwargs)
+
+    @action(detail=False, methods=['get'], url_path='tf_list/fields',
+            url_name='tf-list-fields')
+    def effects_fields(self, request, *args, **kwargs):
+        filter_fields = None
+        return self.fields(request, *args, filter_fields=filter_fields)
+
+    def get_queryset(self):
+        if 'tf_list' in self.request.path_info:
+            return CCTF.objects.tf_list()
+        else:
+            return CCTF.objects.all().order_by('id')
+
+    def get_serializer_class(self):
+        if 'tf_list' in self.request.path_info:
+            return CCTFListSerializer
+        else:
+            return CCTFSerializer
 
 
 class CCExperimentViewSet(ListModelFieldsMixin,
@@ -396,11 +577,11 @@ class HopsViewSet(ListModelFieldsMixin,
     permission_classes = (AllowAny,)
 
 
-class HopsReplicacteSigViewSet(ListModelFieldsMixin,
-                               CustomCreateMixin,
-                               PageSizeModelMixin,
-                               viewsets.ModelViewSet,
-                               CountModelMixin):
+class HopsReplicateSigViewSet(ListModelFieldsMixin,
+                              CustomCreateMixin,
+                              PageSizeModelMixin,
+                              viewsets.ModelViewSet,
+                              CountModelMixin):
     """
     API endpoint that allows users to be viewed or edited.
     """
@@ -409,9 +590,17 @@ class HopsReplicacteSigViewSet(ListModelFieldsMixin,
     permission_classes = (AllowAny,)
     filterset_class = HopsReplicateSigFilter
 
-    @action(detail=False, methods=['get'], url_path='with_annote', url_name='with-annote')
+    filter_backends = [filters.DjangoFilterBackend, SearchFilter]
+    search_fields = ['promoterregions__associated_features__locus_tag',
+                     'promoterregions___associated_features__gene',
+                     'experiment__tf__tf__locus_tag',
+                     'experiment___tf__tf__gene']
+
+    @action(detail=False, methods=['get'], url_path='with_annote',
+            url_name='with-annote')
     def with_annotations(self, request, *args, **kwargs):
-        annotated_queryset = HopsReplicateSig.objects.with_annotations().order_by('id')
+        annotated_queryset = HopsReplicateSig.objects\
+            .with_annotations().order_by('id')
 
         # Apply the filtering
         filtered_queryset = self.filter_queryset(annotated_queryset)
@@ -421,23 +610,29 @@ class HopsReplicacteSigViewSet(ListModelFieldsMixin,
             serializer = HopsReplicateSigAnnotatedSerializer(page, many=True)
             return self.get_paginated_response(serializer.data)
 
-        serializer = HopsReplicateSigAnnotatedSerializer(filtered_queryset, many=True)
+        serializer = HopsReplicateSigAnnotatedSerializer(filtered_queryset,
+                                                         many=True)
         return Response(serializer.data)
 
-    @action(detail=False, url_path='with_annote/count', url_name='with-annote-count')
+    @action(detail=False, url_path='with_annote/count',
+            url_name='with-annote-count')
     def with_annotations_count(self, request, *args, **kwargs) -> Response:
-        hops_with_annotations = HopsReplicateSig.objects.with_annotations()
+        hops_with_annotations = HopsReplicateSig\
+            .objects.with_annotations()
         hops_with_annotations_fltr = HopsReplicateSigFilter(
             self.request.GET,
             queryset=hops_with_annotations)
         content = {'count': self.get_count(hops_with_annotations_fltr.qs)}
         return Response(content)
 
-    @action(detail=False, url_path='with_annote/pagination_info', url_name='with-annote-pagination-info')
-    def with_annotations_pagination_info(self, request, *args, **kwargs) -> Response:
+    @action(detail=False, url_path='with_annote/pagination_info',
+            url_name='with-annote-pagination-info')
+    def with_annotations_pagination_info(self, request,
+                                         *args, **kwargs) -> Response:
         return self.pagination_info(request, *args, **kwargs)
 
-    @action(detail=False, url_path='with_annote/fields', url_name='with-annote-fields')
+    @action(detail=False, url_path='with_annote/fields',
+            url_name='with-annote-fields')
     def with_annotations_fields(self, request, *args, **kwargs) -> Response:
         # Use GeneWithEffectsSerializer instead of DummySerializer
         readable = [field.source for field in
@@ -544,14 +739,17 @@ class QcR1ToR2TfSummaryViewSet(viewsets.ViewSet):
                 r2_r1_max_tally=Max('qcr2tor1tf__tally'),
                 r2_r1_status=Subquery(r2_r1_max_tally_subquery),
             )
-            .filter(Q(r1_r2_max_tally__isnull=False) | Q(r2_r1_max_tally__isnull=False))
+            .filter(Q(r1_r2_max_tally__isnull=False)
+                    | Q(r2_r1_max_tally__isnull=False))
             .order_by('experiment_id')
             .values('experiment_id', 'r1_r2_status', 'r2_r1_status')
         )
 
         for item in query:
-            item['r1_r2_status'] = 'pass' if item['r1_r2_status'] == 0 else 'fail'
-            item['r2_r1_status'] = 'pass' if item['r2_r1_status'] == 0 else 'fail'
+            item['r1_r2_status'] = 'pass' if \
+                item['r1_r2_status'] == 0 else 'fail'
+            item['r2_r1_status'] = 'pass' if \
+                item['r2_r1_status'] == 0 else 'fail'
 
         serializer = BarcodeComponentsSummarySerializer(query, many=True)
         return Response(serializer.data)
@@ -566,6 +764,8 @@ class QcReviewViewSet(ListModelFieldsMixin,
     serializer_class = QcReviewSerializer
 
     filter_backends = [filters.DjangoFilterBackend]
+
+    filterset_class = CCExperimentFilter
 
     def get_queryset(self):
 
@@ -602,7 +802,7 @@ class QcReviewViewSet(ListModelFieldsMixin,
                 r1_r2_status=Subquery(r1_r2_max_tally_subquery),
                 r2_r1_max_tally=Max('qcr2tor1tf__tally'),
                 r2_r1_status=Subquery(r2_r1_max_tally_subquery),
-                map_unmap_ratio=F('qcmetrics__genome_mapped') / F('qcmetrics__unmapped'),
+                map_unmap_ratio=F('qcmetrics__genome_mapped') / F('qcmetrics__unmapped'),  # noqa
                 num_hops=Subquery(hop_count_subquery),
                 rank_recall=F('qcmanualreview__rank_recall'),
                 chip_better=F('qcmanualreview__chip_better'),
@@ -626,6 +826,7 @@ class QcReviewViewSet(ListModelFieldsMixin,
         return query
 
     def update(self, request, pk=None):
+        
         manual_review = QcManualReview.objects.get(pk=pk)
 
         qc_review_combined = self.get_queryset().get(experiment_id=pk)
@@ -635,8 +836,10 @@ class QcReviewViewSet(ListModelFieldsMixin,
         valid_fields = set(QcManualReviewSerializer().get_fields().keys())
 
         # Get the data fields to update and filter out any invalid fields
+        # TODO this expects a single dict, not a list. Should it accept a list?
+        # unlisting and extracting the first item is what the [0] is doing
         update_data = {key: value for key, value in
-                       request.data.items() if key in valid_fields}
+                       request.data[0].items() if key in valid_fields}
 
         serializer = QcManualReviewSerializer(
             manual_review,
@@ -697,7 +900,7 @@ class ExpressionViewSetViewSet(ListModelFieldsMixin,
                 target_locus_tag=F('gene_id__locus_tag'),
                 target_gene=F('gene_id__gene'),
                 effect_expr=F('effect'),
-                p_expr=Value(0),
+                p_expr=F('pval'),
                 source_expr=Value('mcisaac_zev'))\
             .values(*return_fields)
 
@@ -719,13 +922,26 @@ class ExpressionViewSetViewSet(ListModelFieldsMixin,
             .union(kemmeren_filtered_qs)\
             .order_by('source_expr', 'tf_id_alias')
 
+        # Log the kemmeren_filter.qs queryset
+        logger.debug('kemmeren_filter.qs: %s', 
+                     queryset_to_string(kemmeren_filter.qs))
+
+        # Log the kemmeren_filtered_qs queryset
+        logger.debug('kemmeren_filtered_qs: %s', 
+                     queryset_to_string(kemmeren_filtered_qs))
+
+        # Log the concatenated_query queryset
+        logger.debug('concatenated_query: %s', 
+                     queryset_to_string(concatenated_query))
+
         return concatenated_query
 
     @action(detail=False, methods=['get'])
     def fields(self, request, *args, **kwargs):
 
         # Get the _readable_fields attribute of the dummy serializer instance
-        readable = ['tf_alias', 'gene_alias', 'effect_expr', 'p_expr', 'source_expr']
+        readable = ['tf_alias', 'gene_alias', 'effect_expr',
+                    'p_expr', 'source_expr']
         writable = None
         automatically_generated = None
 

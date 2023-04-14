@@ -1,4 +1,3 @@
-import pytest
 from django.urls import reverse
 from django.contrib.auth.hashers import check_password
 from rest_framework.test import APITestCase

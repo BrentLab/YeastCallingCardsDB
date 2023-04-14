@@ -2,21 +2,12 @@ import logging
 
 from rest_framework import serializers
 
-from .models import *
+from .models import (ChrMap, Gene, PromoterRegions, HarbisonChIP,
+                     KemmerenTFKO, McIsaacZEV, Background, CCTF,
+                     CCExperiment, Hops, HopsReplicateSig, QcMetrics,
+                     QcManualReview, QcR1ToR2Tf, QcR2ToR1Tf, QcTfToTransposon)  # noqa
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
-
-__all__ = ['ChrMapSerializer', 'GeneSerializer', 'GeneWithEffectsSerializer',
-           'PromoterRegionsSerializer', 'HarbisonChIPSerializer',
-           'HarbisonChIPAnnotatedSerializer',
-           'KemmerenTFKOSerializer', 'McIsaacZEVSerializer',
-           'BackgroundSerializer', 'CCTFSerializer', 'CCExperimentSerializer',
-           'HopsSerializer', 'HopsReplicateSigSerializer',
-           'QcMetricsSerializer', 'QcManualReviewSerializer',
-           'QcR1ToR2TfSerializer', 'QcR2ToR1TfSerializer',
-           'QcTfToTransposonSerializer', 'BarcodeComponentsSummarySerializer',
-           'QcReviewSerializer', 'ExpressionViewSetSerializer',
-           'HopsReplicateSigAnnotatedSerializer']
 
 
 class ChrMapSerializer(serializers.ModelSerializer):
@@ -35,22 +26,20 @@ class GeneSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class GeneWithEffectsSerializer(serializers.Serializer):
-    id = serializers.IntegerField()
-    locus_tag = serializers.CharField()
-    mcisaac_zev_effect = serializers.FloatField(allow_null=True)
-    mcisaac_zev_p = serializers.FloatField()
-    kemmeren_tfko_effect = serializers.FloatField(allow_null=True)
-    kemmeren_tfko_p = serializers.FloatField(allow_null=True)
-    harbison_chip = serializers.FloatField(allow_null=True)
-
-
 class PromoterRegionsSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
 
     class Meta:
         model = PromoterRegions  # noqa
         fields = '__all__'
+
+
+class PromoterRegionsTargetsOnlySerializer(serializers.Serializer):
+    promoter_id = serializers.IntegerField()
+    target_gene_id = serializers.IntegerField()
+    target_locus_tag = serializers.CharField()
+    target_gene = serializers.CharField()
+    source = serializers.CharField()
 
 
 class HarbisonChIPSerializer(serializers.ModelSerializer):
@@ -62,13 +51,14 @@ class HarbisonChIPSerializer(serializers.ModelSerializer):
 
 
 class HarbisonChIPAnnotatedSerializer(serializers.Serializer):
+    tf_id = serializers.IntegerField()
     tf_locus_tag = serializers.CharField()
     tf_gene = serializers.CharField()
+    target_gene_id = serializers.IntegerField()
     target_locus_tag = serializers.CharField()
     target_gene = serializers.CharField()
-    pval = serializers.FloatField()
-    gene_id = serializers.IntegerField()
-    tf_id = serializers.IntegerField()
+    binding_signal = serializers.FloatField()
+    experiment = serializers.CharField()
 
 
 class KemmerenTFKOSerializer(serializers.ModelSerializer):
@@ -102,6 +92,10 @@ class CCTFSerializer(serializers.ModelSerializer):
         model = CCTF  # noqa
         fields = '__all__'
 
+class CCTFListSerializer(serializers.Serializer):
+    tf_id = serializers.IntegerField()
+    tf_locus_tag = serializers.CharField()
+    tf_gene = serializers.CharField()
 
 class CCExperimentSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
@@ -198,8 +192,10 @@ class ExpressionViewSetSerializer(serializers.Serializer):
     source_expr = serializers.CharField()
 
 class HopsReplicateSigAnnotatedSerializer(serializers.Serializer):
+    tf_id_alias = serializers.IntegerField()
     tf_locus_tag = serializers.CharField()
     tf_gene = serializers.CharField()
+    target_gene_id = serializers.IntegerField()
     target_locus_tag = serializers.CharField()
     target_gene = serializers.CharField()
     bg_hops = serializers.IntegerField()

@@ -4,15 +4,11 @@ import factory
 
 
 from callingcards.users.test.factories import UserFactory
-from ..models import *  # pylint: disable=W0401,W0614 # noqa
-
-__all__ = ['ChrMapFactory', 'GeneFactory', 'PromoterRegionsFactory',
-           'HarbisonChIPFactory', 'KemmerenTFKOFactory',
-           'McIsaacZEVFactory', 'BackgroundFactory', 'CCTFFactory',
-           'CCExperimentFactory', 'HopsFactory',
-           'HopsReplicateSigFactory', 'QcMetricsFactory',
-           'QcManualReviewFactory', 'QcR1ToR2TfFactory',
-           'QcR2ToR1TfFactory', 'QcTfToTransposonFactory']
+# from ..models import (ChrMap, Gene, PromoterRegions, HarbisonChIP,
+#                       KemmerenTFKO, McIsaacZEV, Background, CCTF,
+#                       CCExperiment, Hops, HopsReplicateSig, QcMetrics,
+#                       QcManualReview, QcR1ToR2Tf, QcR2ToR1Tf,
+#                       QcTfToTransposon)
 
 
 def close_value(value, min_diff=0.0001, max_diff=0.01):
@@ -56,7 +52,7 @@ class BaseModelFactoryMixin:
     uploadDate = factory.Faker('date_time_between',
                                start_date='-30d',
                                end_date='now')
-    modified = factory.LazyAttribute(lambda o: factory.Faker( #pylint: disable=E1101 # noqa
+    modified = factory.LazyAttribute(lambda o: factory.Faker(  # pylint: disable=E1101 # noqa
         'date_time_between',
         start_date=o.uploadDate,
         end_date='now').generate({}))
