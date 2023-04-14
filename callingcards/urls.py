@@ -18,7 +18,8 @@ from .callingcards.views import (ChrMapViewSet, GeneViewSet,
                                  QcR1ToR2ViewSet,
                                  QcR2ToR1ViewSet, QcTfToTransposonViewSet,
                                  QcR1ToR2TfSummaryViewSet,
-                                 QcReviewViewSet, ExpressionViewSetViewSet)
+                                 QcReviewViewSet, ExpressionViewSetViewSet,
+                                 check_task_status)
 
 
 router = DefaultRouter()
@@ -54,6 +55,7 @@ urlpatterns = [
     path('api/v1/', include(router.urls)),
     path('api-token-auth/', views.obtain_auth_token),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
+    path('check_task_status/<str:task_id>/', check_task_status, name='check_task_status'),
 
     # the 'api-root' from django rest-frameworks default router
     # http://www.django-rest-framework.org/api-guide/routers/#defaultrouter

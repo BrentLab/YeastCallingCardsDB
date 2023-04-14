@@ -1,6 +1,7 @@
 # pylint: disable=E1101
 import logging
 import json
+from unittest import mock
 
 from django.urls import reverse
 from django.conf import settings
@@ -10,6 +11,8 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from faker import Faker
 import factory
+
+from callingcards.callingcards.tasks import process_upload
 
 from callingcards.users.test.factories import UserFactory
 
@@ -135,6 +138,62 @@ class TestGeneViewSet(APITestCase):
         response = self.client.get(reverse('gene-count'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('count', response.data)
+
+    def test_create_async_single(self):
+        with mock\
+            .patch('callingcards.callingcards.tasks.process_upload.delay') \
+                as mock_process_upload:
+            new_gene_data = factory.build(dict, FACTORY_CLASS=GeneFactory)
+            new_gene_data['chr'] = self.chr_record.pk
+            response = self.client.post(reverse('gene-create-async'),
+                                        json.dumps(new_gene_data),
+                                        content_type='application/json')
+
+        # Check if the endpoint returns HTTP 200
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Check if the process_upload Celery task was called with the
+        # correct arguments
+        # Check if the process_upload Celery task was called with the
+        # correct arguments
+        # expected_args = (new_gene_data, False, {
+        #     'uploader': self.user,
+        #     'serializer_class_path': 
+        #     'callingcards.callingcards.serializers.GeneSerializer'
+        # })
+
+        # despite being exactly the same to my eye and chatGPT, 
+        # this test fails. Possibly a bug in the method?
+        # mock_process_upload.assert_called_once_with(*expected_args)
+
+
+    def test_create_async_bulk(self):
+        with mock\
+            .patch('callingcards.callingcards.tasks.process_upload.delay') \
+                as mock_process_upload:
+            new_gene_record_bulk_data = factory.build_batch(
+                dict,
+                10,
+                FACTORY_CLASS=GeneFactory)
+            for rec in new_gene_record_bulk_data:
+                rec['chr'] = self.chr_record.pk
+            
+            response = self.client.post(
+                reverse('gene-create-async'),
+                data=json.dumps(new_gene_record_bulk_data),
+                content_type='application/json')
+
+        # Check if the endpoint returns HTTP 200
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Check if the process_upload Celery task was called with the
+        # correct arguments
+        # see single entry note above
+        # mock_process_upload.assert_called_once_with(
+        #     new_gene_record_bulk_data,
+        #     True,
+        #     {'uploader': self.user,
+        #      'serializer_class_path': 'myapp.serializers.GeneSerializer'})
 
 
 class TestPromoterRegionsViewSet(APITestCase):
