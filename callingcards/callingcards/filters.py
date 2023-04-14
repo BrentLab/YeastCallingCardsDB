@@ -1,7 +1,7 @@
 import django_filters
-from .models import Gene, McIsaacZEV, KemmerenTFKO,\
-    HopsReplicateSig, CCExperiment, STRAND_CHOICES, PromoterRegions, \
-    HarbisonChIP
+from .models import (Gene, McIsaacZEV, KemmerenTFKO,
+                     HopsReplicateSig, CCExperiment, STRAND_CHOICES,
+                     PromoterRegions, HarbisonChIP)
 
 
 class GeneFilter(django_filters.FilterSet):
@@ -129,6 +129,9 @@ class KemmerenTfkoFilter(django_filters.FilterSet):
 
 
 class HarbisonChIPFilter(django_filters.FilterSet):
+    tf_id = django_filters.NumberFilter(
+        field_name="tf_id",
+        lookup_expr="exact")
     tf_locus_tag = django_filters.CharFilter(
         field_name="tf_id__locus_tag",
         lookup_expr="iexact")
@@ -144,34 +147,42 @@ class HarbisonChIPFilter(django_filters.FilterSet):
 
     class Meta:
         model = HarbisonChIP
-        fields = ['tf_locus_tag', 'tf_gene', 'target_locus_tag', 'target_gene']
+        fields = ['tf_id', 'tf_locus_tag', 'tf_gene',
+                  'target_locus_tag', 'target_gene']
 
 class CCExperimentFilter(django_filters.FilterSet):
+    experiment = django_filters.NumberFilter(
+        field_name="pk",
+        lookup_expr="in")
     batch = django_filters.CharFilter(
         field_name="batch",
         lookup_expr="iexact")
     batch_replicate = django_filters.CharFilter(
         field_name="batch_replicate",
         lookup_expr="iexact")
+    tf_id = django_filters.NumberFilter(
+        field_name="tf__tf",
+        lookup_expr="exact")
     tf_locus_tag = django_filters.CharFilter(
-        field_name="tf_id__locus_tag",
+        field_name="tf__tf__locus_tag",
         lookup_expr="iexact")
     tf_gene = django_filters.CharFilter(
-        field_name="tf_id__gene",
+        field_name="tf__tf__gene",
         lookup_expr="iexact")
 
     class Meta:
         model = CCExperiment
-        fields = ['batch', 'batch_replicate', 'tf_locus_tag', 'tf_gene']
+        fields = ['experiment', 'batch', 'batch_replicate',
+                  'tf_id', 'tf_locus_tag', 'tf_gene']
 
 
 class HopsReplicateSigFilter(django_filters.FilterSet):
 
     batch = django_filters.CharFilter(
-        field_name='cc_experiment__batch',
+        field_name='experiment__batch',
         lookup_expr="iexact")
     batch_replicate = django_filters.NumberFilter(
-        field_name='cc_experiment__batch_replicate',
+        field_name='experiment__batch_replicate',
         lookup_expr="iexact")
     background = django_filters.CharFilter(
         field_name='background',
@@ -179,14 +190,24 @@ class HopsReplicateSigFilter(django_filters.FilterSet):
     promoter_source = django_filters.CharFilter(
         field_name='promoter__source',
         lookup_expr="iexact")
+    tf_id = django_filters.NumberFilter(
+        field_name='experiment__tf__tf__id',
+        lookup_expr="exact")
     tf_locus_tag = django_filters.CharFilter(
-        field_name='tf_locus_tag',
+        field_name='experiment__tf__tf__locus_tag',
         lookup_expr="iexact")
     tf_gene = django_filters.CharFilter(
-        field_name='tf_gene',
+        field_name='experiment__tf__tf__gene',
+        lookup_expr="iexact")
+    target_locus_tag = django_filters.CharFilter(
+        field_name='promoter__associated_feature__locus_tag',
+        lookup_expr="iexact")
+    target_gene = django_filters.CharFilter(
+        field_name='promoter__associated_feature__gene',
         lookup_expr="iexact")
 
     class Meta:
         model = HopsReplicateSig
-        fields = ['batch', 'batch_replicate', 'background',
-                  'promoter_source', 'tf_locus_tag', 'tf_gene']
+        fields = ['experiment', 'batch', 'batch_replicate', 'background',
+                  'promoter_source', 'tf_id', 'tf_locus_tag', 'tf_gene', 
+                  'target_locus_tag', 'target_gene']

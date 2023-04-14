@@ -7,33 +7,44 @@ from rest_framework.routers import DefaultRouter
 from rest_framework.authtoken import views
 
 from .users.views import UserViewSet, UserCreateViewSet
-from .callingcards.views import *
+from .callingcards.views import (ChrMapViewSet, GeneViewSet,
+                                 PromoterRegionsViewSet, HarbisonChIPViewSet,
+                                 KemmerenTFKOViewSet,
+                                 McIsaacZEVViewSet, BackgroundViewSet,
+                                 CCTFViewSet,
+                                 CCExperimentViewSet, HopsViewSet,
+                                 HopsReplicateSigViewSet,
+                                 QcMetricsViewSet, QcManualReviewViewSet,
+                                 QcR1ToR2ViewSet,
+                                 QcR2ToR1ViewSet, QcTfToTransposonViewSet,
+                                 QcR1ToR2TfSummaryViewSet,
+                                 QcReviewViewSet, ExpressionViewSetViewSet)
 
 
 router = DefaultRouter()
 router.register(r'users', UserViewSet)
 router.register(r'users', UserCreateViewSet)
-router.register(r'chrmap', ChrMapViewSet)
-router.register(r'genes', GeneViewSet)
-router.register(r'promoterregions', PromoterRegionsViewSet)
-router.register(r'harbisonchip', HarbisonChIPViewSet)
-router.register(r'kemmerentfko', KemmerenTFKOViewSet)
-router.register(r'mcisaaczev', McIsaacZEVViewSet)
-router.register(r'background', BackgroundViewSet)
-router.register(r'cctf', CCTFViewSet)
-router.register(r'ccexperiment', CCExperimentViewSet)
-router.register(r'hops', HopsViewSet)
+router.register(r'chrmap', ChrMapViewSet, basename='chrmap')
+router.register(r'genes', GeneViewSet, basename='gene')
+router.register(r'promoterregions', PromoterRegionsViewSet, basename='promoterregions')
+router.register(r'harbisonchip', HarbisonChIPViewSet, basename='harbisonchip')
+router.register(r'kemmerentfko', KemmerenTFKOViewSet, basename='kemmerentfko')
+router.register(r'mcisaaczev', McIsaacZEVViewSet, basename='mcisaaczev')
+router.register(r'background', BackgroundViewSet, basename='background')
+router.register(r'cctf', CCTFViewSet, basename='cctf')
+router.register(r'ccexperiment', CCExperimentViewSet, basename='ccexperiment')
+router.register(r'hops', HopsViewSet, basename='hops')
 router.register(r'hopsreplicatesig',
-                HopsReplicacteSigViewSet,
+                HopsReplicateSigViewSet,
                 basename='hopsreplicatesig')
-router.register(r'qcmetrics', QcMetricsViewSet)
-router.register(r'qcmanualreview', QcManualReviewViewSet)
-router.register(r'qcr1tor2', QcR1ToR2ViewSet)
-router.register(r'qcr2tor1', QcR2ToR1ViewSet)
-router.register(r'qctftotransposon', QcTfToTransposonViewSet)
+router.register(r'qcmetrics', QcMetricsViewSet, basename='qcmetrics')
+router.register(r'qcmanualreview', QcManualReviewViewSet, basename='qcmanualreview')
+router.register(r'qcr1tor2', QcR1ToR2ViewSet, basename='qcr1tor2')
+router.register(r'qcr2tor1', QcR2ToR1ViewSet, basename='qcr2tor1')
+router.register(r'qctftotransposon', QcTfToTransposonViewSet, basename='qctftotransposon')
 router.register(r'qcr1tor2summary', QcR1ToR2TfSummaryViewSet,
-                basename='qc_r1_to_r2_summary')
-router.register(r'qc_review', QcReviewViewSet, basename='qc_review')
+                basename='qcr1tor2summary')
+router.register(r'qc_review', QcReviewViewSet, basename='qcreview')
 router.register(r'expression', ExpressionViewSetViewSet,
                 basename='expression')
 
