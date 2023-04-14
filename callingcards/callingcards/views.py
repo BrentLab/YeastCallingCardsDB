@@ -29,11 +29,12 @@ from django.db.models import (Max, F, Q, Subquery, OuterRef,
                               Count, Value, Case, When, CharField)
 from rest_framework.settings import api_settings
 from rest_framework.filters import OrderingFilter, SearchFilter
-from rest_framework.decorators import action
-from rest_framework import status
+from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.permissions import AllowAny
+
+from celery.result import AsyncResult
 
 from .filters import (McIsaacZevFilter, KemmerenTfkoFilter,
                       CCExperimentFilter, HopsReplicateSigFilter, GeneFilter,
@@ -61,6 +62,8 @@ from .serializers import (ChrMapSerializer, GeneSerializer,
                           QcTfToTransposonSerializer,
                           BarcodeComponentsSummarySerializer,
                           QcReviewSerializer, ExpressionViewSetSerializer)
+
+from .tasks import process_upload
 
 from .utils import queryset_to_string
 
@@ -133,6 +136,23 @@ class CustomCreateMixin:
             serializer.data,
             status=status.HTTP_201_CREATED,
             headers=headers)
+
+    @action(detail=False, methods=['post'], url_path='create-async')
+    def create_async(self, request, *args, **kwargs):
+        """ Asynchronously create records
+        """
+        many_flag = True if isinstance(request.data, list) else False
+        kwargs = {
+            self.user_field: self.request.user,
+            'serializer_class_path': f'{self.serializer_class.__module__}'
+                                     f'.{self.serializer_class.__name__}'
+        }
+
+        # Call the Celery task with the request data and user_field
+        result = process_upload.delay(request.data, many_flag, kwargs)
+
+        return Response({"status":
+                         f"Upload in progress. Task ID: {result.task_id}"})
 
 
 class CountModelMixin(object):
@@ -259,49 +279,6 @@ class GeneViewSet(ListModelFieldsMixin,
     filterset_class = GeneFilter
     filter_backends = [filters.DjangoFilterBackend, SearchFilter]
     search_fields = ['locus_tag', 'gene']
-    # leaving this here for now -- spent a lot of time getting the effects
-    # action to work -- this reduces the repeated code
-    # @action(detail=False, methods=['get'], url_path='effects',
-    #         url_name='effects')
-    # def effects(self, request, *args, **kwargs):
-    #     queryset = self.get_queryset()
-
-    #     page = self.paginate_queryset(queryset)
-    #     if page is not None:
-    #         serializer = self.get_serializer(page, many=True)
-    #         return self.get_paginated_response(serializer.data)
-
-    #     serializer = self.get_serializer(queryset, many=True)
-    #     return Response(serializer.data)
-
-    # @action(detail=False, url_path='effects/count',
-    #         url_name='effects-count')
-    # def effects_count(self, request, *args, **kwargs) -> Response:
-    #     return self.count(request, *args, **kwargs)
-
-    # @action(detail=False, url_path='effects/pagination_info',
-    #         url_name='effects-pagination-info')
-    # def effects_pagination_info(self, request,
-    #                             *args, **kwargs) -> Response:
-    #     return self.pagination_info(request, *args, **kwargs)
-
-    # @action(detail=False, methods=['get'], url_path='effects/fields',
-    #         url_name='effects-fields')
-    # def effects_fields(self, request, *args, **kwargs):
-    #     filter_fields = ['tf_gene', 'promoter_source', 'background']
-    #     return self.fields(request, *args, filter_fields=filter_fields)
-
-    # def get_queryset(self):
-    #     if 'effects' in self.request.path_info:
-    #         return Gene.objects.effects(**self.request.query_params)
-    #     else:
-    #         return Gene.objects.all().order_by('id')
-
-    # def get_serializer_class(self):
-    #     if 'effects' in self.request.path_info:
-    #         return GeneWithEffectsSerializer
-    #     else:
-    #         return GeneSerializer
 
 
 class PromoterRegionsViewSet(ListModelFieldsMixin,
@@ -826,7 +803,7 @@ class QcReviewViewSet(ListModelFieldsMixin,
         return query
 
     def update(self, request, pk=None):
-        
+
         manual_review = QcManualReview.objects.get(pk=pk)
 
         qc_review_combined = self.get_queryset().get(experiment_id=pk)
@@ -923,15 +900,15 @@ class ExpressionViewSetViewSet(ListModelFieldsMixin,
             .order_by('source_expr', 'tf_id_alias')
 
         # Log the kemmeren_filter.qs queryset
-        logger.debug('kemmeren_filter.qs: %s', 
+        logger.debug('kemmeren_filter.qs: %s',
                      queryset_to_string(kemmeren_filter.qs))
 
         # Log the kemmeren_filtered_qs queryset
-        logger.debug('kemmeren_filtered_qs: %s', 
+        logger.debug('kemmeren_filtered_qs: %s',
                      queryset_to_string(kemmeren_filtered_qs))
 
         # Log the concatenated_query queryset
-        logger.debug('concatenated_query: %s', 
+        logger.debug('concatenated_query: %s',
                      queryset_to_string(concatenated_query))
 
         return concatenated_query
@@ -960,3 +937,16 @@ class ExpressionViewSetViewSet(ListModelFieldsMixin,
                          automatically_generated,
                          "filter": filter_columns},
                         status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+def check_task_status(request, task_id):
+    result = AsyncResult(task_id)
+    response_data = {
+        'task_id': task_id,
+        'status': result.status,
+    }
+
+    if result.ready():
+        response_data['result'] = result.result
+
+    return Response(response_data)
