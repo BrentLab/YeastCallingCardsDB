@@ -24,13 +24,12 @@ To interact with this model via a RESTful API, you can perform the following
 import logging
 import io
 import csv
-import datetime
-from datetime import date
 
 from django_filters import rest_framework as filters
 from django.conf import settings
 from django.db.models import (Max, F, Q, Subquery, OuterRef,
-                              Count, Value, Case, When, CharField)
+                              Count, Value, Case, When, CharField,
+                              ForeignKey)
 from rest_framework.settings import api_settings
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.decorators import action
@@ -39,9 +38,7 @@ from rest_framework import viewsets, status
 from rest_framework.mixins import ListModelMixin
 from rest_framework.permissions import AllowAny
 from celery.result import AsyncResult
-from django.db import connection
 from django.db import DatabaseError
-from psycopg2 import errors
 
 from callingcards.celery import app
 
@@ -178,12 +175,33 @@ class CustomCreateMixin:
         # Process the header row and add the additional columns
         header = next(csv.reader(input_data))
 
+        # get a list of the foriegn key fields in the model
+        foreign_key_fields = {
+            field.name: field.related_model
+            for field in self.queryset.model._meta.get_fields()
+            if isinstance(field, ForeignKey)}
+        # remove the uploader field -- set that explicitly
+        foreign_key_fields.pop(self.user_field, None)
+
         # Process the remaining rows and add the additional columns to each row
         # user_uuid = str(request.user.id)
         rows = []
         for row in csv.reader(input_data):
             # Combine the header and row using zip and create a dictionary
             row_dict = {header[i]: row[i] for i in range(len(header))}
+
+            # Handle foreign key fields
+            for field, related_model in foreign_key_fields.items():
+                if field in row_dict:
+                    try:
+                        related_id = int(row_dict[field])
+                        row_dict[field] = related_model.objects.get(id=related_id)
+                    except (related_model.DoesNotExist, ValueError, TypeError):
+                        return Response({"error": f"Invalid '{field}' "
+                                         f"value '{row_dict[field]}'"
+                                         f"on line {csv.reader.line_num}"},
+                                        status=status.HTTP_400_BAD_REQUEST)
+
             # Add the additional fields to the dictionary
             row_dict['uploader'] = self.request.user
             rows.append(row_dict)
@@ -195,6 +213,7 @@ class CustomCreateMixin:
         except (DatabaseError, ValueError) as err:
             # Extract the relevant information from the error
             error_message = str(err)
+            logger.debug(error_message)
             lines_with_errors = set()
             for line in error_message.split("\n"):
                 if "INSERT INTO" in line:
@@ -207,7 +226,7 @@ class CustomCreateMixin:
                 error_msg = f"Error during CSV upload: {error_message}"
             else:
                 error_msg = ("Errors during CSV upload on lines: "
-                             f"{', '.join(map(str, sorted(lines_with_errors)))}") # noqa
+                             f"{', '.join(map(str, sorted(lines_with_errors)))}")  # noqa
 
             return Response({"error": error_msg},
                             status=status.HTTP_400_BAD_REQUEST)
@@ -1039,18 +1058,6 @@ class ExpressionViewSetViewSet(ListModelFieldsMixin,
         concatenated_query = mcisaac_filtered_qs\
             .union(kemmeren_filtered_qs)\
             .order_by('source_expr', 'tf_id_alias')
-
-        # Log the kemmeren_filter.qs queryset
-        logger.debug('kemmeren_filter.qs: %s',
-                     queryset_to_string(kemmeren_filter.qs))
-
-        # Log the kemmeren_filtered_qs queryset
-        logger.debug('kemmeren_filtered_qs: %s',
-                     queryset_to_string(kemmeren_filtered_qs))
-
-        # Log the concatenated_query queryset
-        logger.debug('concatenated_query: %s',
-                     queryset_to_string(concatenated_query))
 
         return concatenated_query
 
