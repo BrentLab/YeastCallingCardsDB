@@ -22,6 +22,10 @@ To interact with this model via a RESTful API, you can perform the following
        request to the specific API endpoint (e.g., /api/chrmap/<id>/).
 """
 import logging
+import io
+import csv
+import datetime
+from datetime import date
 
 from django_filters import rest_framework as filters
 from django.conf import settings
@@ -29,14 +33,17 @@ from django.db.models import (Max, F, Q, Subquery, OuterRef,
                               Count, Value, Case, When, CharField)
 from rest_framework.settings import api_settings
 from rest_framework.filters import OrderingFilter, SearchFilter
-from rest_framework.decorators import action, api_view
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import viewsets, status
 from rest_framework.mixins import ListModelMixin
 from rest_framework.permissions import AllowAny
 from celery.result import AsyncResult
+from django.db import connection
+from django.db import DatabaseError
+from psycopg2 import errors
 
-from callingcards.celery import app  
+from callingcards.celery import app
 
 
 from .filters import (McIsaacZevFilter, KemmerenTfkoFilter,
@@ -157,6 +164,137 @@ class CustomCreateMixin:
         return Response({"status":
                          f"Upload in progress. Task ID: {result.task_id}"})
 
+    @action(detail=False, methods=['post'], url_path='upload-csv')
+    def upload_csv(self, request, *args, **kwargs):
+        csv_file = request.FILES.get('csv_file')
+
+        if not csv_file:
+            return Response({"error": "No CSV file provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Read the input CSV file and add the user_uuid to each row
+        file_data = csv_file.read().decode('utf-8')
+        input_data = io.StringIO(file_data)
+
+        # Process the header row and add the additional columns
+        header = next(csv.reader(input_data))
+
+        # Process the remaining rows and add the additional columns to each row
+        # user_uuid = str(request.user.id)
+        rows = []
+        for row in csv.reader(input_data):
+            # Combine the header and row using zip and create a dictionary
+            row_dict = {header[i]: row[i] for i in range(len(header))}
+            # Add the additional fields to the dictionary
+            row_dict['uploader'] = self.request.user
+            rows.append(row_dict)
+
+        # Bulk create the rows in the database
+        try:
+            objs = [self.queryset.model(**row_dict) for row_dict in rows]
+            self.queryset.model.objects.bulk_create(objs)
+        except (DatabaseError, ValueError) as err:
+            # Extract the relevant information from the error
+            error_message = str(err)
+            lines_with_errors = set()
+            for line in error_message.split("\n"):
+                if "INSERT INTO" in line:
+                    line_parts = line.split(" ")
+                    line_number = int(line_parts[3].replace("(", ""))
+                    lines_with_errors.add(line_number)
+
+            # Construct the error response message
+            if len(lines_with_errors) == 1:
+                error_msg = f"Error during CSV upload: {error_message}"
+            else:
+                error_msg = ("Errors during CSV upload on lines: "
+                             f"{', '.join(map(str, sorted(lines_with_errors)))}") # noqa
+
+            return Response({"error": error_msg},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"status": "CSV data uploaded successfully."},
+                        status=status.HTTP_201_CREATED)
+    # this is postgresql specific. May be faster, but lose the db agnostic
+    # nature of the django API
+    # @action(detail=False, methods=['post'], url_path='upload-csv')
+    # def upload_csv(self, request, *args, **kwargs):
+
+    #     # Check if the database engine is PostgreSQL
+    #     db_engine = settings.DATABASES['default']['ENGINE']
+    #     if 'postgresql' not in db_engine:
+    #         return Response({"error": "CSV upload is only supported for PostgreSQL database engine."},
+    #                         status=status.HTTP_400_BAD_REQUEST)
+
+    #     csv_file = request.FILES.get('csv_file')
+
+    #     if not csv_file:
+    #         return Response({"error": "No CSV file provided."},
+    #                         status=status.HTTP_400_BAD_REQUEST)
+
+    #     # Read the input CSV file and add the user_uuid to each row
+    #     file_data = csv_file.read().decode('utf-8')
+    #     input_data = io.StringIO(file_data)
+
+    #     # Create a new StringIO object to store the modified data
+    #     data_file = io.StringIO()
+    #     reader = csv.reader(input_data)
+    #     writer = csv.writer(data_file)
+
+    #     # Process the header row and add the additional columns
+    #     header = next(reader)
+    #     header.append('uploader_id')
+    #     header.append('uploadDate')
+    #     header.append('modified')
+    #     writer.writerow(header)
+
+    #     # Process the remaining rows and add the additional columns to each row
+    #     user_uuid = str(request.user.id)
+    #     for row in reader:
+    #         row.append(user_uuid)
+    #         # Add the current date for uploadDate
+    #         row.append(str(date.today()))
+    #         # Add the current datetime for modified
+    #         row.append(str(datetime.datetime.now()))
+    #         writer.writerow(row)
+
+    #     # Reset the data_file cursor to the beginning
+    #     data_file.seek(0)
+
+    #     # Connect to the database using Django's connection
+    #     conn = connection
+    #     conn.ensure_connection()
+
+    #     with conn.connection as db_conn:
+    #         try:
+    #             # Load the data using the COPY command
+    #             cursor = db_conn.cursor()
+
+    #             # Read the header line to get the column names
+    #             header_line = data_file.readline().strip()
+    #             columns = [f'"{col}"' for col in csv.reader([header_line]).__next__()]
+
+    #             table_name = self.queryset.model._meta.db_table
+    #             copy_command = f"COPY {table_name} ({', '.join(columns)}) FROM STDIN WITH CSV HEADER"
+    #             cursor.copy_expert(copy_command, data_file)
+
+    #             db_conn.commit()
+
+    #         except (errors.UniqueViolation, errors.ForeignKeyViolation) as err:
+    #             db_conn.rollback()
+    #             error_message = f"Error during CSV upload: {err}"
+    #             if hasattr(err, 'lineno'):
+    #                 error_message += f" at line {err.lineno}"
+    #             return Response({"error":
+    #                              error_message},
+    #                             status=status.HTTP_400_BAD_REQUEST)
+
+    #         except DatabaseError as err:
+    #             db_conn.rollback()
+    #             return Response({"error":
+    #                              f"Error during CSV upload: {err}"},
+    #                             status=status.HTTP_400_BAD_REQUEST)
+
+    #     return Response({"status": "CSV data uploaded successfully."})
 
 class CountModelMixin(object):
     """

@@ -2,7 +2,12 @@
 import logging
 import json
 from unittest import mock
+import io
+import csv
+from decimal import Decimal
 
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
 from django.urls import reverse
 from django.conf import settings
 from rest_framework.settings import api_settings
@@ -158,14 +163,13 @@ class TestGeneViewSet(APITestCase):
         # correct arguments
         # expected_args = (new_gene_data, False, {
         #     'uploader': self.user,
-        #     'serializer_class_path': 
+        #     'serializer_class_path':
         #     'callingcards.callingcards.serializers.GeneSerializer'
         # })
 
-        # despite being exactly the same to my eye and chatGPT, 
+        # despite being exactly the same to my eye and chatGPT,
         # this test fails. Possibly a bug in the method?
         # mock_process_upload.assert_called_once_with(*expected_args)
-
 
     def test_create_async_bulk(self):
         with mock\
@@ -177,7 +181,7 @@ class TestGeneViewSet(APITestCase):
                 FACTORY_CLASS=GeneFactory)
             for rec in new_gene_record_bulk_data:
                 rec['chr'] = self.chr_record.pk
-            
+
             response = self.client.post(
                 reverse('gene-create-async'),
                 data=json.dumps(new_gene_record_bulk_data),
@@ -387,7 +391,9 @@ class TestHarbisonChIP(APITestCase):
         expected_data = HarbisonChIPAnnotatedSerializer(annotated_queryset, many=True).data
         assert response.data['results'] == expected_data
 
-
+@override_settings(DATABASES={'default': 
+                              {'ENGINE': 
+                               'django.db.backends.postgresql_psycopg2'}})
 class TestKemmerenTFKO(APITestCase):
     """
     Tests /kemmeren_tfko detail operations.
@@ -401,9 +407,6 @@ class TestKemmerenTFKO(APITestCase):
         self.kemmeren_tfko_data = factory.build(dict, FACTORY_CLASS=KemmerenTFKOFactory)
         self.kemmeren_tfko_data['gene'] = self.gene_record.pk
         self.kemmeren_tfko_data['tf'] = self.gene_record.pk
-        # tmp, self.uploadDate, self.modified = \
-        #     [self.kemmeren_tfko_data.pop(x) for x in
-        #      ['uploader', 'uploadDate', 'modified']]
         self.url = reverse('kemmerentfko-list')
         settings.DEBUG = True
 
@@ -423,6 +426,44 @@ class TestKemmerenTFKO(APITestCase):
         assert kemmeren_tfko.tf.pk == self.kemmeren_tfko_data.get('tf')
         assert kemmeren_tfko.uploader.username == self.user.username
 
+    def test_upload_csv(self):
+        # Create a test CSV file with valid data
+        header = ['gene_id', 'effect', 'pval', 'tf_id']
+        gene = GeneFactory.create()
+        tf = GeneFactory.create()
+        data = [
+            [gene.pk, '0.1', '0.01', tf.pk],
+            [gene.pk, '0.2', '0.02', tf.pk],
+            [gene.pk, '0.3', '0.03', tf.pk]
+        ]
+        with io.StringIO() as f:
+            writer = csv.writer(f)
+            writer.writerow(header)
+            writer.writerows(data)
+            f.seek(0)
+            csv_file = SimpleUploadedFile("test_mcisaaczev.csv",
+                                          f.read().encode('utf-8'),
+                                          content_type="text/csv")
+
+        # Make a request to the upload-csv endpoint
+        url = reverse('mcisaaczev-upload-csv')
+        response = self.client.post(url, {'csv_file': csv_file},
+                                    format='multipart')
+
+        # Check the response and the database
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data == {'status': 'CSV data uploaded successfully.'}
+
+        queryset = McIsaacZEV.objects.all()
+        assert queryset.count() == 3
+        for i, record in enumerate(queryset):
+            assert record.gene == gene
+            assert Decimal(data[i][1]) == record.effect
+            assert Decimal(data[i][2]) == record.pval
+            assert record.tf == tf
+            assert str(record.uploader) == self.user.username
+            assert record.uploadDate is not None
+            assert record.modified is not None
 
 class TestMcIsaacZEV(APITestCase):
     """
