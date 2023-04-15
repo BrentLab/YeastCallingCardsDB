@@ -428,7 +428,7 @@ class TestKemmerenTFKO(APITestCase):
 
     def test_upload_csv(self):
         # Create a test CSV file with valid data
-        header = ['gene_id', 'effect', 'pval', 'tf_id']
+        header = ['gene', 'effect', 'pval', 'tf']
         gene = GeneFactory.create()
         tf = GeneFactory.create()
         data = [
