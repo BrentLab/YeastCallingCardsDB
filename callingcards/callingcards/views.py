@@ -27,9 +27,11 @@ import csv
 
 from django_filters import rest_framework as filters
 from django.conf import settings
+from django.db import DatabaseError, connection
 from django.db.models import (Max, F, Q, Subquery, OuterRef,
                               Count, Value, Case, When, CharField,
                               ForeignKey)
+from django.utils.timezone import now
 from rest_framework.settings import api_settings
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.decorators import action
@@ -38,7 +40,7 @@ from rest_framework import viewsets, status
 from rest_framework.mixins import ListModelMixin
 from rest_framework.permissions import AllowAny
 from celery.result import AsyncResult
-from django.db import DatabaseError
+from psycopg2 import errors
 
 from callingcards.celery import app
 
@@ -72,7 +74,8 @@ from .serializers import (ChrMapSerializer, GeneSerializer,
 
 from .tasks import process_upload
 
-from .utils import queryset_to_string
+# this can be used if you need to log a queryset
+# from .utils import queryset_to_string
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +117,31 @@ class CustomCreateMixin:
     @user_field.setter
     def user_field(self, value):
         self._user_field = value
+
+    def get_foreign_key_fields(self, pop_user_field=True):
+        """
+        Get a dictionary of foreign key fields for the model associated with
+        the queryset. The dictionary keys are the field names and the values
+        are the related models.
+
+        Args:
+            pop_user_field (bool): If True (default), exclude the field
+            specified in the user_field property from the returned dictionary.
+
+        Returns:
+            dict: A dictionary containing the foreign key fields and 
+            their related models.
+        """
+        foreign_key_fields = {
+            field.name: field.related_model
+            for field in self.queryset.model._meta.get_fields()
+            if isinstance(field, ForeignKey)
+        }
+
+        if pop_user_field:
+            foreign_key_fields.pop(self.user_field, None)
+
+        return foreign_key_fields
 
     def create(self, request, *args, **kwargs):
         """ overwrite default create to accept either single or multiple
@@ -176,12 +204,7 @@ class CustomCreateMixin:
         header = next(csv.reader(input_data))
 
         # get a list of the foriegn key fields in the model
-        foreign_key_fields = {
-            field.name: field.related_model
-            for field in self.queryset.model._meta.get_fields()
-            if isinstance(field, ForeignKey)}
-        # remove the uploader field -- set that explicitly
-        foreign_key_fields.pop(self.user_field, None)
+        foreign_key_fields = self.get_foreign_key_fields()
 
         # Process the remaining rows and add the additional columns to each row
         # user_uuid = str(request.user.id)
@@ -233,87 +256,97 @@ class CustomCreateMixin:
 
         return Response({"status": "CSV data uploaded successfully."},
                         status=status.HTTP_201_CREATED)
+
     # this is postgresql specific. May be faster, but lose the db agnostic
     # nature of the django API
-    # @action(detail=False, methods=['post'], url_path='upload-csv')
-    # def upload_csv(self, request, *args, **kwargs):
+    @action(detail=False, methods=['post'], url_path='upload-csv-postgres')
+    def upload_csv_postgres(self, request, *args, **kwargs):
 
-    #     # Check if the database engine is PostgreSQL
-    #     db_engine = settings.DATABASES['default']['ENGINE']
-    #     if 'postgresql' not in db_engine:
-    #         return Response({"error": "CSV upload is only supported for PostgreSQL database engine."},
-    #                         status=status.HTTP_400_BAD_REQUEST)
+        # Check if the database engine is PostgreSQL
+        db_engine = settings.DATABASES['default']['ENGINE']
+        if 'postgresql' not in db_engine:
+            return Response({"error": "CSV upload is only supported for PostgreSQL database engine."},
+                            status=status.HTTP_400_BAD_REQUEST)
 
-    #     csv_file = request.FILES.get('csv_file')
+        csv_file = request.FILES.get('csv_file')
 
-    #     if not csv_file:
-    #         return Response({"error": "No CSV file provided."},
-    #                         status=status.HTTP_400_BAD_REQUEST)
+        if not csv_file:
+            return Response({"error": "No CSV file provided."},
+                            status=status.HTTP_400_BAD_REQUEST)
 
-    #     # Read the input CSV file and add the user_uuid to each row
-    #     file_data = csv_file.read().decode('utf-8')
-    #     input_data = io.StringIO(file_data)
+        # get a list of the foriegn key fields in the model
+        foreign_key_fields = self.get_foreign_key_fields()
 
-    #     # Create a new StringIO object to store the modified data
-    #     data_file = io.StringIO()
-    #     reader = csv.reader(input_data)
-    #     writer = csv.writer(data_file)
+        # Read the input CSV file and add the user_uuid to each row
+        file_data = csv_file.read().decode('utf-8')
+        input_data = io.StringIO(file_data)
 
-    #     # Process the header row and add the additional columns
-    #     header = next(reader)
-    #     header.append('uploader_id')
-    #     header.append('uploadDate')
-    #     header.append('modified')
-    #     writer.writerow(header)
+        # Create a new StringIO object to store the modified data
+        data_file = io.StringIO()
+        reader = csv.reader(input_data)
+        writer = csv.writer(data_file)
 
-    #     # Process the remaining rows and add the additional columns to each row
-    #     user_uuid = str(request.user.id)
-    #     for row in reader:
-    #         row.append(user_uuid)
-    #         # Add the current date for uploadDate
-    #         row.append(str(date.today()))
-    #         # Add the current datetime for modified
-    #         row.append(str(datetime.datetime.now()))
-    #         writer.writerow(row)
+        # Process the header row and add the additional columns
+        header = next(reader)
 
-    #     # Reset the data_file cursor to the beginning
-    #     data_file.seek(0)
+        # Check for foreign key fields and add "_id" to them
+        header = [field + '_id' if field in foreign_key_fields
+                  else field for field in header]
 
-    #     # Connect to the database using Django's connection
-    #     conn = connection
-    #     conn.ensure_connection()
+        # append the django managed fields
+        header.append('uploader_id')
+        header.append('uploadDate')
+        header.append('modified')
+        writer.writerow(header)
 
-    #     with conn.connection as db_conn:
-    #         try:
-    #             # Load the data using the COPY command
-    #             cursor = db_conn.cursor()
+        # Process the remaining rows and add the additional columns to each row
+        user_uuid = str(request.user.id)
+        for row in reader:
+            row.append(user_uuid)
+            # Add the current date for uploadDate
+            row.append(now().date())
+            # Add the current datetime for modified
+            row.append(now())
+            writer.writerow(row)
 
-    #             # Read the header line to get the column names
-    #             header_line = data_file.readline().strip()
-    #             columns = [f'"{col}"' for col in csv.reader([header_line]).__next__()]
+        # Reset the data_file cursor to the beginning
+        data_file.seek(0)
 
-    #             table_name = self.queryset.model._meta.db_table
-    #             copy_command = f"COPY {table_name} ({', '.join(columns)}) FROM STDIN WITH CSV HEADER"
-    #             cursor.copy_expert(copy_command, data_file)
+        # Connect to the database using Django's connection
+        conn = connection
+        conn.ensure_connection()
 
-    #             db_conn.commit()
+        with conn.connection as db_conn:
+            try:
+                # Load the data using the COPY command
+                cursor = db_conn.cursor()
 
-    #         except (errors.UniqueViolation, errors.ForeignKeyViolation) as err:
-    #             db_conn.rollback()
-    #             error_message = f"Error during CSV upload: {err}"
-    #             if hasattr(err, 'lineno'):
-    #                 error_message += f" at line {err.lineno}"
-    #             return Response({"error":
-    #                              error_message},
-    #                             status=status.HTTP_400_BAD_REQUEST)
+                # Read the header line to get the column names
+                header_line = data_file.readline().strip()
+                columns = [f'"{col}"' for col in csv.reader([header_line]).__next__()]  # noqa
 
-    #         except DatabaseError as err:
-    #             db_conn.rollback()
-    #             return Response({"error":
-    #                              f"Error during CSV upload: {err}"},
-    #                             status=status.HTTP_400_BAD_REQUEST)
+                table_name = self.queryset.model._meta.db_table
+                copy_command = f"COPY {table_name} ({', '.join(columns)}) FROM STDIN WITH CSV HEADER"  # noqa
+                cursor.copy_expert(copy_command, data_file)
 
-    #     return Response({"status": "CSV data uploaded successfully."})
+                db_conn.commit()
+
+            except (errors.UniqueViolation, errors.ForeignKeyViolation) as err:
+                db_conn.rollback()
+                error_message = f"Error during CSV upload: {err}"
+                if hasattr(err, 'lineno'):
+                    error_message += f" at line {err.lineno}"
+                return Response({"error":
+                                 error_message},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+            except DatabaseError as err:
+                db_conn.rollback()
+                return Response({"error":
+                                 f"Error during CSV upload: {err}"},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"status": "CSV data uploaded successfully."})
 
 class CountModelMixin(object):
     """
