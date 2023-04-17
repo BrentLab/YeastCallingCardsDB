@@ -884,14 +884,29 @@ class QcReviewViewSet(ListModelFieldsMixin,
             experiment_id=OuterRef('pk')
         ).annotate(count=Count('experiment')
                    ).values('count')
+        
+        r1_r2_max_tally_subquery = QcR1ToR2Tf.objects\
+            .filter(experiment_id=OuterRef('pk'))\
+            .order_by('-tally').values('edit_dist')\
+            .annotate(max_edit_dist=Max('edit_dist'))\
+            .values('max_edit_dist')[:1]
 
-        r1_r2_max_tally_subquery = QcR1ToR2Tf.objects.filter(
-            experiment_id=OuterRef('pk')
-        ).order_by('-tally').values('edit_dist')[:1]
+        # was getting error that more than 1 subquery is returned
+        # trying subquery about but need to check the effect
+        #
+        # r1_r2_max_tally_subquery = QcR1ToR2Tf.objects.filter(
+        #     experiment_id=OuterRef('pk')
+        # ).order_by('-tally').values('edit_dist')[:1]
 
-        r2_r1_max_tally_subquery = QcR2ToR1Tf.objects.filter(
-            experiment_id=OuterRef('pk')
-        ).order_by('-tally').values('edit_dist')[:1]
+        r2_r1_max_tally_subquery = QcR2ToR1Tf.objects\
+            .filter(experiment_id=OuterRef('pk'))\
+            .order_by('-tally').values('edit_dist')\
+            .annotate(max_edit_dist=Max('edit_dist'))\
+            .values('max_edit_dist')[:1]
+
+        # r2_r1_max_tally_subquery = QcR2ToR1Tf.objects.filter(
+        #     experiment_id=OuterRef('pk')
+        # ).order_by('-tally').values('edit_dist')[:1]
 
         unknown_feature_id = Gene.objects\
             .get(locus_tag=UNDETERMINED_LOCUS_TAG).id
