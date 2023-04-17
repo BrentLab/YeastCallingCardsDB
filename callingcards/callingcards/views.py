@@ -28,6 +28,7 @@ import csv
 from django_filters import rest_framework as filters
 from django.conf import settings
 from django.db import DatabaseError
+from django.db.models.functions import Coalesce
 from django.db.models import (Max, F, Q, Subquery, OuterRef,
                               Count, Value, Case, When, CharField,
                               ForeignKey)
@@ -908,6 +909,8 @@ class QcReviewViewSet(ListModelFieldsMixin,
         ccexperiment_fltr = CCExperimentFilter(self.request.GET)
  
         # TODO add select/prefetch related to reduce the number of queries
+        # note when teh qc_metrics unmapped is 0, set to 0 to avoid divide by 
+        # 0 error
         query = (
             ccexperiment_fltr.qs
             .exclude(tf_id=unknown_feature_id)
@@ -922,7 +925,7 @@ class QcReviewViewSet(ListModelFieldsMixin,
                 r1_r2_status=Subquery(r1_r2_max_tally_subquery),
                 r2_r1_max_tally=Max('qcr2tor1tf__tally'),
                 r2_r1_status=Subquery(r2_r1_max_tally_subquery),
-                map_unmap_ratio=F('qcmetrics__genome_mapped') / F('qcmetrics__unmapped'),  # noqa
+                map_unmap_ratio=Coalesce(F('qcmetrics__genome_mapped') / F('qcmetrics__unmapped'), Value(0)),
                 num_hops=Subquery(hop_count_subquery),
                 rank_recall=F('qcmanualreview__rank_recall'),
                 chip_better=F('qcmanualreview__chip_better'),
