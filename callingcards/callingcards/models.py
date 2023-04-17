@@ -500,7 +500,7 @@ class QcR1ToR2Tf(BaseModel):
         models.CASCADE,
         db_index=True)
     edit_dist = models.PositiveSmallIntegerField()
-    tally = models.SmallIntegerField(
+    tally = models.IntegerField(
         validators=[MinValueValidator(-1)]
     )
     note = models.CharField(
@@ -519,7 +519,7 @@ class QcR2ToR1Tf(BaseModel):
         models.CASCADE,
         db_index=True)
     edit_dist = models.IntegerField()
-    tally = models.SmallIntegerField(
+    tally = models.IntegerField(
         validators=[MinValueValidator(-1)]
     )
     note = models.CharField(
@@ -538,7 +538,7 @@ class QcTfToTransposon(BaseModel):
         models.CASCADE,
         db_index=True)
     edit_dist = models.IntegerField()
-    tally = models.SmallIntegerField(
+    tally = models.IntegerField(
         validators=[MinValueValidator(-1)]
     )
     note = models.CharField(
