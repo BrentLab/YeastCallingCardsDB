@@ -30,8 +30,7 @@ from django.conf import settings
 from django.db import DatabaseError
 from django.db.models import (Max, F, Q, Subquery, OuterRef,
                               Count, Value, Case, When, CharField,
-                              ForeignKey, IntegerField)
-from django.db.models.functions import Coalesce
+                              ForeignKey)
 from rest_framework.settings import api_settings
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.decorators import action
@@ -886,59 +885,32 @@ class QcReviewViewSet(ListModelFieldsMixin,
         ).annotate(count=Count('experiment')
                    ).values('count')
 
-        # r1_r2_max_tally_subquery = QcR1ToR2Tf.objects\
-        #     .filter(experiment_id=OuterRef('pk'))\
-        #     .order_by('-tally').values('edit_dist')\
-        #     .annotate(max_edit_dist=Max('edit_dist'))\
-        #     .values('max_edit_dist')[:1]
+        r1_r2_max_tally_subquery = QcR1ToR2Tf.objects.filter(
+            experiment_id=OuterRef('pk')
+        ).order_by('-tally').values('edit_dist')[:1]
 
-        # was getting error that more than 1 subquery is returned
-        # trying subquery about but need to check the effect
-        #
-        # r1_r2_max_tally_subquery = QcR1ToR2Tf.objects.filter(
-        #     experiment_id=OuterRef('pk')
-        # ).order_by('-tally').values('edit_dist')[:1]
-
-        # r2_r1_max_tally_subquery = QcR2ToR1Tf.objects\
-        #     .filter(experiment_id=OuterRef('pk'))\
-        #     .order_by('-tally').values('edit_dist')\
-        #     .annotate(max_edit_dist=Max('edit_dist'))\
-        #     .values('max_edit_dist')[:1]
-
-        # r2_r1_max_tally_subquery = QcR2ToR1Tf.objects.filter(
-        #     experiment_id=OuterRef('pk')
-        # ).order_by('-tally').values('edit_dist')[:1]
-
-        r1_r2_max_tally_subquery = QcR1ToR2Tf.objects\
-            .filter(experiment_id=OuterRef('pk'))\
-            .order_by('-tally').values('edit_dist')\
-            .annotate(max_edit_dist=Max('edit_dist'))\
-            .values('max_edit_dist')[:1]
-
-        r1_r2_status = Subquery(
-            r1_r2_max_tally_subquery,
-            output_field=IntegerField()
-        )
-
-        r1_r2_status_with_default = Coalesce(r1_r2_status, 0)
-
-        r2_r1_max_tally_subquery = QcR2ToR1Tf.objects\
-            .filter(experiment_id=OuterRef('pk'))\
-            .order_by('-tally').values('edit_dist')\
-            .annotate(max_edit_dist=Max('edit_dist'))\
-            .values('max_edit_dist')[:1]
-
-        r2_r1_status = Subquery(
-            r2_r1_max_tally_subquery,
-            output_field=IntegerField()
-        )
-
-        r2_r1_status_with_default = Coalesce(r2_r1_status, 0)
+        r2_r1_max_tally_subquery = QcR2ToR1Tf.objects.filter(
+            experiment_id=OuterRef('pk')
+        ).order_by('-tally').values('edit_dist')[:1]
 
         unknown_feature_id = Gene.objects\
             .get(locus_tag=UNDETERMINED_LOCUS_TAG).id
 
         ccexperiment_fltr = CCExperimentFilter(self.request.GET)
+
+        # Perform the subquery separately and log the result
+        experiment_ids = ccexperiment_fltr.qs.values_list('id', flat=True)
+        for experiment_id in experiment_ids:
+            r1_r2_result = list(QcR1ToR2Tf.objects
+                                .filter(experiment_id=experiment_id)
+                                .order_by('-tally')
+                                .values('edit_dist')
+                                .annotate(max_edit_dist=Max('edit_dist'))
+                                .values('max_edit_dist'))
+
+            if len(r1_r2_result) > 1 or r1_r2_result is None or len(r1_r2_result) == 0:
+                logger.error(
+                    f"Experiment ID: {experiment_id} has a problematic row in r1_r2 subquery: {r1_r2_result}")
 
         query = (
             ccexperiment_fltr.qs
@@ -952,9 +924,9 @@ class QcReviewViewSet(ListModelFieldsMixin,
                     default=F('tf__tf__gene'),
                     output_field=CharField()),
                 r1_r2_max_tally=Max('qcr1tor2tf__tally'),
-                r1_r2_status=r1_r2_status_with_default, #Subquery(r1_r2_max_tally_subquery),
+                r1_r2_status=Subquery(r1_r2_max_tally_subquery),
                 r2_r1_max_tally=Max('qcr2tor1tf__tally'),
-                r2_r1_status=r2_r1_status_with_default, #Subquery(r2_r1_max_tally_subquery),
+                r2_r1_status=Subquery(r2_r1_max_tally_subquery),
                 map_unmap_ratio=F('qcmetrics__genome_mapped') / F('qcmetrics__unmapped'),  # noqa
                 num_hops=Subquery(hop_count_subquery),
                 rank_recall=F('qcmanualreview__rank_recall'),
