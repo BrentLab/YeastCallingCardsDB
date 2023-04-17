@@ -45,7 +45,10 @@ from callingcards.celery import app
 
 from .filters import (McIsaacZevFilter, KemmerenTfkoFilter,
                       CCExperimentFilter, HopsReplicateSigFilter, GeneFilter,
-                      PromoterRegionsFilter, HarbisonChIPFilter)
+                      PromoterRegionsFilter, HarbisonChIPFilter,
+                      QcMetricsFilter, QcManualReviewFilter,
+                      QcR1ToR2TfFilter, QcR2ToR1TfFilter,
+                      QcTfToTransposonFilter)
 
 from .models import (ChrMap, Gene, PromoterRegions, HarbisonChIP,
                      KemmerenTFKO, McIsaacZEV, Background, CCTF,
@@ -776,6 +779,7 @@ class QcMetricsViewSet(ListModelFieldsMixin,
     queryset = QcMetrics.objects.all().order_by('id')  # noqa
     serializer_class = QcMetricsSerializer  # noqa
     permission_classes = (AllowAny,)
+    filterset_class = QcMetricsFilter
 
 
 class QcManualReviewViewSet(ListModelFieldsMixin,
@@ -789,6 +793,7 @@ class QcManualReviewViewSet(ListModelFieldsMixin,
     queryset = QcManualReview.objects.all().order_by('id')  # noqa
     serializer_class = QcManualReviewSerializer  # noqa
     permission_classes = (AllowAny,)
+    filterset_class = QcManualReviewFilter
 
 
 class QcR1ToR2ViewSet(ListModelFieldsMixin,
@@ -802,6 +807,7 @@ class QcR1ToR2ViewSet(ListModelFieldsMixin,
     queryset = QcR1ToR2Tf.objects.all().order_by('id')  # noqa
     serializer_class = QcR1ToR2TfSerializer  # noqa
     permission_classes = (AllowAny,)
+    filterset_class = QcR1ToR2TfFilter
 
 
 class QcR2ToR1ViewSet(ListModelFieldsMixin,
@@ -815,6 +821,7 @@ class QcR2ToR1ViewSet(ListModelFieldsMixin,
     queryset = QcR2ToR1Tf.objects.all().order_by('id')  # noqa
     serializer_class = QcR2ToR1TfSerializer  # noqa
     permission_classes = (AllowAny,)
+    filterset_class = QcR2ToR1TfFilter
 
 
 class QcTfToTransposonViewSet(ListModelFieldsMixin,
@@ -828,6 +835,7 @@ class QcTfToTransposonViewSet(ListModelFieldsMixin,
     queryset = QcTfToTransposon.objects.all().order_by('id')  # noqa
     serializer_class = QcTfToTransposonSerializer  # noqa
     permission_classes = (AllowAny,)
+    filterset_class = QcTfToTransposonFilter
 
 
 class QcR1ToR2TfSummaryViewSet(viewsets.ViewSet):
