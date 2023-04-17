@@ -893,18 +893,22 @@ class QcReviewViewSet(ListModelFieldsMixin,
         ).annotate(count=Count('experiment')
                    ).values('count')
 
-        r1_r2_max_tally_subquery = QcR1ToR2Tf.objects\
-            .filter(experiment_id=OuterRef('pk'))\
-            .annotate(max_tally=Max('tally'))\
-            .order_by('-max_tally')\
-            .values('edit_dist')[:1]
+        r1_r2_max_tally_subquery = QcR1ToR2Tf.objects.filter(
+            experiment_id=OuterRef('pk')
+        ).annotate(
+            max_tally=Max('tally', filter=Q(experiment_id=OuterRef('pk')))
+        ).filter(
+            tally=F('max_tally')
+        ).values('edit_dist')[:1]
 
-        r2_r1_max_tally_subquery = QcR2ToR1Tf.objects\
-            .filter(experiment_id=OuterRef('pk'))\
-            .annotate(max_tally=Max('tally'))\
-            .order_by('-max_tally')\
-            .values('edit_dist')[:1]
-        
+        r2_r1_max_tally_subquery = QcR2ToR1Tf.objects.filter(
+            experiment_id=OuterRef('pk')
+        ).annotate(
+            max_tally=Max('tally', filter=Q(experiment_id=OuterRef('pk')))
+        ).filter(
+            tally=F('max_tally')
+        ).values('edit_dist')[:1]
+
         unknown_feature_id = Gene.objects\
             .get(locus_tag=UNDETERMINED_LOCUS_TAG).id
 
