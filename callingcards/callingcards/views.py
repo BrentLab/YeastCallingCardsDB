@@ -24,14 +24,14 @@ To interact with this model via a RESTful API, you can perform the following
 import logging
 import io
 import csv
-import traceback
 
 from django_filters import rest_framework as filters
 from django.conf import settings
 from django.db import DatabaseError
 from django.db.models import (Max, F, Q, Subquery, OuterRef,
                               Count, Value, Case, When, CharField,
-                              ForeignKey)
+                              ForeignKey, IntegerField)
+from django.db.models.functions import Coalesce
 from rest_framework.settings import api_settings
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.decorators import action
@@ -886,11 +886,11 @@ class QcReviewViewSet(ListModelFieldsMixin,
         ).annotate(count=Count('experiment')
                    ).values('count')
 
-        r1_r2_max_tally_subquery = QcR1ToR2Tf.objects\
-            .filter(experiment_id=OuterRef('pk'))\
-            .order_by('-tally').values('edit_dist')\
-            .annotate(max_edit_dist=Max('edit_dist'))\
-            .values('max_edit_dist')[:1]
+        # r1_r2_max_tally_subquery = QcR1ToR2Tf.objects\
+        #     .filter(experiment_id=OuterRef('pk'))\
+        #     .order_by('-tally').values('edit_dist')\
+        #     .annotate(max_edit_dist=Max('edit_dist'))\
+        #     .values('max_edit_dist')[:1]
 
         # was getting error that more than 1 subquery is returned
         # trying subquery about but need to check the effect
@@ -899,59 +899,82 @@ class QcReviewViewSet(ListModelFieldsMixin,
         #     experiment_id=OuterRef('pk')
         # ).order_by('-tally').values('edit_dist')[:1]
 
+        # r2_r1_max_tally_subquery = QcR2ToR1Tf.objects\
+        #     .filter(experiment_id=OuterRef('pk'))\
+        #     .order_by('-tally').values('edit_dist')\
+        #     .annotate(max_edit_dist=Max('edit_dist'))\
+        #     .values('max_edit_dist')[:1]
+
+        # r2_r1_max_tally_subquery = QcR2ToR1Tf.objects.filter(
+        #     experiment_id=OuterRef('pk')
+        # ).order_by('-tally').values('edit_dist')[:1]
+
+        r1_r2_max_tally_subquery = QcR1ToR2Tf.objects\
+            .filter(experiment_id=OuterRef('pk'))\
+            .order_by('-tally').values('edit_dist')\
+            .annotate(max_edit_dist=Max('edit_dist'))\
+            .values('max_edit_dist')[:1]
+
+        r1_r2_status = Subquery(
+            r1_r2_max_tally_subquery,
+            output_field=IntegerField()
+        )
+
+        r1_r2_status_with_default = Coalesce(r1_r2_status, 0)
+
         r2_r1_max_tally_subquery = QcR2ToR1Tf.objects\
             .filter(experiment_id=OuterRef('pk'))\
             .order_by('-tally').values('edit_dist')\
             .annotate(max_edit_dist=Max('edit_dist'))\
             .values('max_edit_dist')[:1]
 
-        # r2_r1_max_tally_subquery = QcR2ToR1Tf.objects.filter(
-        #     experiment_id=OuterRef('pk')
-        # ).order_by('-tally').values('edit_dist')[:1]
+        r2_r1_status = Subquery(
+            r2_r1_max_tally_subquery,
+            output_field=IntegerField()
+        )
+
+        r2_r1_status_with_default = Coalesce(r2_r1_status, 0)
 
         unknown_feature_id = Gene.objects\
             .get(locus_tag=UNDETERMINED_LOCUS_TAG).id
 
         ccexperiment_fltr = CCExperimentFilter(self.request.GET)
-        try:
-            query = (
-                ccexperiment_fltr.qs
-                .exclude(tf_id=unknown_feature_id)
-                .select_related('tf_id', 'qcmetrics', 'qcmanualreview')
-                .annotate(
-                    experiment_id=F('id'),
-                    tf_alias=Case(
-                        When(tf__tf__gene__istartswith='unknown',
-                            then=F('tf__tf__locus_tag')),
-                        default=F('tf__tf__gene'),
-                        output_field=CharField()),
-                    r1_r2_max_tally=Max('qcr1tor2tf__tally'),
-                    r1_r2_status=Subquery(r1_r2_max_tally_subquery),
-                    r2_r1_max_tally=Max('qcr2tor1tf__tally'),
-                    r2_r1_status=Subquery(r2_r1_max_tally_subquery),
-                    map_unmap_ratio=F('qcmetrics__genome_mapped') / F('qcmetrics__unmapped'),  # noqa
-                    num_hops=Subquery(hop_count_subquery),
-                    rank_recall=F('qcmanualreview__rank_recall'),
-                    chip_better=F('qcmanualreview__chip_better'),
-                    data_usable=F('qcmanualreview__data_usable'),
-                    passing_replicate=F('qcmanualreview__passing_replicate'),
-                    note=F('qcmanualreview__note')
-                )
-                .order_by('tf_alias', 'batch', 'batch_replicate')
-                .values('experiment_id', 'tf_alias', 'batch', 'batch_replicate',
-                        'r1_r2_status', 'r2_r1_status', 'map_unmap_ratio',
-                        'num_hops', 'rank_recall', 'chip_better', 'data_usable',
-                        'passing_replicate', 'note')
-            )
 
-            for item in query:
-                item['r1_r2_status'] = 'pass' if item['r1_r2_status'] == 0 \
-                    else 'fail'
-                item['r2_r1_status'] = 'pass' if item['r2_r1_status'] == 0 \
-                    else 'fail'
-        except Exception as err:
-            logger.error(f"Exception encountered: {err}")  # pylint:disable=W1203 #noqa
-            logger.error(traceback.format_exc())
+        query = (
+            ccexperiment_fltr.qs
+            .exclude(tf_id=unknown_feature_id)
+            .select_related('tf_id', 'qcmetrics', 'qcmanualreview')
+            .annotate(
+                experiment_id=F('id'),
+                tf_alias=Case(
+                    When(tf__tf__gene__istartswith='unknown',
+                         then=F('tf__tf__locus_tag')),
+                    default=F('tf__tf__gene'),
+                    output_field=CharField()),
+                r1_r2_max_tally=Max('qcr1tor2tf__tally'),
+                r1_r2_status=r1_r2_status_with_default, #Subquery(r1_r2_max_tally_subquery),
+                r2_r1_max_tally=Max('qcr2tor1tf__tally'),
+                r2_r1_status=r2_r1_status_with_default, #Subquery(r2_r1_max_tally_subquery),
+                map_unmap_ratio=F('qcmetrics__genome_mapped') / F('qcmetrics__unmapped'),  # noqa
+                num_hops=Subquery(hop_count_subquery),
+                rank_recall=F('qcmanualreview__rank_recall'),
+                chip_better=F('qcmanualreview__chip_better'),
+                data_usable=F('qcmanualreview__data_usable'),
+                passing_replicate=F('qcmanualreview__passing_replicate'),
+                note=F('qcmanualreview__note')
+            )
+            .order_by('tf_alias', 'batch', 'batch_replicate')
+            .values('experiment_id', 'tf_alias', 'batch', 'batch_replicate',
+                    'r1_r2_status', 'r2_r1_status', 'map_unmap_ratio',
+                    'num_hops', 'rank_recall', 'chip_better', 'data_usable',
+                    'passing_replicate', 'note')
+        )
+
+        for item in query:
+            item['r1_r2_status'] = 'pass' if item['r1_r2_status'] == 0 \
+                else 'fail'
+            item['r2_r1_status'] = 'pass' if item['r2_r1_status'] == 0 \
+                else 'fail'
 
         return query
 
