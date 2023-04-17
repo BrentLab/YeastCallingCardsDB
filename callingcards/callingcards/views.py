@@ -28,7 +28,7 @@ import csv
 from django_filters import rest_framework as filters
 from django.conf import settings
 from django.db import DatabaseError
-from django.db.models.functions import Coalesce
+from django.db.models.functions import Coalesce, NullIf
 from django.db.models import (Max, F, Q, Subquery, OuterRef,
                               Count, Value, Case, When, CharField,
                               ForeignKey)
@@ -907,38 +907,44 @@ class QcReviewViewSet(ListModelFieldsMixin,
             .get(locus_tag=UNDETERMINED_LOCUS_TAG).id
 
         ccexperiment_fltr = CCExperimentFilter(self.request.GET)
- 
+
         # TODO add select/prefetch related to reduce the number of queries
-        # note when teh qc_metrics unmapped is 0, set to 0 to avoid divide by 
+        # note when teh qc_metrics unmapped is 0, set to 0 to avoid divide by
         # 0 error
-        query = (
-            ccexperiment_fltr.qs
-            .exclude(tf_id=unknown_feature_id)
-            .annotate(
-                experiment_id=F('id'),
-                tf_alias=Case(
-                    When(tf__tf__gene__istartswith='unknown',
-                         then=F('tf__tf__locus_tag')),
-                    default=F('tf__tf__gene'),
-                    output_field=CharField()),
-                r1_r2_max_tally=Max('qcr1tor2tf__tally'),
-                r1_r2_status=Subquery(r1_r2_max_tally_subquery),
-                r2_r1_max_tally=Max('qcr2tor1tf__tally'),
-                r2_r1_status=Subquery(r2_r1_max_tally_subquery),
-                map_unmap_ratio=Coalesce(F('qcmetrics__genome_mapped') / F('qcmetrics__unmapped'), 0),
-                num_hops=Subquery(hop_count_subquery),
-                rank_recall=F('qcmanualreview__rank_recall'),
-                chip_better=F('qcmanualreview__chip_better'),
-                data_usable=F('qcmanualreview__data_usable'),
-                passing_replicate=F('qcmanualreview__passing_replicate'),
-                note=F('qcmanualreview__note')
+        try:
+            query = (
+                ccexperiment_fltr.qs
+                .exclude(tf_id=unknown_feature_id)
+                .annotate(
+                    experiment_id=F('id'),
+                    tf_alias=Case(
+                        When(tf__tf__gene__istartswith='unknown',
+                             then=F('tf__tf__locus_tag')),
+                        default=F('tf__tf__gene'),
+                        output_field=CharField()),
+                    r1_r2_max_tally=Max('qcr1tor2tf__tally'),
+                    r1_r2_status=Subquery(r1_r2_max_tally_subquery),
+                    r2_r1_max_tally=Max('qcr2tor1tf__tally'),
+                    r2_r1_status=Subquery(r2_r1_max_tally_subquery),
+                    map_unmap_ratio=Coalesce(
+                        F('qcmetrics__genome_mapped') / NullIf(
+                            F('qcmetrics__unmapped'), 0), Value(0)
+                    ),
+                    num_hops=Subquery(hop_count_subquery),
+                    rank_recall=F('qcmanualreview__rank_recall'),
+                    chip_better=F('qcmanualreview__chip_better'),
+                    data_usable=F('qcmanualreview__data_usable'),
+                    passing_replicate=F('qcmanualreview__passing_replicate'),
+                    note=F('qcmanualreview__note')
+                )
+                .order_by('tf_alias', 'batch', 'batch_replicate')
+                .values('experiment_id', 'tf_alias', 'batch', 'batch_replicate',
+                        'r1_r2_status', 'r2_r1_status', 'map_unmap_ratio',
+                        'num_hops', 'rank_recall', 'chip_better', 'data_usable',
+                        'passing_replicate', 'note')
             )
-            .order_by('tf_alias', 'batch', 'batch_replicate')
-            .values('experiment_id', 'tf_alias', 'batch', 'batch_replicate',
-                    'r1_r2_status', 'r2_r1_status', 'map_unmap_ratio',
-                    'num_hops', 'rank_recall', 'chip_better', 'data_usable',
-                    'passing_replicate', 'note')
-        )
+        except ZeroDivisionError as err:
+            logging.error(err)
 
         for item in query:
             item['r1_r2_status'] = 'pass' if item['r1_r2_status'] == 0 \
