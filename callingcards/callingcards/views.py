@@ -24,6 +24,7 @@ To interact with this model via a RESTful API, you can perform the following
 import logging
 import io
 import csv
+import traceback
 
 from django_filters import rest_framework as filters
 from django.conf import settings
@@ -884,7 +885,7 @@ class QcReviewViewSet(ListModelFieldsMixin,
             experiment_id=OuterRef('pk')
         ).annotate(count=Count('experiment')
                    ).values('count')
-        
+
         r1_r2_max_tally_subquery = QcR1ToR2Tf.objects\
             .filter(experiment_id=OuterRef('pk'))\
             .order_by('-tally').values('edit_dist')\
@@ -912,42 +913,45 @@ class QcReviewViewSet(ListModelFieldsMixin,
             .get(locus_tag=UNDETERMINED_LOCUS_TAG).id
 
         ccexperiment_fltr = CCExperimentFilter(self.request.GET)
-
-        query = (
-            ccexperiment_fltr.qs
-            .exclude(tf_id=unknown_feature_id)
-            .select_related('tf_id', 'qcmetrics', 'qcmanualreview')
-            .annotate(
-                experiment_id=F('id'),
-                tf_alias=Case(
-                    When(tf__tf__gene__istartswith='unknown',
-                         then=F('tf__tf__locus_tag')),
-                    default=F('tf__tf__gene'),
-                    output_field=CharField()),
-                r1_r2_max_tally=Max('qcr1tor2tf__tally'),
-                r1_r2_status=Subquery(r1_r2_max_tally_subquery),
-                r2_r1_max_tally=Max('qcr2tor1tf__tally'),
-                r2_r1_status=Subquery(r2_r1_max_tally_subquery),
-                map_unmap_ratio=F('qcmetrics__genome_mapped') / F('qcmetrics__unmapped'),  # noqa
-                num_hops=Subquery(hop_count_subquery),
-                rank_recall=F('qcmanualreview__rank_recall'),
-                chip_better=F('qcmanualreview__chip_better'),
-                data_usable=F('qcmanualreview__data_usable'),
-                passing_replicate=F('qcmanualreview__passing_replicate'),
-                note=F('qcmanualreview__note')
+        try:
+            query = (
+                ccexperiment_fltr.qs
+                .exclude(tf_id=unknown_feature_id)
+                .select_related('tf_id', 'qcmetrics', 'qcmanualreview')
+                .annotate(
+                    experiment_id=F('id'),
+                    tf_alias=Case(
+                        When(tf__tf__gene__istartswith='unknown',
+                            then=F('tf__tf__locus_tag')),
+                        default=F('tf__tf__gene'),
+                        output_field=CharField()),
+                    r1_r2_max_tally=Max('qcr1tor2tf__tally'),
+                    r1_r2_status=Subquery(r1_r2_max_tally_subquery),
+                    r2_r1_max_tally=Max('qcr2tor1tf__tally'),
+                    r2_r1_status=Subquery(r2_r1_max_tally_subquery),
+                    map_unmap_ratio=F('qcmetrics__genome_mapped') / F('qcmetrics__unmapped'),  # noqa
+                    num_hops=Subquery(hop_count_subquery),
+                    rank_recall=F('qcmanualreview__rank_recall'),
+                    chip_better=F('qcmanualreview__chip_better'),
+                    data_usable=F('qcmanualreview__data_usable'),
+                    passing_replicate=F('qcmanualreview__passing_replicate'),
+                    note=F('qcmanualreview__note')
+                )
+                .order_by('tf_alias', 'batch', 'batch_replicate')
+                .values('experiment_id', 'tf_alias', 'batch', 'batch_replicate',
+                        'r1_r2_status', 'r2_r1_status', 'map_unmap_ratio',
+                        'num_hops', 'rank_recall', 'chip_better', 'data_usable',
+                        'passing_replicate', 'note')
             )
-            .order_by('tf_alias', 'batch', 'batch_replicate')
-            .values('experiment_id', 'tf_alias', 'batch', 'batch_replicate',
-                    'r1_r2_status', 'r2_r1_status', 'map_unmap_ratio',
-                    'num_hops', 'rank_recall', 'chip_better', 'data_usable',
-                    'passing_replicate', 'note')
-        )
 
-        for item in query:
-            item['r1_r2_status'] = 'pass' if item['r1_r2_status'] == 0 \
-                else 'fail'
-            item['r2_r1_status'] = 'pass' if item['r2_r1_status'] == 0 \
-                else 'fail'
+            for item in query:
+                item['r1_r2_status'] = 'pass' if item['r1_r2_status'] == 0 \
+                    else 'fail'
+                item['r2_r1_status'] = 'pass' if item['r2_r1_status'] == 0 \
+                    else 'fail'
+        except Exception as err:
+            logger.error(f"Exception encountered: {err}")  # pylint:disable=W1203 #noqa
+            logger.error(traceback.format_exc())
 
         return query
 
