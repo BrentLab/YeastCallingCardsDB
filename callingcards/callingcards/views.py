@@ -888,50 +888,29 @@ class QcReviewViewSet(ListModelFieldsMixin,
 
     def get_queryset(self):
 
-        hop_count_subquery = Hops.objects.filter(
-            experiment_id=OuterRef('pk')
-        ).annotate(count=Count('experiment')
-                   ).values('count')
+        hop_count_subquery = Hops.objects\
+            .filter(experiment_id=OuterRef('pk'))\
+            .values('experiment_id')\
+            .annotate(count=Count('experiment_id'))\
+            .values('count')
 
         r1_r2_max_tally_subquery = QcR1ToR2Tf.objects.filter(
             experiment_id=OuterRef('pk')
-        ).annotate(
-            max_tally=Max('tally', filter=Q(experiment_id=OuterRef('pk')))
-        ).filter(
-            tally=F('max_tally')
-        ).values('edit_dist')[:1]
+        ).order_by('-tally').values('edit_dist')[:1]
 
         r2_r1_max_tally_subquery = QcR2ToR1Tf.objects.filter(
             experiment_id=OuterRef('pk')
-        ).annotate(
-            max_tally=Max('tally', filter=Q(experiment_id=OuterRef('pk')))
-        ).filter(
-            tally=F('max_tally')
-        ).values('edit_dist')[:1]
+        ).order_by('-tally').values('edit_dist')[:1]
 
         unknown_feature_id = Gene.objects\
             .get(locus_tag=UNDETERMINED_LOCUS_TAG).id
 
         ccexperiment_fltr = CCExperimentFilter(self.request.GET)
-
-        # Perform the subquery separately and log the result
-        experiment_ids = ccexperiment_fltr.qs.values_list('id', flat=True)
-        for experiment_id in experiment_ids:
-            r1_r2_result = list(QcR1ToR2Tf.objects
-                                .filter(experiment_id=experiment_id)
-                                .order_by('-tally')
-                                .values('edit_dist')
-                                .annotate(max_edit_dist=Max('edit_dist'))
-                                .values('max_edit_dist'))
-
-            if len(r1_r2_result) > 1 or r1_r2_result is None or len(r1_r2_result) == 0:
-                logger.error(
-                    f"Experiment ID: {experiment_id} has a problematic row in r1_r2 subquery: {r1_r2_result}")
-
+ 
+        # TODO add select/prefetch related to reduce the number of queries
         query = (
             ccexperiment_fltr.qs
             .exclude(tf_id=unknown_feature_id)
-            .select_related('tf_id', 'qcmetrics', 'qcmanualreview')
             .annotate(
                 experiment_id=F('id'),
                 tf_alias=Case(
