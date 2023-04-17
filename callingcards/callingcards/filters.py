@@ -1,8 +1,9 @@
 import django_filters
 from .models import (Gene, McIsaacZEV, KemmerenTFKO,
                      HopsReplicateSig, CCExperiment, STRAND_CHOICES,
-                     PromoterRegions, HarbisonChIP)
-
+                     PromoterRegions, HarbisonChIP, QcMetrics,
+                     QcManualReview, QcR1ToR2Tf, QcR2ToR1Tf,
+                     QcTfToTransposon)
 
 class GeneFilter(django_filters.FilterSet):
     chr = django_filters.CharFilter(field_name="chr__ucsc")
@@ -209,5 +210,40 @@ class HopsReplicateSigFilter(django_filters.FilterSet):
     class Meta:
         model = HopsReplicateSig
         fields = ['experiment', 'batch', 'batch_replicate', 'background',
-                  'promoter_source', 'tf_id', 'tf_locus_tag', 'tf_gene', 
+                  'promoter_source', 'tf_id', 'tf_locus_tag', 'tf_gene',
                   'target_locus_tag', 'target_gene']
+
+
+class QcMetricsFilter(django_filters.FilterSet):
+
+    class Meta:
+        model = QcMetrics
+        fields = "__all__"
+
+
+class QcManualReviewFilter(django_filters.FilterSet):
+
+    class Meta:
+        model = QcManualReview
+        fields = "__all__"
+
+
+class QcR1ToR2TfFilter(django_filters.FilterSet):
+
+    class Meta:
+        model = QcR1ToR2Tf
+        fields = "__all__"
+
+
+class QcR2ToR1TfFilter(django_filters.FilterSet):
+
+    class Meta:
+        model = QcR2ToR1Tf
+        fields = "__all__"
+
+
+class QcTfToTransposonFilter(django_filters.FilterSet):
+
+    class Meta:
+        model = QcTfToTransposon
+        fields = "__all__"
