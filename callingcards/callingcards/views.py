@@ -895,11 +895,11 @@ class QcReviewViewSet(ListModelFieldsMixin,
             .annotate(count=Count('experiment_id'))\
             .values('count')
 
-        r1_r2_max_tally_subquery = QcR1ToR2Tf.objects.filter(
+        r1_r2_max_tally_edit_dist_subquery = QcR1ToR2Tf.objects.filter(
             experiment_id=OuterRef('pk')
         ).order_by('-tally').values('edit_dist')[:1]
 
-        r2_r1_max_tally_subquery = QcR2ToR1Tf.objects.filter(
+        r2_r1_max_tally_edit_dist_subquery = QcR2ToR1Tf.objects.filter(
             experiment_id=OuterRef('pk')
         ).order_by('-tally').values('edit_dist')[:1]
 
@@ -921,10 +921,8 @@ class QcReviewViewSet(ListModelFieldsMixin,
                             then=F('tf__tf__locus_tag')),
                     default=F('tf__tf__gene'),
                     output_field=CharField()),
-                r1_r2_max_tally=Max('qcr1tor2tf__tally'),
-                r1_r2_status=Subquery(r1_r2_max_tally_subquery),
-                r2_r1_max_tally=Max('qcr2tor1tf__tally'),
-                r2_r1_status=Subquery(r2_r1_max_tally_subquery),
+                r1_r2_max_tally_edit_dist=Subquery(r1_r2_max_tally_edit_dist_subquery), # noqa
+                r2_r1_max_tally_edit_dist=Subquery(r2_r1_max_tally_edit_dist_subquery), # noqa
                 map_unmap_ratio=Coalesce(
                     F('qcmetrics__genome_mapped') / NullIf(
                         F('qcmetrics__unmapped'), 0), Value(0)
@@ -938,16 +936,16 @@ class QcReviewViewSet(ListModelFieldsMixin,
             )
             .order_by('tf_alias', 'batch', 'batch_replicate')
             .values('experiment_id', 'tf_alias', 'batch', 'batch_replicate',
-                    'r1_r2_status', 'r2_r1_status', 'map_unmap_ratio',
-                    'num_hops', 'rank_recall', 'chip_better', 'data_usable',
-                    'passing_replicate', 'note')
+                    'r1_r2_max_tally_edit_dist', 'r2_r1_max_tally_edit_dist',
+                    'map_unmap_ratio', 'num_hops', 'rank_recall',
+                    'chip_better', 'data_usable', 'passing_replicate', 'note')
         )
 
-        for item in query:
-            item['r1_r2_status'] = 'pass' if item['r1_r2_status'] == 0 \
-                else 'fail'
-            item['r2_r1_status'] = 'pass' if item['r2_r1_status'] == 0 \
-                else 'fail'
+        # for item in query:
+        #     item['r1_r2_status'] = 'pass' if item['r1_r2_status'] == 0 \
+        #         else 'fail'
+        #     item['r2_r1_status'] = 'pass' if item['r2_r1_status'] == 0 \
+        #         else 'fail'
 
         return query
 
