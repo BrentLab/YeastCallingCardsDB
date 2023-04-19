@@ -5,6 +5,9 @@ from django.contrib import admin
 from django.views.generic.base import RedirectView
 from rest_framework.routers import DefaultRouter
 from rest_framework.authtoken import views
+from drf_spectacular.views import (SpectacularAPIView, 
+                                   SpectacularSwaggerView, 
+                                   SpectacularRedocView)
 
 from .users.views import UserViewSet, UserCreateViewSet
 from .callingcards.views import (ChrMapViewSet, GeneViewSet,
@@ -97,5 +100,8 @@ urlpatterns = [
     # the 'api-root' from django rest-frameworks default router
     # http://www.django-rest-framework.org/api-guide/routers/#defaultrouter
     re_path(r'^$', RedirectView.as_view(url=reverse_lazy('api-root'), permanent=False)),
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

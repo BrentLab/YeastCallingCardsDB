@@ -27,6 +27,7 @@ class Common(Configuration):
         'rest_framework.authtoken',  # token authentication
         'django_filters',            # for filtering rest endpoints
         'django_extensions',         # additional tools added to manage.py
+        'drf_spectacular',           # OpenAPI 3.0 schema generation'
 
         # Your apps
         'callingcards.users',
@@ -221,5 +222,21 @@ class Common(Configuration):
         'DEFAULT_AUTHENTICATION_CLASSES': (
             'rest_framework.authentication.SessionAuthentication',
             'rest_framework.authentication.TokenAuthentication',
-        )
+        ),
+        'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     }
+
+    SPECTACULAR_SETTINGS = {
+    'TITLE': 'CallingCards API',
+    'DESCRIPTION': 'A database to faciliate the development, review and use of Calling Cards data',
+    'VERSION': '1.0.0',
+    'LICENSE': {
+        'name': 'Your License',
+        'url': 'https://www.example.com/license/',
+    },
+    'CONTACT': {
+        'name': 'Your Name',
+        'email': 'contact@example.com',
+        'url': 'https://www.example.com/contact/',
+    },
+}
