@@ -1681,6 +1681,20 @@ files = [
 ]
 
 [[package]]
+name = "pydotplus"
+version = "2.0.2"
+description = "Python interface to Graphviz's Dot language"
+category = "dev"
+optional = false
+python-versions = "*"
+files = [
+    {file = "pydotplus-2.0.2.tar.gz", hash = "sha256:91e85e9ee9b85d2391ead7d635e3d9c7f5f44fd60a60e59b13e2403fa66505c4"},
+]
+
+[package.dependencies]
+pyparsing = ">=2.0.1"
+
+[[package]]
 name = "pyflakes"
 version = "3.0.1"
 description = "passive checker of Python programs"
@@ -1706,6 +1720,21 @@ files = [
 
 [package.extras]
 plugins = ["importlib-metadata"]
+
+[[package]]
+name = "pyparsing"
+version = "3.0.9"
+description = "pyparsing module - Classes and methods to define and execute parsing grammars"
+category = "dev"
+optional = false
+python-versions = ">=3.6.8"
+files = [
+    {file = "pyparsing-3.0.9-py3-none-any.whl", hash = "sha256:5026bae9a10eeaefb61dab2f09052b9f4307d44aee4eda64b309723d8d206bbc"},
+    {file = "pyparsing-3.0.9.tar.gz", hash = "sha256:2b020ecf7d21b687f219b71ecad3631f644a47f01403fa1d1036b0c6416d70fb"},
+]
+
+[package.extras]
+diagrams = ["jinja2", "railroad-diagrams"]
 
 [[package]]
 name = "pytest"
@@ -2266,4 +2295,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "118b2dd4154d8cbc8edb95faa5677bbdfdd6815e1d1df46885c3fae82815e3be"
+content-hash = "c1fc4f46424d3f818586da1311693cd0390803abaffe34a8e4e4dab4609d0e1c"
