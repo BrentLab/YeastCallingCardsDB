@@ -31,56 +31,55 @@ from ..models import HarbisonChIP, PromoterRegions
 class TestCreateChrMap(TestCase):
 
     def setUp(self):
-        user = UserFactory()
-        self.chrmap_data = model_to_dict(ChrMapFactory.build(uploader=user))  # noqa
+        self.serializer = ChrMapSerializer
+        self.factory = ChrMapFactory
 
     def test_serializer_with_empty_data(self):
-        serializer = ChrMapSerializer(data={})  # noqa
+        serializer = self.serializer(data={})  # noqa
         assert serializer.is_valid() is False
 
     def test_serializer_with_valid_data(self):
-        serializer = ChrMapSerializer(data=self.chrmap_data)  # noqa
+        serializer = self.serializer(
+            data=model_to_dict(self.factory.create()))
         assert serializer.is_valid() is True
 
 
 class TestGeneSerializer(TestCase):
 
     def setUp(self):
-        # note that this instantiates and saves to the DB
-        # must set systematic to something unique as a result
-        # probably worth a post to github
-        user = UserFactory()
-        chr_record = ChrMapFactory.create(uploader=user)
-        self.gene_data = model_to_dict(GeneFactory.build(uploader=user,
-                                                         chr=chr_record))
+        self.serializer = GeneSerializer
+        self.factory = GeneFactory
 
     def test_serializer_with_empty_data(self):
-        serializer = GeneSerializer(data={})  # noqa
+        serializer = self.serializer(data={})  # noqa
         assert serializer.is_valid() is False
 
     def test_serializer_with_valid_data(self):
-        serializer = GeneSerializer(data=self.gene_data)  # noqa
+        data_dict = model_to_dict(self.factory.create())
+        # since the record is already created, if we verify now it will fail 
+        # on the locus_tag field b/c it is not unique (it matches itself)
+        serializer = self.serializer(
+            data=data_dict)
+        assert serializer.is_valid() is False
+        # but if we change the locus tag, this will work
+        data_dict['locus_tag'] = 'new_locus_tag'
+        serializer = self.serializer(data=data_dict)
         assert serializer.is_valid() is True
 
 
 class TestCreatePromoterRegions(TestCase):
 
     def setUp(self):
-        user = UserFactory()
-        chr_record = ChrMapFactory(uploader=user)
-        gene_record = GeneFactory(uploader=user,
-                                  chr=chr_record)
-        self.promoter_data = model_to_dict(
-            PromoterRegionsFactory.build(uploader=user,
-                                         chr=chr_record,
-                                         associated_feature=gene_record))  # noqa
+        self.serializer = PromoterRegionsSerializer
+        self.factory = PromoterRegionsFactory
 
     def test_serializer_with_empty_data(self):
-        serializer = PromoterRegionsSerializer(data={})  # noqa
+        serializer = self.serializer(data={})  # noqa
         assert serializer.is_valid() is False
 
     def test_serializer_with_valid_data(self):
-        serializer = PromoterRegionsSerializer(data=self.promoter_data)  # noqa
+        serializer = self.serializer(
+            data=model_to_dict(self.factory.create()))
         assert serializer.is_valid() is True
 
 
@@ -88,9 +87,11 @@ class TestPromoterRegionsTargetsOnly(TestCase):
 
     def setUp(self):
         user = UserFactory()
-        chr_record = ChrMapFactory(uploader=user)
-        self.gene = GeneFactory(uploader=user, chr=chr_record)
+        chr_record = ChrMapFactory(uploader=user,
+                                   modifiedBy=user)
+        self.gene = GeneFactory(uploader=user, modifiedBy=user, chr=chr_record)
         self.promoter_region = PromoterRegionsFactory(
+            modifiedBy=user,
             associated_feature=self.gene)
         self.annotated_queryset = PromoterRegions.objects\
             .targets().filter(id=self.promoter_region.id)
@@ -145,83 +146,64 @@ class TestHarbisonChIP(TestCase):
 class TestKemmerenTFKO(TestCase):
 
     def setUp(self):
-        user = UserFactory()
-        chr_record = ChrMapFactory(uploader=user)
-        gene_record = GeneFactory(uploader=user,
-                                  chr=chr_record)
-
-        self.kemmeren_data = model_to_dict(
-            KemmerenTFKOFactory.build(uploader=user,
-                                      gene=gene_record,
-                                      tf=gene_record))  # noqa
+        self.serializer = KemmerenTFKOSerializer
+        self.factory = KemmerenTFKOFactory
 
     def test_serializer_with_empty_data(self):
-        serializer = KemmerenTFKOSerializer(data={})  # noqa
+        serializer = self.serializer(data={})  # noqa
         assert serializer.is_valid() is False
 
     def test_serializer_with_valid_data(self):
-        serializer = KemmerenTFKOSerializer(data=self.kemmeren_data)  # noqa
+        serializer = self.serializer(
+            data=model_to_dict(self.factory.create()))
         assert serializer.is_valid() is True
 
 
 class TestMcIsaacZEV(TestCase):
 
     def setUp(self):
-        user = UserFactory()
-        chr_record = ChrMapFactory(uploader=user)
-        gene_record = GeneFactory(uploader=user,
-                                  chr=chr_record)
-
-        self.mcisaac_data = model_to_dict(
-            McIsaacZEVFactory.build(gene=gene_record,
-                                    tf=gene_record))  # noqa
+        self.serializer = McIsaacZEVSerializer
+        self.factory = McIsaacZEVFactory
 
     def test_serializer_with_empty_data(self):
-        serializer = McIsaacZEVSerializer(data={})  # noqa
+        serializer = self.serializer(data={})  # noqa
         assert serializer.is_valid() is False
 
     def test_serializer_with_valid_data(self):
-        serializer = McIsaacZEVSerializer(data=self.mcisaac_data)  # noqa
+        serializer = self.serializer(
+            data=model_to_dict(self.factory.create()))
         assert serializer.is_valid() is True
 
 
 class TestBackground(TestCase):
 
     def setUp(self):
-        user = UserFactory()
-        chr_record = ChrMapFactory(uploader=user)
-
-        self.background_data = model_to_dict(
-            BackgroundFactory.build(uploader=user,
-                                    chr=chr_record))  # noqa
+        self.serializer = BackgroundSerializer
+        self.factory = BackgroundFactory
 
     def test_serializer_with_empty_data(self):
-        serializer = BackgroundSerializer(data={})  # noqa
+        serializer = self.serializer(data={})  # noqa
         assert serializer.is_valid() is False
 
     def test_serializer_with_valid_data(self):
-        serializer = BackgroundSerializer(data=self.background_data)  # noqa
+        serializer = self.serializer(
+            data=model_to_dict(self.factory.create()))
         assert serializer.is_valid() is True
 
 
 class TestCCTF(TestCase):
 
     def setUp(self):
-        user = UserFactory()
-        chr_record = ChrMapFactory(uploader=user)
-        gene_record = GeneFactory(uploader=user,
-                                  chr=chr_record)
-
-        self.cctf_data = model_to_dict(
-            CCTFFactory.build(uploader=user,
-                              tf=gene_record))  # noqa
+        self.serializer = CCTFSerializer
+        self.factory = CCTFFactory
 
     def test_serializer_with_empty_data(self):
-        serializer = CCTFSerializer(data={})  # noqa
+        serializer = self.serializer(data={})  # noqa
         assert serializer.is_valid() is False
 
     def test_serializer_with_valid_data(self):
-        serializer = CCTFSerializer(data=self.cctf_data)  # noqa
+        serializer = self.serializer(
+            data=model_to_dict(self.factory.create()))
         assert serializer.is_valid() is True
 
 
@@ -229,8 +211,10 @@ class TestCCTFListSerializer(TestCase):
 
     def setUp(self):
         user = UserFactory()
-        chr_record = ChrMapFactory(uploader=user)
+        chr_record = ChrMapFactory(uploader=user,
+                                   modifiedBy=user)
         gene_record = GeneFactory(uploader=user,
+                                  modifiedBy=user,
                                   chr=chr_record)
 
         self.cctf_list_data = {
@@ -250,165 +234,108 @@ class TestCCTFListSerializer(TestCase):
 class TestCCExperiment(TestCase):
 
     def setUp(self):
-        user = UserFactory()
-        chr_record = ChrMapFactory(uploader=user)
-        gene_record = GeneFactory(uploader=user,
-                                  chr=chr_record)
-        cctf_record = CCTFFactory(uploader=user,
-                                  tf=gene_record)
-
-        self.cc_experiment_data = model_to_dict(
-            CCExperimentFactory.build(tf=cctf_record))  # noqa
+        self.serializer = CCExperimentSerializer
+        self.factory = CCExperimentFactory
 
     def test_serializer_with_empty_data(self):
-        serializer = CCExperimentSerializer(data={})  # noqa
+        serializer = self.serializer(data={})  # noqa
         assert serializer.is_valid() is False
 
     def test_serializer_with_valid_data(self):
-        serializer = CCExperimentSerializer(data=self.cc_experiment_data)  # noqa
+        serializer = self.serializer(
+            data=model_to_dict(self.factory.create()))
         assert serializer.is_valid() is True
-
 
 class TestHops(TestCase):
 
     def setUp(self):
-        user = UserFactory()
-        chr_record = ChrMapFactory(uploader=user)
-        gene_record = GeneFactory(uploader=user,
-                                  chr=chr_record)
-        cctf_record = CCTFFactory(uploader=user,
-                                  tf=gene_record)
-        expr_record = CCExperimentFactory(uploader=user,
-                                          tf=cctf_record)
-
-        self.hops_data = model_to_dict(HopsFactory.build(  # noqa
-            chr=chr_record, experiment=expr_record))
+        pass
 
     def test_serializer_with_empty_data(self):
         serializer = HopsSerializer(data={})  # noqa
         assert serializer.is_valid() is False
 
     def test_serializer_with_valid_data(self):
-        serializer = HopsSerializer(data=self.hops_data)  # noqa
+        serializer = HopsSerializer(
+            data=model_to_dict(HopsFactory.create()))
         assert serializer.is_valid() is True
 
 
 class TestHopsReplicateSig(TestCase):
 
     def setUp(self):
-        user = UserFactory()
-        chr_record = ChrMapFactory(uploader=user)
-        gene_record = GeneFactory(chr=chr_record, uploader=user)
-        cctf_record = CCTFFactory(tf=gene_record, uploader=user)
-        expr_record = CCExperimentFactory(tf=cctf_record, uploader=user)
-        promoter_record = PromoterRegionsFactory(chr=chr_record, uploader=user)
-
-        self.hops_rep_data = model_to_dict(HopsReplicateSigFactory.build(
-            promoter=promoter_record, experiment=expr_record))
+        pass
 
     def test_serializer_with_empty_data(self):
         serializer = HopsReplicateSigSerializer(data={})  # noqa
         assert serializer.is_valid() is False
 
     def test_serializer_with_valid_data(self):
-        serializer = HopsReplicateSigSerializer(data=self.hops_rep_data)  # noqa
+        serializer = HopsReplicateSigSerializer(
+            data=model_to_dict(HopsReplicateSigFactory.create()))
         assert serializer.is_valid() is True
 
 
 class TestQcMetrics(TestCase):
 
     def setUp(self):
-        user = UserFactory()
-        chr_record = ChrMapFactory(uploader=user)
-        gene_record = GeneFactory(uploader=user,
-                                  chr=chr_record)
-        cctf_record = CCTFFactory(uploader=user,
-                                  tf=gene_record)
-        expr_record = CCExperimentFactory(uploader=user,
-                                          tf=cctf_record)
-
-        self.qc_data = model_to_dict(QcMetricsFactory.build(  # noqa
-            experiment=expr_record))
+        pass
 
     def test_serializer_with_empty_data(self):
         serializer = QcMetricsSerializer(data={})  # noqa
         assert serializer.is_valid() is False
 
     def test_serializer_with_valid_data(self):
-        serializer = QcMetricsSerializer(data=self.qc_data)  # noqa
+        serializer = QcMetricsSerializer(
+            data=model_to_dict(QcMetricsFactory.create()))
         assert serializer.is_valid() is True
 
 
 class TestQcManifest(TestCase):
 
     def setUp(self):
-        user = UserFactory()
-        chr_record = ChrMapFactory(uploader=user)
-        gene_record = GeneFactory(uploader=user,
-                                  chr=chr_record)
-        cctf_record = CCTFFactory(uploader=user,
-                                  tf=gene_record)
-        expr_record = CCExperimentFactory(uploader=user,
-                                          tf=cctf_record)
-
-        self.qc_manifest_data = model_to_dict(QcManualReviewFactory.build(  # noqa
-            experiment=expr_record))
+        self.serializer = QcManualReviewSerializer
+        self.factory = QcManualReviewFactory
 
     def test_serializer_with_empty_data(self):
-        serializer = QcManualReviewSerializer(data={})  # noqa
+        serializer = self.serializer(data={})  # noqa
         assert serializer.is_valid() is False
 
     def test_serializer_with_valid_data(self):
-        serializer = QcManualReviewSerializer(data=self.qc_manifest_data)  # noqa
+        serializer = self.serializer(
+            data=model_to_dict(self.factory.create()))
         assert serializer.is_valid() is True
 
 
 class TestQcR1ToR2Tf(TestCase):
 
     def setUp(self):
-        user = UserFactory()
-        chr_record = ChrMapFactory(uploader=user)
-        gene_record = GeneFactory(uploader=user,
-                                  chr=chr_record)
-        cctf_record = CCTFFactory(uploader=user,
-                                  tf=gene_record)
-        expr_record = CCExperimentFactory(uploader=user,
-                                          tf=cctf_record)
-
-        self.qc_r1_to_r2_data = model_to_dict(QcR1ToR2TfFactory.build(  # noqa
-            experiment=expr_record))
+        self.serializer = QcR1ToR2TfSerializer
+        self.factory = QcR1ToR2TfFactory
 
     def test_serializer_with_empty_data(self):
-        serializer = QcR1ToR2TfSerializer(data={})  # noqa
+        serializer = self.serializer(data={})  # noqa
         assert serializer.is_valid() is False
 
     def test_serializer_with_valid_data(self):
-        serializer = QcR1ToR2TfSerializer(data=self.qc_r1_to_r2_data)  # noqa
+        serializer = self.serializer(
+            data=model_to_dict(self.factory.create()))
         assert serializer.is_valid() is True
 
 
 class TestQcTfToTransposon(TestCase):
 
     def setUp(self):
-        user = UserFactory()
-        chr_record = ChrMapFactory(uploader=user)
-        gene_record = GeneFactory(uploader=user,
-                                  chr=chr_record)
-        cctf_record = CCTFFactory(uploader=user,
-                                  tf=gene_record)
-        expr_record = CCExperimentFactory(uploader=user,
-                                          tf=cctf_record)
-
-        self.qc_tf_to_transposon_data = model_to_dict(  # noqa
-            QcTfToTransposonFactory.build(experiment=expr_record))
+        self.serializer = QcTfToTransposonSerializer
+        self.factory = QcTfToTransposonFactory
 
     def test_serializer_with_empty_data(self):
-        serializer = QcTfToTransposonSerializer(data={})
+        serializer = self.serializer(data={})  # noqa
         assert serializer.is_valid() is False
 
     def test_serializer_with_valid_data(self):
-        serializer = QcTfToTransposonSerializer(
-            data=self.qc_tf_to_transposon_data)
+        serializer = self.serializer(
+            data=model_to_dict(self.factory.create()))
         assert serializer.is_valid() is True
 
 class ExpressionViewSetSerializerTestCase(TestCase):

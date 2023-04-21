@@ -1,14 +1,10 @@
 import random
 from math import floor
 import factory
+import uuid
 
 
 from callingcards.users.test.factories import UserFactory
-# from ..models import (ChrMap, Gene, PromoterRegions, HarbisonChIP,
-#                       KemmerenTFKO, McIsaacZEV, Background, CCTF,
-#                       CCExperiment, Hops, HopsReplicateSig, QcMetrics,
-#                       QcManualReview, QcR1ToR2Tf, QcR2ToR1Tf,
-#                       QcTfToTransposon)
 
 
 def close_value(value, min_diff=0.0001, max_diff=0.01):
@@ -36,26 +32,26 @@ def close_value(value, min_diff=0.0001, max_diff=0.01):
     return round(value + sign * diff, 5)
 
 
-class BaseModelFactoryMixin:
-
-    @classmethod
-    def _create(cls, model_class, *args, **kwargs):
-        uploader = kwargs.pop('uploader', None)
-        if not uploader:
-            uploader = UserFactory.create()
-        instance = model_class(*args, **kwargs)
-        instance.uploader = uploader
-        instance.save()
-        return instance
+class BaseModelFactoryMixin(factory.django.DjangoModelFactory):
 
     uploader = factory.SubFactory(UserFactory)
-    uploadDate = factory.Faker('date_time_between',
-                               start_date='-30d',
-                               end_date='now')
-    modified = factory.LazyAttribute(lambda o: factory.Faker(  # pylint: disable=E1101 # noqa
-        'date_time_between',
-        start_date=o.uploadDate,
-        end_date='now').generate({}))
+    modifiedBy = factory.SelfAttribute('uploader')
+
+    class Meta:
+        abstract = True
+
+    @factory.post_generation
+    def _set_related_fields(self, create, extracted, **kwargs):
+        if not create:
+            # If we're not saving the instance to the database, no need to set related fields
+            return
+
+        for attribute in ['uploader', 'modifiedBy']:
+            value = getattr(self, attribute)
+            if not value:
+                value = UserFactory.create()
+            setattr(self, attribute, value)
+        self.save()
 
 
 class ChrMapFactory(BaseModelFactoryMixin,
@@ -103,7 +99,6 @@ class PromoterRegionsFactory(BaseModelFactoryMixin,
     end = factory.Sequence(lambda n: n * 200 + 100)
     strand = factory.Iterator(['+', '-', '*'])
     associated_feature = factory.SubFactory(GeneFactory)
-    associated_direction = factory.Iterator(['+', '-', '*'])
     score = 100
     source = factory.Iterator(['not_orf', 'yiming'])
 
@@ -226,9 +221,6 @@ class QcManualReviewFactory(BaseModelFactoryMixin,
     class Meta:
         model = 'callingcards.QcManualReview'
 
-    # uploader = factory.SubFactory(UserFactory)
-    # uploadDate = factory.Faker('date_time')
-    # modified = factory.Faker('date_time')
     experiment = factory.SubFactory(CCExperimentFactory)
     rank_recall = 'unreviewed'
     chip_better = 'yes'

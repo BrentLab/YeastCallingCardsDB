@@ -1,1 +1,1 @@
-from .queryset_to_string import queryset_to_string
+from .compute_cc_effect import compute_cc_effect
