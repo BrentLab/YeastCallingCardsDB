@@ -1,6 +1,7 @@
 import django_filters
+from .models.mixins.GenomicCoordinatesMixin import GenonomicCoordinatesMixin
 from .models import (Gene, McIsaacZEV, KemmerenTFKO,
-                     HopsReplicateSig, CCExperiment, STRAND_CHOICES,
+                     HopsReplicateSig, CCExperiment,
                      PromoterRegions, HarbisonChIP, QcMetrics,
                      QcManualReview, QcR1ToR2Tf, QcR2ToR1Tf,
                      QcTfToTransposon)
@@ -9,7 +10,8 @@ class GeneFilter(django_filters.FilterSet):
     chr = django_filters.CharFilter(field_name="chr__ucsc")
     start = django_filters.NumberFilter()
     end = django_filters.NumberFilter()
-    strand = django_filters.ChoiceFilter(choices=STRAND_CHOICES)
+    strand = django_filters.ChoiceFilter(
+        choices=GenonomicCoordinatesMixin.STRAND_CHOICES)
     type = django_filters.CharFilter(lookup_expr='iexact')
     gene_biotype = django_filters.CharFilter(lookup_expr='iexact')
     locus_tag = django_filters.CharFilter(lookup_expr='iexact')
@@ -36,7 +38,6 @@ class PromoterRegionsFilter(django_filters.FilterSet):
     - strand: Strand (either '+', '-' or '.')
     - target_locus_tag: Associated feature locus_tag (Foreign key to Gene model)
     - target_gene: Associated feature gene name (Foreign key to Gene model)
-    - associated_direction: Associated direction (either '+', '-' or '.')
     - score: Score (0-100)
     - source: Source (either 'not_orf' or 'yiming')
     """
@@ -53,7 +54,6 @@ class PromoterRegionsFilter(django_filters.FilterSet):
             'strand',
             'target_locus_tag',
             'target_gene',
-            'associated_direction',
             'score',
             'source',
         ]

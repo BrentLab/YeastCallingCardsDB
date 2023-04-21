@@ -5,13 +5,14 @@ from rest_framework import serializers
 from .models import (ChrMap, Gene, PromoterRegions, HarbisonChIP,
                      KemmerenTFKO, McIsaacZEV, Background, CCTF,
                      CCExperiment, Hops, HopsReplicateSig, QcMetrics,
-                     QcManualReview, QcR1ToR2Tf, QcR2ToR1Tf, QcTfToTransposon)  # noqa
+                     QcManualReview, QcR1ToR2Tf, QcR2ToR1Tf, QcTfToTransposon)
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
 class ChrMapSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
+    modifiedBy = serializers.CharField(source='modifiedBy.username')
 
     class Meta:
         model = ChrMap  # noqa
@@ -20,6 +21,7 @@ class ChrMapSerializer(serializers.ModelSerializer):
 
 class GeneSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
+    modifiedBy = serializers.CharField(source='modifiedBy.username')
 
     class Meta:
         model = Gene  # noqa
@@ -28,6 +30,7 @@ class GeneSerializer(serializers.ModelSerializer):
 
 class PromoterRegionsSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
+    modifiedBy = serializers.CharField(source='modifiedBy.username')
 
     class Meta:
         model = PromoterRegions  # noqa
@@ -42,8 +45,19 @@ class PromoterRegionsTargetsOnlySerializer(serializers.Serializer):
     source = serializers.CharField()
 
 
+class PromoterHopsBackgroundViewSerializer(serializers.ModelSerializer):
+    expression_hops = serializers.IntegerField()
+    background_hops = serializers.IntegerField()
+    effect = serializers.FloatField()
+
+    class Meta:
+        model = PromoterRegions
+        fields = ('id', 'expression_hops', 'background_hops', 'effect')
+
+
 class HarbisonChIPSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
+    modifiedBy = serializers.CharField(source='modifiedBy.username')
 
     class Meta:
         model = HarbisonChIP  # noqa
@@ -63,6 +77,7 @@ class HarbisonChIPAnnotatedSerializer(serializers.Serializer):
 
 class KemmerenTFKOSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
+    modifiedBy = serializers.CharField(source='modifiedBy.username')
 
     class Meta:
         model = KemmerenTFKO  # noqa
@@ -71,6 +86,7 @@ class KemmerenTFKOSerializer(serializers.ModelSerializer):
 
 class McIsaacZEVSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
+    modifiedBy = serializers.CharField(source='modifiedBy.username')
 
     class Meta:
         model = McIsaacZEV  # noqa
@@ -79,6 +95,7 @@ class McIsaacZEVSerializer(serializers.ModelSerializer):
 
 class BackgroundSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
+    modifiedBy = serializers.CharField(source='modifiedBy.username')
 
     class Meta:
         model = Background  # noqa
@@ -87,6 +104,7 @@ class BackgroundSerializer(serializers.ModelSerializer):
 
 class CCTFSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
+    modifiedBy = serializers.CharField(source='modifiedBy.username')
 
     class Meta:
         model = CCTF  # noqa
@@ -99,6 +117,7 @@ class CCTFListSerializer(serializers.Serializer):
 
 class CCExperimentSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
+    modifiedBy = serializers.CharField(source='modifiedBy.username')
 
     class Meta:
         model = CCExperiment  # noqa
@@ -107,6 +126,7 @@ class CCExperimentSerializer(serializers.ModelSerializer):
 
 class HopsSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
+    modifiedBy = serializers.CharField(source='modifiedBy.username')
 
     class Meta:
         model = Hops  # noqa
@@ -115,6 +135,7 @@ class HopsSerializer(serializers.ModelSerializer):
 
 class HopsReplicateSigSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
+    modifiedBy = serializers.CharField(source='modifiedBy.username')
 
     class Meta:
         model = HopsReplicateSig  # noqa
@@ -123,6 +144,7 @@ class HopsReplicateSigSerializer(serializers.ModelSerializer):
 
 class QcMetricsSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
+    modifiedBy = serializers.CharField(source='modifiedBy.username')
 
     class Meta:
         model = QcMetrics  # noqa
@@ -130,6 +152,7 @@ class QcMetricsSerializer(serializers.ModelSerializer):
 
 class QcManualReviewSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
+    modifiedBy = serializers.CharField(source='modifiedBy.username')
 
     class Meta:
         model = QcManualReview  # noqa
@@ -138,6 +161,7 @@ class QcManualReviewSerializer(serializers.ModelSerializer):
 
 class QcR1ToR2TfSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
+    modifiedBy = serializers.CharField(source='modifiedBy.username')
 
     class Meta:
         model = QcR1ToR2Tf  # noqa
@@ -146,6 +170,7 @@ class QcR1ToR2TfSerializer(serializers.ModelSerializer):
 
 class QcR2ToR1TfSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
+    modifiedBy = serializers.CharField(source='modifiedBy.username')
 
     class Meta:
         model = QcR2ToR1Tf  # noqa
@@ -154,6 +179,7 @@ class QcR2ToR1TfSerializer(serializers.ModelSerializer):
 
 class QcTfToTransposonSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
+    modifiedBy = serializers.CharField(source='modifiedBy.username')
 
     class Meta:
         model = QcTfToTransposon  # noqa
@@ -190,6 +216,7 @@ class ExpressionViewSetSerializer(serializers.Serializer):
     effect_expr = serializers.FloatField()
     p_expr = serializers.FloatField()
     source_expr = serializers.CharField()
+
 
 class HopsReplicateSigAnnotatedSerializer(serializers.Serializer):
     tf_id_alias = serializers.IntegerField()

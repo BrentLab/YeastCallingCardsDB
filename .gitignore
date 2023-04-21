@@ -1,6 +1,7 @@
 migrations/
 *.sqlite-shm
 *.sqlite-wal
+*.sqlite
 
 # fixture data
 fixtures

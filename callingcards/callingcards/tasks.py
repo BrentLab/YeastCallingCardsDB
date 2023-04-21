@@ -22,7 +22,10 @@ def process_upload(data, many_flag, kwargs):
     user_pk = kwargs.pop("uploader")
     User = get_user_model()
     user = User.objects.get(pk=user_pk)
-    kwargs["uploader"] = user
+    # TODO document that the user_field and modifiedBy_field may be passed
+    # in the kwargs
+    kwargs[kwargs.get('user_field', 'uploader')] = user
+    kwargs[kwargs.get('modifiedBy_field', 'modifiedBy')] = user
 
     if many_flag:
         serializer = serializer_class(data=data, many=True)
@@ -52,10 +55,12 @@ def upload_csv_postgres_task(file_data,
     # Check for foreign key fields and add "_id" to them
     header = [field + '_id' if field in foreign_key_fields
               else field for field in header]
-
+    
+    # TODO remove hard coding on these fields
     # append the django managed fields
     header.append('uploader_id')
     header.append('uploadDate')
+    header.append('modifiedBy_id')
     header.append('modified')
     writer.writerow(header)
 
@@ -64,6 +69,8 @@ def upload_csv_postgres_task(file_data,
         row.append(user_uuid) 
         # Add the current date for uploadDate
         row.append(now().date())
+        # add the user_uuid for modifiedBy
+        row.append(user_uuid)
         # Add the current datetime for modified
         row.append(now())
         writer.writerow(row)

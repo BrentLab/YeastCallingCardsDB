@@ -210,7 +210,7 @@ class Common(Configuration):
     REST_FRAMEWORK = {
         'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
         'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
-        'PAGE_SIZE': int(os.getenv('DJANGO_PAGINATION_LIMIT', 1000)),
+        'PAGE_SIZE': int(os.getenv('DJANGO_PAGINATION_LIMIT', '1000')),
         'DATETIME_FORMAT': '%Y-%m-%dT%H:%M:%S%z',
         'DEFAULT_RENDERER_CLASSES': (
             'rest_framework.renderers.JSONRenderer',
@@ -227,16 +227,16 @@ class Common(Configuration):
     }
 
     SPECTACULAR_SETTINGS = {
-    'TITLE': 'CallingCards API',
-    'DESCRIPTION': 'A database to faciliate the development, review and use of Calling Cards data',
-    'VERSION': '1.0.0',
-    'LICENSE': {
-        'name': 'Your License',
-        'url': 'https://www.example.com/license/',
-    },
-    'CONTACT': {
-        'name': 'Your Name',
-        'email': 'contact@example.com',
-        'url': 'https://www.example.com/contact/',
-    },
-}
+        'TITLE': 'CallingCards API',
+        'DESCRIPTION': 'A database to faciliate the development, review and use of Calling Cards data',
+        'VERSION': '1.0.0',
+        'LICENSE': {
+            'name': 'MIT License',
+            'url': 'https://github.com/BrentLab/YeastCallingCardsDB/blob/main/LICENSE',
+        },
+        'CONTACT': {
+            'name': 'Chase Mateusiak',
+            'email': 'chasem@wustl.edu',
+            'url': 'http://mblab.wustl.edu/',
+        },
+    }
