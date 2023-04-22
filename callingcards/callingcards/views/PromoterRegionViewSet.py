@@ -1,3 +1,4 @@
+import logging
 from django.db.models import F
 from rest_framework import viewsets, status
 from rest_framework.filters import SearchFilter
@@ -18,6 +19,10 @@ from ..models import PromoterRegions
 from ..serializers import (PromoterRegionsSerializer,
                            PromoterRegionsTargetsOnlySerializer)
 from ..filters import PromoterRegionsFilter
+from ..utils import calculate_callingcards_metrics
+
+logger = logging.getLogger(__name__)
+
 
 class PromoterRegionsViewSet(ListModelFieldsMixin,
                              CustomCreateMixin,
@@ -107,11 +112,6 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
         background_df = pd.DataFrame.from_records(background_res)
         background_df = background_df[['promoter_id', 'promoter_source',
                                        'background_hops', 'background_source']]
-        
-        total_hops_dict = {
-            'background': {},
-            'experiment': {},
-        }
 
         background_df_list = []
         for background in background_df.background_source.unique():
@@ -124,12 +124,10 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
             df.fillna({'background_hops': 0,
                        'background_source': background, },
                       inplace=True)
-            
-            total_hops_dict['background'][background] = \
-                len(df[df.background_hops > 0])
-            
+            df['background_total_hops'] = len(df[df.background_hops > 0])
+
             background_df_list.append(df)
-        
+
         promoter_background_df = \
             pd.concat(background_df_list, ignore_index=True)
 
@@ -144,15 +142,18 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
             df.fillna({'experiment_hops': 0,
                        'experiment_id': experiment, },
                       inplace=True)
-            
-            total_hops_dict['experiment'][experiment] = \
+
+            df['experiment_total_hops'] = \
                 len(df[df.experiment_hops > 0])
-            
+
             experiment_df_list.append(df)
 
         result_df = pd.concat(experiment_df_list, ignore_index=True)
 
-
+        result_df = result_df.merge(
+            result_df.apply(calculate_callingcards_metrics, axis=1),
+            left_index=True, right_index=True
+        )
 
         # Convert the DataFrame to a list of dictionaries
         data = result_df.to_dict(orient='records')
