@@ -26,12 +26,13 @@ class PromoterRegionsTargetsOnlySerializer(serializers.Serializer):
     source = serializers.CharField()
 
 
-class PromoterHopsBackgroundViewSerializer(serializers.ModelSerializer):
-    expression_hops = serializers.IntegerField()
+class PromoterRegionsCallingCardsSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    experiment_hops = serializers.IntegerField()
     background_hops = serializers.IntegerField()
     effect = serializers.FloatField()
 
     class Meta:
         model = PromoterRegions
-        fields = ('id', 'expression_hops', 'background_hops', 'effect')
+        fields = ('id', 'experiment_hops', 'background_hops', 'effect')
 

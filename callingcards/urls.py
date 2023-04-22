@@ -10,18 +10,25 @@ from drf_spectacular.views import (SpectacularAPIView,
                                    SpectacularRedocView)
 
 from .users.views import UserViewSet, UserCreateViewSet
-from .callingcards.views import (ChrMapViewSet, GeneViewSet,
-                                 PromoterRegionsViewSet, HarbisonChIPViewSet,
+from .callingcards.views import (ChrMapViewSet,
+                                 GeneViewSet,
+                                 PromoterRegionsViewSet,
+                                 HarbisonChIPViewSet,
                                  KemmerenTFKOViewSet,
-                                 McIsaacZEVViewSet, BackgroundViewSet,
+                                 McIsaacZEVViewSet,
+                                 BackgroundViewSet,
                                  CCTFViewSet,
-                                 CCExperimentViewSet, HopsViewSet,
+                                 CCExperimentViewSet,
+                                 HopsViewSet,
                                  HopsReplicateSigViewSet,
-                                 QcMetricsViewSet, QcManualReviewViewSet,
+                                 QcMetricsViewSet,
+                                 QcManualReviewViewSet,
                                  QcR1ToR2ViewSet,
-                                 QcR2ToR1ViewSet, QcTfToTransposonViewSet,
+                                 QcR2ToR1ViewSet,
+                                 QcTfToTransposonViewSet,
                                  QcR1ToR2TfSummaryViewSet,
-                                 QcReviewViewSet, ExpressionViewSet,
+                                 QcReviewViewSet,
+                                 ExpressionViewSet,
                                  TaskStatusViewSet)
 
 
