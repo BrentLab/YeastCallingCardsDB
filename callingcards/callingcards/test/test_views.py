@@ -285,6 +285,49 @@ class TestPromoterRegionsViewSet(APITestCase):
         assert set(response.data.keys()) == \
             {'readable', 'writable', 'automatically_generated', 'filter'}
 
+    def test_promoter_stats_view(self):
+        experiment = CCExperimentFactory.create()
+        chr_record = ChrMapFactory.create()
+        hops_data = [
+            {'chr': chr_record, 'start': 1, 'end': 2, 'strand': '+', 'depth': 1000, 'experiment': experiment},
+            {'chr': chr_record, 'start': 2, 'end': 3, 'strand': '-', 'depth': 6, 'experiment': experiment},
+            {'chr': chr_record, 'start': 3, 'end': 4, 'strand': '+', 'depth': 2, 'experiment': experiment},
+            {'chr': chr_record, 'start': 365, 'end': 366, 'strand': '+', 'depth': 10, 'experiment': experiment},
+            {'chr': chr_record, 'start': 367, 'end': 368, 'strand': '-', 'depth': 10, 'experiment': experiment}
+        ]
+        background_data = [
+            {'chr': chr_record, 'start': 1, 'end': 2, 'strand': '+', 'depth': 50, 'source': 'adh1'},
+            {'chr': chr_record, 'start': 2, 'end': 3, 'strand': '-', 'depth': 8, 'source': 'adh1'},
+            {'chr': chr_record, 'start': 3, 'end': 4, 'strand': '+', 'depth': 10, 'source': 'adh1'}
+        ]
+        promoter_regions_data = [
+            {'chr': chr_record, 'start': 0, 'end': 365, 'strand': '+', 'source': 'yiming'},
+            {'chr': chr_record, 'start': 10, 'end': 400, 'strand': '-', 'source': 'yiming'},
+            {'chr': chr_record, 'start': 50, 'end': 300, 'strand': '+', 'source': 'not_orf'}
+        ]
+        for hop in hops_data:
+            HopsFactory.create(**hop)
+        for bg in background_data:
+            BackgroundFactory.create(**bg)
+        for prom in promoter_regions_data:
+            PromoterRegionsFactory.create(**prom)
+        
+        promoter_filter = {}
+        hops_filter = {}
+        background_filter = {}
+        consider_strand = True
+
+        # # Test without filtering
+        response = self.client.get(reverse('promoterregions-callingcards'))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # self.assertEqual(len(response.json()), 3)
+        # self.assertEqual(response.json()[0]['promoter_id'], '1')
+        # self.assertEqual(response.json()[0]['expression_hops'], 3)
+        # self.assertEqual(response.json()[0]['background_hops'], 3)
+        # self.assertAlmostEqual(response.json()[0]['effect'], 1.1142857142857143)
+        # self.assertEqual(response.json()[1]['promoter_id'], '2')
+        # # self.assertEqual(response.json
+
 
 class TestHarbisonChIP(APITestCase):
     """

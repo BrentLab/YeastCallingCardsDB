@@ -13,7 +13,7 @@ from .KemmerenTFKOSerializers import KemmerenTFKOSerializer
 from .McIsaacZEVSerializers import McIsaacZEVSerializer
 from .PromoterRegionsSerializers import (PromoterRegionsSerializer,
                                          PromoterRegionsTargetsOnlySerializer,
-                                         PromoterHopsBackgroundViewSerializer)
+                                         PromoterRegionsCallingCardsSerializer)
 from .QcSerializers import (BarcodeComponentsSummarySerializer,
                             QcMetricsSerializer,
                             QcManualReviewSerializer,

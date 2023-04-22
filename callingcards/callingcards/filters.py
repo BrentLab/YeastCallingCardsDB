@@ -1,10 +1,29 @@
 import django_filters
 from .models.mixins.GenomicCoordinatesMixin import GenonomicCoordinatesMixin
-from .models import (Gene, McIsaacZEV, KemmerenTFKO,
-                     HopsReplicateSig, CCExperiment,
+from .models import (Gene, McIsaacZEV, KemmerenTFKO, Background,
+                     Hops, HopsReplicateSig, CCExperiment,
                      PromoterRegions, HarbisonChIP, QcMetrics,
                      QcManualReview, QcR1ToR2Tf, QcR2ToR1Tf,
                      QcTfToTransposon)
+
+class HopsFilter(django_filters.FilterSet):
+    tf_id = django_filters.NumberFilter(field_name="experiment__tf__id")
+    tf_locus_tag = django_filters.CharFilter(field_name="experiment__tf__locus_tag")
+    tf_gene = django_filters.CharFilter(field_name="experiment__tf__gene")
+    experiment = django_filters.CharFilter(field_name="experiment__id")
+
+    class Meta:
+        model = Hops
+        fields = ['tf_id', 'tf_locus_tag', 'tf_gene', 'experiment']
+
+
+class BackgroundFilter(django_filters.FilterSet):
+    background_source = django_filters.CharFilter(field_name="source")
+
+    class Meta:
+        model = Background
+        fields = [f.name for f in model._meta.fields if f.name != 'source']
+        fields += ['background_source']
 
 class GeneFilter(django_filters.FilterSet):
     chr = django_filters.CharFilter(field_name="chr__ucsc")
