@@ -69,7 +69,8 @@ class Background(GenonomicCoordinatesMixin, BaseModel):
     depth = models.PositiveIntegerField()
     source = models.CharField(
         max_length=5,
-        choices=SOURCE_CHOICES)
+        choices=SOURCE_CHOICES,
+        db_index=True)
 
     class Meta:
         managed = True

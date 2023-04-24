@@ -59,15 +59,7 @@ class PromoterRegionsQuerySet(models.QuerySet):
             .values('promoter_id', 'target_gene_id', 'target_locus_tag',
                     'target_gene', 'source')
 
-    def calling_cards_experiment(self,
-                                 tf_id: int = None,
-                                 tf_locus_tag: str = None,
-                                 tf_gene: str = None,
-                                 experiment_id: int = None,
-                                 experiment_batch: str = None,
-                                 promoter_source: str = None,
-                                 consider_strand: bool = False,
-                                 **kwargs) -> models.QuerySet:  # noqa
+    def calling_cards_experiment(self, **kwargs) -> models.QuerySet:
         """return a Queryset with the associated targets of a given promoter
 
         This method creates a QuerySet for experiment hops by filtering the 
@@ -77,14 +69,22 @@ class PromoterRegionsQuerySet(models.QuerySet):
         The result is a queryset that annotates the experiment hops count for
         each promoter.
 
-        :param int experiment_id: The experiment id to filter hops records.
-        :param str promoter_source: The source to filter promoter
-        regions.
-        :param bool consider_strand: Whether to consider the strand in the
-        filtering process. Defaults to False.
-        :param kwargs: Additional keyword argument which may be part of the 
-        query parameters. Except for the paramters explicitely named above, 
-        these are not used in the query.
+        :param kwargs: A dictionary of keyword arguments that can be used to
+            filter the queryset. The following keyword arguments are supported:
+
+            - tf_id: The id from the gene table of the transcription factor
+            - tf_locus_tag: The locus tag from the gene table of the
+            transcription factor
+            - tf_gene: The gene name from the gene table of the transcription
+            factor
+            - experiment_id: The id from the CCExperiment table
+            - experiment_batch: The batch from the CCExperiment table
+            - promoter_source: The source from the PromoterRegions table
+            - consider_strand: A boolean that determines whether to require
+              that a read be on the same strand as the promoter region. Default
+              is False, which means reads on either strand in the promoter 
+              range are counted
+
         :return: A queryset of annotated experiment hops counts for each
         promoter.
         :rtype: QuerySet
@@ -101,6 +101,14 @@ class PromoterRegionsQuerySet(models.QuerySet):
 
             .. seealso:: :py:meth:`calling_cards_background
         """
+        tf_id = kwargs.get('tf_id', None)
+        tf_locus_tag = kwargs.get('tf_locus_tag', None)
+        tf_gene = kwargs.get('tf_gene', None)
+        experiment_id = kwargs.get('experiment_id', None)
+        experiment_batch = kwargs.get('experiment_batch', None)
+        promoter_source = kwargs.get('promoter_source', None)
+        consider_strand = kwargs.get('consider_strand', False)
+
         experiment_hops = self\
             .filter(
                 chr__hops__chr_id=F('chr'),
@@ -153,10 +161,7 @@ class PromoterRegionsQuerySet(models.QuerySet):
 
         return experiment_hops
 
-    def calling_cards_background(self,
-                                 background_source: str = None,
-                                 promoter_source: str = None,
-                                 consider_strand: bool = False):
+    def calling_cards_background(self, **kwargs) -> models.QuerySet:
         """Return a Queryset with the background hops count for each promoter.
 
         This method creates a QuerySet for background hops by filtering the
@@ -166,15 +171,15 @@ class PromoterRegionsQuerySet(models.QuerySet):
         The result is a queryset that annotates the background hops count for
         each promoter.
 
-        :param int tf_id: The transcription factor id to filter records.
-        :param str tf_locus_tag: The transcription factor locus tag to filter records.
-        :param str tf_gene: The transcription factor gene to filter records.
-        :param int experiment_id: The experiment id to filter hops records.
-        :param str experiment_batch: The experiment batch to filter records.
-        :param str promoter_source: The source to filter promoter
-        regions.
-        :param bool consider_strand: Whether to consider the strand in the
-        filtering process. Defaults to False.
+        :param kwargs: A dictionary of keyword arguments that can be used to
+            filter the queryset. The following keyword arguments are supported:
+            - background_source: the source from the Background table
+            - promoter_source: the source from the PromoterRegions table
+            - consider_strand: A boolean that determines whether to require
+              that a read be on the same strand as the promoter region. Default
+              is False, which means reads on either strand in the promoter
+              range are counted
+        
         :return: A queryset of annotated experiment hops counts for each
         promoter.
         :rtype: QuerySet
@@ -191,6 +196,9 @@ class PromoterRegionsQuerySet(models.QuerySet):
 
         .. seealso:: :py:meth:`calling_cards_experiment`
         """
+        background_source = kwargs.get('background_source', None)
+        promoter_source = kwargs.get('promoter_source', None)
+        consider_strand = kwargs.get('consider_strand', False)
         background_hops = self\
             .filter(
                 chr__background__chr_id=F('chr'),
@@ -276,7 +284,8 @@ class PromoterRegions(GenonomicCoordinatesMixin,
     )
     source = models.CharField(
         max_length=10,
-        choices=SOURCE_CHOICES
+        choices=SOURCE_CHOICES,
+        db_index=True
     )
 
     class Meta:

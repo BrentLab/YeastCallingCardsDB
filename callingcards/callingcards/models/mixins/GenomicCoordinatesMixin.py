@@ -43,12 +43,17 @@ class GenonomicCoordinatesMixin(models.Model):
     chr = models.ForeignKey(
         'ChrMap', models.PROTECT,
         db_index=True)
-    start = models.PositiveIntegerField()
-    end = models.PositiveIntegerField()
+    start = models.PositiveIntegerField(
+        db_index=True
+    )
+    end = models.PositiveIntegerField(
+        db_index=True
+    )
     strand = models.CharField(
         max_length=1,
         choices=STRAND_CHOICES,
-        default=Strand.UNSTRANDED.value)
+        default=Strand.UNSTRANDED.value,
+        db_index=True)
 
     class Meta:  # pylint: disable=C0115
         abstract = True
