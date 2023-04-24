@@ -7,7 +7,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         docs_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                                '..', '..', '..', 'docs'))
+                                                '..', '..', '..', '..', 'docs'))
         try:
             subprocess.run(['make', 'html'], cwd=docs_dir, check=True)
         except subprocess.CalledProcessError as err:

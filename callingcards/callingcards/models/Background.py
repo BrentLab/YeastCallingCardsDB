@@ -2,8 +2,10 @@
 .. module:: Background
    :synopsis: Model for storing background genomic regions.
 
+Date Written: 2023-04-20
+Date(s) Modified: 2023-04-22
+
 .. moduleauthor:: Chase Mateusiak
-.. date:: 2023-04-20
 
 This module defines the `Background` model, which is used to store background
 genomic regions. The model inherits from the `BaseModel` and

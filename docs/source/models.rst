@@ -1,7 +1,8 @@
 Models
 ======
 
-.. automodule:: callingcards.callingcards.models
+Background
+----------
+.. automodule:: callingcards.callingcards.models.Background
     :members:
-    :undoc-members:
     :show-inheritance:

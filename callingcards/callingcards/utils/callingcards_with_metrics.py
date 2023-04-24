@@ -26,7 +26,7 @@ from django.db.models import Q, Count
 import scipy.stats as scistat
 import pandas as pd
 
-from ..models import PromoterRegions, Hops, Background
+from ..models import (PromoterRegions, Hops, Background)
 from ..filters import PromoterRegionsFilter, HopsFilter, BackgroundFilter
 
 logger = logging.getLogger(__name__)
@@ -42,7 +42,11 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
     :type query_params_dict: dict
     :return: A DataFrame containing metrics for each promoter region,
         experiment, and background source, including effect, Poisson p-value,
-        and hypergeometric p-value.
+        and hypergeometric p-value. If outside_data is True, the following
+        changes are made: the expression_effect, expression_pval and 
+        expression_source are added, and by default the CallingCards poisson 
+        pvalue is transformed to 'binding_signal'. the 'experiment' column is 
+        used to denote the source of the binding_data.
     :rtype: pandas.DataFrame
 
     The input `query_params_dict` may contain fields which are in the filter
@@ -111,8 +115,9 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
     # over that promoter region. Do the same for each background source.
     # Then, calculate the enrichment score for each promoter region
     results = []
+    promoter_queryset = filtered_promoters.qs
     start_time = time.time()
-    for promoter_region in filtered_promoters.qs:
+    for promoter_region in promoter_queryset:
         # get the number of hops for each experiment over this promoter
         experiment_hops_list = []
         for experiment, experiment_total_hops in \
@@ -123,11 +128,11 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
                 start__lte=promoter_region.end,
                 experiment_id=experiment)
 
-            if consider_strand:
+            if consider_strand and promoter_region.strand != "*":
                 experiment_hops = experiment_hops.filter(
                     Q(strand=promoter_region.strand) |
-                    Q(strand="*") |
-                    Q(promoter_region__strand="*"))
+                    Q(strand="*"))
+
             # record experiment data
             experiment_hops_list.append(
                 {
@@ -147,11 +152,11 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
                 start__lte=promoter_region.end,
                 source=background_source)
 
-            if consider_strand:
+            if consider_strand and promoter_region.strand != "*":
                 background_hops = background_hops.filter(
                     Q(strand=promoter_region.strand) |
-                    Q(strand="*") |
-                    Q(promoter_region__strand="*"))
+                    Q(strand="*"))
+
             # record background data
             background_hops_list.append(
                 {
@@ -162,57 +167,59 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
                 }
             )
         # for each experiment ...
-        for experiment_hops_list in experiment_hops_list:
+        for experiment_hops_dict in experiment_hops_list:
             # for each background ...
-            for background_hops_list in background_hops_list:
+            for background_hops_dict in background_hops_list:
                 # record the results
                 results.append(
                     {
                         'promoter_id': promoter_region.id,
-                        'experiment_id': experiment_hops['experiment_id'],
+                        'target_gene_id': promoter_region.associated_feature_id,
+                        'experiment_id': experiment_hops_dict['experiment_id'],
                         'background_source':
-                        background_hops['background_source'],
+                        background_hops_dict['background_source'],
                         'promoter_source': promoter_region.source,
-                        'background_hops': background_hops['background_hops'],
                         'background_total_hops':
-                        background_hops['background_total_hops'],
-                        'experiment_hops':
-                        experiment_hops['experiment_hops'],
+                        background_hops_dict['background_total_hops'],
                         'experiment_total_hops':
-                        experiment_hops['experiment_total_hops'],
-                        'effect': calling_cards_effect(
-                            background_hops['background_total_hops'],
-                            experiment_hops['experiment_total_hops'],
-                            background_hops['background_hops'],
-                            experiment_hops['experiment_hops'],
+                        experiment_hops_dict['experiment_total_hops'],
+                        'background_hops':
+                        background_hops_dict['background_hops'],
+                        'experiment_hops':
+                        experiment_hops_dict['experiment_hops'],
+                        'callingcards_enrichment': enrichment(
+                            background_hops_dict['background_total_hops'],
+                            experiment_hops_dict['experiment_total_hops'],
+                            background_hops_dict['background_hops'],
+                            experiment_hops_dict['experiment_hops'],
                             query_params_dict.get('pseudo_count', 0.2)),
                         'poisson_pval': poisson_pval(
-                            background_hops['background_total_hops'],
-                            experiment_hops['experiment_total_hops'],
-                            background_hops['background_hops'],
-                            experiment_hops['experiment_hops'],
+                            background_hops_dict['background_total_hops'],
+                            experiment_hops_dict['experiment_total_hops'],
+                            background_hops_dict['background_hops'],
+                            experiment_hops_dict['experiment_hops'],
                             query_params_dict.get('pseudo_count', 0.2)),
                         'hypergeometric_pval': hypergeom_pval(
-                            background_hops['background_total_hops'],
-                            experiment_hops['experiment_total_hops'],
-                            background_hops['background_hops'],
-                            experiment_hops['experiment_hops']),
+                            background_hops_dict['background_total_hops'],
+                            experiment_hops_dict['experiment_total_hops'],
+                            background_hops_dict['background_hops'],
+                            experiment_hops_dict['experiment_hops']),
                     }
                 )
 
     logger.info('Time to process %s promoters: %s',
-                len(filtered_promoters), time.time() - start_time)
+                len(promoter_queryset), time.time() - start_time)
 
     result_df = pd.DataFrame.from_dict(results)
 
     return result_df
 
 
-def calling_cards_effect(total_background_hops: int,
-                         total_experiment_hops: int,
-                         background_hops: int,
-                         experiment_hops: int,
-                         pseudocount: float = 0.2):
+def enrichment(total_background_hops: int,
+               total_experiment_hops: int,
+               background_hops: int,
+               experiment_hops: int,
+               pseudocount: float = 1e-10):
     """
     Compute the Calling Cards effect (enrichment) for the given hops counts.
 
@@ -231,17 +238,17 @@ def calling_cards_effect(total_background_hops: int,
     :rtype: float
     """
 
-    numerator = ((experiment_hops / total_experiment_hops) + pseudocount)
-    denominator = ((background_hops / total_background_hops) + pseudocount)
+    numerator = (experiment_hops / (total_experiment_hops + pseudocount))
+    denominator = (background_hops / (total_background_hops + pseudocount))
 
-    return (numerator / denominator)
+    return (numerator / (denominator+pseudocount))
 
 
 def poisson_pval(total_background_hops: int,
                  total_experiment_hops: int,
                  background_hops: int,
                  experiment_hops: int,
-                 pseudocount: float = 0.2) -> float:
+                 pseudocount: float = 1e-10) -> float:
     """
     Compute the Poisson p-value for the given hops counts.
 
@@ -259,11 +266,27 @@ def poisson_pval(total_background_hops: int,
     :return: The Poisson p-value.
     :rtype: float
     """
-    hop_ratio = total_experiment_hops / total_background_hops
+    # check input
+    if total_background_hops < 0 or not isinstance(total_background_hops, int):
+        raise ValueError(('total_background_hops must '
+                          'be a non-negative integer'))
+    if total_experiment_hops < 0 or not isinstance(total_experiment_hops, int):
+        raise ValueError(('total_experiment_hops must '
+                          'be a non-negative integer'))
+    if background_hops < 0 or not isinstance(background_hops, int):
+        raise ValueError('background_hops must be a non-negative integer')
+    if experiment_hops < 0 or not isinstance(experiment_hops, int):
+        raise ValueError('experiment_hops must be a non-negative integer')
+
+    hop_ratio = total_experiment_hops / (total_background_hops+pseudocount)
+    # expected number of hops in the promoter region
     mu = (background_hops * hop_ratio) + pseudocount
+    # random variable -- observed hops in the promoter region
     x = experiment_hops + pseudocount
 
-    return 1 - scistat.poisson.cdf(x, mu)
+    pval = 1 - scistat.poisson.cdf(x, mu)
+
+    return pval
 
 
 def hypergeom_pval(total_background_hops: int,
@@ -284,11 +307,39 @@ def hypergeom_pval(total_background_hops: int,
     :return: The hypergeometric p-value.
     :rtype: float
     """
+    # check input
+    if total_background_hops < 0 or not isinstance(total_background_hops, int):
+        raise ValueError(('total_background_hops must '
+                          'be a non-negative integer'))
+    if total_experiment_hops < 0 or not isinstance(total_experiment_hops, int):
+        raise ValueError(('total_experiment_hops must '
+                          'be a non-negative integer'))
+    if background_hops < 0 or not isinstance(background_hops, int):
+        raise ValueError('background_hops must be a non-negative integer')
+    if experiment_hops < 0 or not isinstance(experiment_hops, int):
+        raise ValueError('experiment_hops must be a non-negative integer')
 
+    # total number of objects (hops) in the bag (promoter region)
     M = total_background_hops + total_experiment_hops
+    # if M is 0, the hypergeometric distribution is undefined
+    # (there is no bag), so return 1
+    if M < 1:
+        return 1
+    # number of 'success' objects in the population (experiment hops)
     n = total_experiment_hops
-
-    x = experiment_hops - 1
+    # sample size (total hops drawn drawn from the bag)
     N = background_hops + experiment_hops
+    # if N is 0, the hypergeometric distribution is undefined
+    # (there is no sample), so return 1
+    if N < 1:
+        return 1
+    # number of 'success' objects (experiment hops).
+    # since we're interested in the chance of drawing a number of
+    # experiment hops equal to or greater than the observed number,
+    # we subtract 1 from the observed number in the CDF calculation.
+    # Subtracting the result from 1 yields the right tailed p-value
+    x = max((experiment_hops - 1), 0)
 
-    return 1 - scistat.hypergeom.cdf(x, M, n, N)
+    pval = 1 - scistat.hypergeom.cdf(x, M, n, N)
+
+    return pval

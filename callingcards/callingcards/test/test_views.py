@@ -333,7 +333,7 @@ class TestPromoterRegionsViewSet(APITestCase):
         # # Test without filtering
         response = self.client.get(reverse('promoterregions-callingcards'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.json()), 3)
+        self.assertEqual(len(response.data['results']), 6)
         # self.assertEqual(response.json()[0]['promoter_id'], '1')
         # self.assertEqual(response.json()[0]['expression_hops'], 3)
         # self.assertEqual(response.json()[0]['background_hops'], 3)

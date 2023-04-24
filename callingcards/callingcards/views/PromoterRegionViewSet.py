@@ -18,7 +18,7 @@ from .mixins import (ListModelFieldsMixin,
 from ..models import PromoterRegions
 from ..serializers import (PromoterRegionsSerializer,
                            PromoterRegionsTargetsOnlySerializer)
-from ..filters import PromoterRegionsFilter
+from ..filters import PromoterRegionsFilter, BackgroundFilter, HopsFilter
 from ..utils.callingcards_with_metrics import callingcards_with_metrics
 
 logger = logging.getLogger(__name__)
@@ -108,3 +108,49 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
 
         # Return the data as a JSON response
         return Response(data)
+
+    @action(detail=False, url_path='callingcards/count',
+            url_name='callingcards-count')
+    def callingcards_count(self, request, *args, **kwargs) -> Response:
+        filtered_queryset = self.filter_queryset(self.get_queryset())
+        content = {'count': self.get_count(filtered_queryset)}
+        return Response(content)
+
+    @action(detail=False, url_path='callingcards/pagination_info',
+            url_name='callingcards-pagination-info')
+    def callingcards_pagination_info(self, request,
+                                     *args, **kwargs) -> Response:
+        return self.pagination_info(request, *args, **kwargs)
+
+    @action(detail=False, methods=['get'], url_path='callingcards/fields',
+            url_name='callingcards-fields')
+    def callingcards_fields(self, request, *args, **kwargs):
+        readable = [
+            'promoter_id',
+            'target_gene_id',
+            'experiment_id',
+            'background_source',
+            'promoter_source',
+            'background_total_hops',
+            'experiment_total_hops',
+            'background_hops',
+            'experiment_hops',
+            'callingcards_enrichment',
+            'callingcards_poisson_pvalue',
+            'callingcards_hypergeometric_pvalue',
+
+        ]
+        writable = None
+        automatically_generated = None
+        filter_columns = (PromoterRegionsFilter.Meta.fields
+                          + BackgroundFilter.Meta.fields
+                          + HopsFilter.Meta.fields
+                          + ['consider_strand'])
+
+        # Return the readable fields as a JSON response
+        return Response({"readable": readable,
+                         "writable": writable,
+                         "automatically_generated":
+                         automatically_generated,
+                         "filter": filter_columns},
+                        status=status.HTTP_200_OK)

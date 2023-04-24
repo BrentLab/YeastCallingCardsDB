@@ -1,7 +1,11 @@
 import os
 import sys
+import django
 
 sys.path.insert(0, os.path.abspath('../../'))
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", 'callingcards.config')
+os.environ.setdefault("DJANGO_CONFIGURATION", "Local")
+django.setup()
 
 # Configuration file for the Sphinx documentation builder.
 #
