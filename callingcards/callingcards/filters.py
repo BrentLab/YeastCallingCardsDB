@@ -11,10 +11,12 @@ class HopsFilter(django_filters.FilterSet):
     tf_locus_tag = django_filters.CharFilter(field_name="experiment__tf__locus_tag")
     tf_gene = django_filters.CharFilter(field_name="experiment__tf__gene")
     experiment = django_filters.CharFilter(field_name="experiment__id")
+    experiment_id = django_filters.CharFilter(field_name="experiment__id")
 
     class Meta:
         model = Hops
-        fields = ['tf_id', 'tf_locus_tag', 'tf_gene', 'experiment']
+        fields = ['tf_id', 'tf_locus_tag', 'tf_gene', 
+                  'experiment', 'experiment_id']
 
 
 class BackgroundFilter(django_filters.FilterSet):
@@ -63,6 +65,7 @@ class PromoterRegionsFilter(django_filters.FilterSet):
     chr_ucsc = django_filters.CharFilter('chr__ucsc')
     target_locus_tag = django_filters.CharFilter('associated_feature__locus_tag')
     target_gene = django_filters.CharFilter('associated_feature__gene')
+    promoter_source = django_filters.CharFilter(field_name="source")
 
     class Meta:
         model = PromoterRegions
@@ -74,7 +77,7 @@ class PromoterRegionsFilter(django_filters.FilterSet):
             'target_locus_tag',
             'target_gene',
             'score',
-            'source',
+            'promoter_source',
         ]
 
 

@@ -21,6 +21,7 @@ class HarbisonChIPQuerySet(models.QuerySet):
             .select_related(
                 'tf',
                 'gene',
+                'gene__genepromoter'
             )\
             .annotate(
                 tf_locus_tag=models.F('tf__locus_tag'),
@@ -29,10 +30,11 @@ class HarbisonChIPQuerySet(models.QuerySet):
                 target_gene=models.F('gene__gene'),
                 target_gene_id=models.F('gene_id'),
                 binding_signal=models.F('pval'),
+                promoter_id=models.F('gene__genepromoter__id'),
                 experiment=models.Value('harbison'))\
             .values('tf_id', 'tf_locus_tag', 'tf_gene',
-                    'target_gene_id', 'target_locus_tag', 'target_gene', 
-                    'binding_signal', 'experiment')
+                    'target_gene_id', 'target_locus_tag', 'target_gene',
+                    'binding_signal', 'experiment', 'promoter_id')
 
 
 class HarbisonChIP(BaseModel):

@@ -19,7 +19,7 @@ from ..models import PromoterRegions
 from ..serializers import (PromoterRegionsSerializer,
                            PromoterRegionsTargetsOnlySerializer)
 from ..filters import PromoterRegionsFilter
-from ..utils import calculate_callingcards_metrics
+from ..utils.callingcards_with_metrics import callingcards_with_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -95,65 +95,7 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
     @action(detail=False, methods=['get'], url_path='callingcards',
             url_name='callingcards')
     def callingcards(self, request, *args, **kwargs):
-        promoter_res = self.get_queryset()\
-            .annotate(promoter_id=F('id'),
-                      promoter_source=F('source'))
-        promoter_df = pd.DataFrame.from_records(promoter_res.values())
-        promoter_df = promoter_df[['promoter_id', 'promoter_source']]
-
-        experiment_res = self.get_queryset()\
-            .calling_cards_experiment(**self.request.query_params)
-        experiment_df = pd.DataFrame.from_records(experiment_res)
-        experiment_df = experiment_df[['promoter_id', 'promoter_source',
-                                       'experiment_hops', 'experiment_id']]
-
-        background_res = self.get_queryset()\
-            .calling_cards_background(**self.request.query_params)
-        background_df = pd.DataFrame.from_records(background_res)
-        background_df = background_df[['promoter_id', 'promoter_source',
-                                       'background_hops', 'background_source']]
-
-        background_df_list = []
-        for background in background_df.background_source.unique():
-            df = pd.merge(
-                promoter_df,
-                background_df[background_df.background_source == background],
-                on=['promoter_id', 'promoter_source'],
-                how='left')
-
-            df.fillna({'background_hops': 0,
-                       'background_source': background, },
-                      inplace=True)
-            df['background_total_hops'] = len(df[df.background_hops > 0])
-
-            background_df_list.append(df)
-
-        promoter_background_df = \
-            pd.concat(background_df_list, ignore_index=True)
-
-        experiment_df_list = []
-        for experiment in experiment_df.experiment_id.unique():
-            df = pd.merge(
-                promoter_background_df,
-                experiment_df[experiment_df.experiment_id == experiment],
-                on=['promoter_id', 'promoter_source'],
-                how='left')
-
-            df.fillna({'experiment_hops': 0,
-                       'experiment_id': experiment, },
-                      inplace=True)
-
-            df['experiment_total_hops'] = \
-                len(df[df.experiment_hops > 0])
-
-            experiment_df_list.append(df)
-
-        result_df = pd.concat(experiment_df_list, ignore_index=True)
-
-        result_df = result_df.merge(
-            result_df.apply(calculate_callingcards_metrics, axis=1),
-            left_index=True, right_index=True
-        )
+        result_df = callingcards_with_metrics(self.request.query_params)
 
         # Convert the DataFrame to a list of dictionaries
         data = result_df.to_dict(orient='records')

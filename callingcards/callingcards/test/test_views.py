@@ -286,24 +286,37 @@ class TestPromoterRegionsViewSet(APITestCase):
             {'readable', 'writable', 'automatically_generated', 'filter'}
 
     def test_promoter_stats_view(self):
-        experiment = CCExperimentFactory.create()
+        experiment1 = CCExperimentFactory.create()
+        experiment2 = CCExperimentFactory.create()
+
         chr_record = ChrMapFactory.create()
         hops_data = [
-            {'chr': chr_record, 'start': 1, 'end': 2, 'strand': '+', 'depth': 1000, 'experiment': experiment},
-            {'chr': chr_record, 'start': 2, 'end': 3, 'strand': '-', 'depth': 6, 'experiment': experiment},
-            {'chr': chr_record, 'start': 3, 'end': 4, 'strand': '+', 'depth': 2, 'experiment': experiment},
-            {'chr': chr_record, 'start': 365, 'end': 366, 'strand': '+', 'depth': 10, 'experiment': experiment},
-            {'chr': chr_record, 'start': 367, 'end': 368, 'strand': '-', 'depth': 10, 'experiment': experiment}
+            {'chr': chr_record, 'start': 1, 'end': 2, 'strand': '+',
+             'depth': 1000, 'experiment': experiment1},
+            {'chr': chr_record, 'start': 2, 'end': 3, 'strand': '-',
+             'depth': 6, 'experiment': experiment1},
+            {'chr': chr_record, 'start': 3, 'end': 4, 'strand': '+',
+             'depth': 2, 'experiment': experiment2},
+            {'chr': chr_record, 'start': 365, 'end': 366, 'strand': '+',
+             'depth': 10, 'experiment': experiment2},
+            {'chr': chr_record, 'start': 367, 'end': 368, 'strand': '-',
+             'depth': 10, 'experiment': experiment2}
         ]
         background_data = [
-            {'chr': chr_record, 'start': 1, 'end': 2, 'strand': '+', 'depth': 50, 'source': 'adh1'},
-            {'chr': chr_record, 'start': 2, 'end': 3, 'strand': '-', 'depth': 8, 'source': 'adh1'},
-            {'chr': chr_record, 'start': 3, 'end': 4, 'strand': '+', 'depth': 10, 'source': 'adh1'}
+            {'chr': chr_record, 'start': 1, 'end': 2, 'strand': '+',
+             'depth': 50, 'source': 'adh1'},
+            {'chr': chr_record, 'start': 2, 'end': 3, 'strand': '-',
+             'depth': 8, 'source': 'adh1'},
+            {'chr': chr_record, 'start': 3, 'end': 4, 'strand': '+',
+             'depth': 10, 'source': 'adh1'}
         ]
         promoter_regions_data = [
-            {'chr': chr_record, 'start': 0, 'end': 365, 'strand': '+', 'source': 'yiming'},
-            {'chr': chr_record, 'start': 10, 'end': 400, 'strand': '-', 'source': 'yiming'},
-            {'chr': chr_record, 'start': 50, 'end': 300, 'strand': '+', 'source': 'not_orf'}
+            {'chr': chr_record, 'start': 0, 'end': 365,
+             'strand': '+', 'source': 'yiming'},
+            {'chr': chr_record, 'start': 10, 'end': 400,
+             'strand': '-', 'source': 'yiming'},
+            {'chr': chr_record, 'start': 50, 'end': 300,
+             'strand': '+', 'source': 'not_orf'}
         ]
         for hop in hops_data:
             HopsFactory.create(**hop)
@@ -311,7 +324,7 @@ class TestPromoterRegionsViewSet(APITestCase):
             BackgroundFactory.create(**bg)
         for prom in promoter_regions_data:
             PromoterRegionsFactory.create(**prom)
-        
+
         promoter_filter = {}
         hops_filter = {}
         background_filter = {}
