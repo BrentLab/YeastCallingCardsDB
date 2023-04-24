@@ -77,6 +77,7 @@ class PromoterRegionsFilter(django_filters.FilterSet):
             'target_locus_tag',
             'target_gene',
             'score',
+            'source',
             'promoter_source',
         ]
 
