@@ -8,7 +8,7 @@ from .ChrMapViewSet import ChrMapViewSet
 from .ExpressionViewSet import ExpressionViewSet
 from .GeneViewSet import GeneViewSet
 from .HarbisonChIPViewSet import HarbisonChIPViewSet
-from .HopsReplicateSigViewSet import HopsReplicateSigViewSet
+#from .HopsReplicateSigViewSet import HopsReplicateSigViewSet
 from .HopsViewSet import HopsViewSet
 from .KemmerenTFKOViewSet import KemmerenTFKOViewSet
 from .McIsaacZEVViewSet import McIsaacZEVViewSet
