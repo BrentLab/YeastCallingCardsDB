@@ -134,6 +134,7 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
     results = [None]*(len(filtered_promoters.qs)*len(experiment_counts_dict)*len(background_counts_dict))
     promoter_queryset = filtered_promoters.qs
     start_time = time.time()
+    index = 0
     for i, promoter_region in enumerate(promoter_queryset):
         # get the number of hops for each experiment over this promoter
         experiment_hops_list = []
@@ -232,7 +233,8 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
                             experiment_hops_dict['experiment_hops']),
                 }
 
-                results[(i*len(promoter_queryset))+m+n] = output_dict
+                results[index] = output_dict
+                index = index + 1
 
     logger.info('Time to process %s promoters: %s',
                 len(promoter_queryset), time.time() - start_time)
