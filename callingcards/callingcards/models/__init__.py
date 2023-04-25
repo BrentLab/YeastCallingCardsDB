@@ -7,7 +7,6 @@ from .ChrMap import ChrMap
 from .Gene import Gene
 from .HarbisonChIP import HarbisonChIP
 from .Hops import Hops
-from .HopsReplicateSig import HopsReplicateSig
 from .KemmerenTFKO import KemmerenTFKO
 from .McIsaacZEV import McIsaacZEV
 from .PromoterRegions import PromoterRegions
