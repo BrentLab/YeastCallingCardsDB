@@ -180,6 +180,7 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
             exp_hops_count['experiment_hops'].fillna(0)
 
         # count the number of background hops
+        # note the renaming of background_source
         bg_hops_count = filtered_bg_hops[
             (filtered_bg_hops['chr_id'] == promoter_row['chr_id']) &
             (filtered_bg_hops['start'] >= promoter_row['start']) &
@@ -190,8 +191,9 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
             .rename(columns={'chr_id': 'background_hops'})
 
         # Perform an outer merge with background_counts_df
-        bg_hops_count = background_counts_df.merge(
-            bg_hops_count, on='source', how='left')
+        bg_hops_count = background_counts_df\
+            .merge(bg_hops_count, on='source', how='left')\
+            .rename(columns={'source': 'background_source'})
 
         bg_hops_count['background_total_hops'] = \
             bg_hops_count['background_total_hops_x']\
