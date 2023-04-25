@@ -232,6 +232,7 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
         merged_df = pd.concat([merged_df, result_df], axis=1)
 
         merged_df['promoter_id'] = promoter_row['id']
+        merged_df['promoter_source'] = promoter_row['source']
         merged_df['target_gene_id'] = promoter_row['associated_feature_id']
                                        
         return merged_df
