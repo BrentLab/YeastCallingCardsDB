@@ -6,8 +6,8 @@ from .ExpressionViewSetSerializer import ExpressionViewSetSerializer
 from .GeneSerializers import GeneSerializer
 from .HarbisonChIPSerializers import (HarbisonChIPSerializer,
                                       HarbisonChIPAnnotatedSerializer)
-from .HopsReplicateSigSerializers import (HopsReplicateSigSerializer,
-                                          HopsReplicateSigAnnotatedSerializer)
+#from .HopsReplicateSigSerializers import (HopsReplicateSigSerializer,
+#                                          HopsReplicateSigAnnotatedSerializer)
 from .HopsSerializers import HopsSerializer
 from .KemmerenTFKOSerializers import KemmerenTFKOSerializer
 from .McIsaacZEVSerializers import McIsaacZEVSerializer
