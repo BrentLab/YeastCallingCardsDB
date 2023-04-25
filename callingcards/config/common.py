@@ -200,6 +200,11 @@ class Common(Configuration):
                 'level': 'INFO',
                 'propagate': False,
             },
+            'callingcards.callingcards.utils': {
+                'handlers': ['console', 'file'],
+                'level': 'INFO',
+                'propagate': False,
+            },
         }
     }
 
