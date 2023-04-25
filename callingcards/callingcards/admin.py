@@ -4,7 +4,7 @@ from .models import *  # pylint: disable=W0401,W0614 # noqa
 
 
 @admin.register(ChrMap, Gene, PromoterRegions, HarbisonChIP, KemmerenTFKO,  # noqa
-                McIsaacZEV, Background, CCTF, CCExperiment, Hops, HopsReplicateSig,  # noqa
+                McIsaacZEV, Background, CCTF, CCExperiment, Hops,  # noqa
                 QcMetrics, QcManualReview, QcR1ToR2Tf, QcR2ToR1Tf,  # noqa
                 QcTfToTransposon)  # noqa
 class CCAdmin(admin.ModelAdmin):

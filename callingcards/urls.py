@@ -20,7 +20,6 @@ from .callingcards.views import (ChrMapViewSet,
                                  CCTFViewSet,
                                  CCExperimentViewSet,
                                  HopsViewSet,
-                                 HopsReplicateSigViewSet,
                                  QcMetricsViewSet,
                                  QcManualReviewViewSet,
                                  QcR1ToR2ViewSet,
@@ -67,9 +66,6 @@ router.register(r'ccexperiment',
 router.register(r'hops',
                 HopsViewSet,
                 basename='hops')
-router.register(r'hopsreplicatesig',
-                HopsReplicateSigViewSet,
-                basename='hopsreplicatesig')
 router.register(r'qcmetrics',
                 QcMetricsViewSet,
                 basename='qcmetrics')

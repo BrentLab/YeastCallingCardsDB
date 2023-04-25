@@ -16,9 +16,14 @@ class Production(Common):
     INSTALLED_APPS += ('storages',)
 
     STORAGES = {
-        'default': 'storages.backends.s3boto3.S3Boto3Storage',
-        'staticfiles': 'storages.backends.s3boto3.S3Boto3Storage',
-    }
+    'default': {
+        'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
+    },
+    'staticfiles': {
+        'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
+    },
+}
+
     
     AWS_ACCESS_KEY_ID = os.getenv('DJANGO_AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.getenv('DJANGO_AWS_SECRET_ACCESS_KEY')

@@ -1,7 +1,7 @@
 import django_filters
 from .models.mixins.GenomicCoordinatesMixin import GenonomicCoordinatesMixin
 from .models import (Gene, McIsaacZEV, KemmerenTFKO, Background,
-                     Hops, HopsReplicateSig, CCExperiment,
+                     Hops, CCExperiment,
                      PromoterRegions, HarbisonChIP, QcMetrics,
                      QcManualReview, QcR1ToR2Tf, QcR2ToR1Tf,
                      QcTfToTransposon)
@@ -200,41 +200,19 @@ class CCExperimentFilter(django_filters.FilterSet):
                   'tf_id', 'tf_locus_tag', 'tf_gene']
 
 
-class HopsReplicateSigFilter(django_filters.FilterSet):
-
-    batch = django_filters.CharFilter(
-        field_name='experiment__batch',
-        lookup_expr="iexact")
-    batch_replicate = django_filters.NumberFilter(
-        field_name='experiment__batch_replicate',
-        lookup_expr="iexact")
-    background = django_filters.CharFilter(
-        field_name='background',
-        lookup_expr="iexact")
-    promoter_source = django_filters.CharFilter(
-        field_name='promoter__source',
-        lookup_expr="iexact")
-    tf_id = django_filters.NumberFilter(
-        field_name='experiment__tf__tf__id',
-        lookup_expr="exact")
-    tf_locus_tag = django_filters.CharFilter(
-        field_name='experiment__tf__tf__locus_tag',
-        lookup_expr="iexact")
-    tf_gene = django_filters.CharFilter(
-        field_name='experiment__tf__tf__gene',
-        lookup_expr="iexact")
-    target_locus_tag = django_filters.CharFilter(
-        field_name='promoter__associated_feature__locus_tag',
-        lookup_expr="iexact")
-    target_gene = django_filters.CharFilter(
-        field_name='promoter__associated_feature__gene',
-        lookup_expr="iexact")
+class HopsFilter(django_filters.FilterSet):
+    tf_id = django_filters.NumberFilter(field_name="experiment__tf__tf__id")
+    tf_locus_tag = django_filters.CharFilter(field_name="experiment__tf__tf__locus_tag")
+    tf_gene = django_filters.CharFilter(field_name="experiment__tf__tf__gene")
+    experiment = django_filters.CharFilter(field_name="experiment__id")
+    experiment_id = django_filters.CharFilter(field_name="experiment__id")
 
     class Meta:
-        model = HopsReplicateSig
-        fields = ['experiment', 'batch', 'batch_replicate', 'background',
-                  'promoter_source', 'tf_id', 'tf_locus_tag', 'tf_gene',
-                  'target_locus_tag', 'target_gene']
+        model = Hops
+        fields = ['tf_id', 'tf_locus_tag', 'tf_gene', 
+                  'experiment', 'experiment_id']
+
+>>>>>>> Stashed changes
 
 
 class QcMetricsFilter(django_filters.FilterSet):
