@@ -131,10 +131,10 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
     # iterate over the set of experiments and count the number over hops
     # over that promoter region. Do the same for each background source.
     # Then, calculate the enrichment score for each promoter region
-    results = []
+    results = [None]*(len(filtered_promoters.qs)*len(experiment_counts_dict)*len(background_counts_dict))
     promoter_queryset = filtered_promoters.qs
     start_time = time.time()
-    for promoter_region in promoter_queryset:
+    for i, promoter_region in enumerate(promoter_queryset):
         # get the number of hops for each experiment over this promoter
         experiment_hops_list = []
         for experiment, experiment_details_dict in experiment_counts_dict.items():
@@ -191,19 +191,18 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
                 }
             )
         # for each experiment ...
-        for experiment_hops_dict in experiment_hops_list:
+        for m, experiment_hops_dict in enumerate(experiment_hops_list):
             # for each background ...
-            for background_hops_dict in background_hops_list:
+            for n, background_hops_dict in enumerate(background_hops_list):
                 # record the results
-                results.append(
-                    {
-                        'promoter_id': promoter_region.id,
-                        'experiment_id': experiment_hops_dict['experiment_id'],
-                        'tf_id': experiment_hops_dict['tf_id'],
-                        'experiment_batch': experiment_hops_dict['experiment_batch'],
-                        'experiment_replicate': experiment_hops_dict['experiment_replicate'],
-                        'target_gene_id': promoter_region.associated_feature_id,
-                        'background_source':
+                output_dict = {
+                    'promoter_id': promoter_region.id,
+                    'experiment_id': experiment_hops_dict['experiment_id'],
+                    'tf_id': experiment_hops_dict['tf_id'],
+                    'experiment_batch': experiment_hops_dict['experiment_batch'],
+                    'experiment_replicate': experiment_hops_dict['experiment_replicate'],
+                    'target_gene_id': promoter_region.associated_feature_id,
+                    'background_source':
                         background_hops_dict['background_source'],
                         'promoter_source': promoter_region.source,
                         'background_total_hops':
@@ -231,8 +230,9 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
                             experiment_hops_dict['experiment_total_hops'],
                             background_hops_dict['background_hops'],
                             experiment_hops_dict['experiment_hops']),
-                    }
-                )
+                }
+
+                results[(i*len(promoter_queryset))+m+n] = output_dict
 
     logger.info('Time to process %s promoters: %s',
                 len(promoter_queryset), time.time() - start_time)
