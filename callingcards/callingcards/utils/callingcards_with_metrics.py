@@ -240,18 +240,11 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
                                                   background_counts_df,
                                                   filtered_background_df,
                                                   consider_strand))
-    logging.info("Time taken to process %s promoters: %s seconds",
+    logger.info("Time taken to process %s promoters: %s seconds",
                  len(filtered_promoters_df), time.time() - start_time)
 
     # Concatenate the resulting DataFrames and reset the index
     result_df = pd.concat(result_df.tolist(), ignore_index=True)
-
-    # Merge result_df with experiment_counts_df to add tf_id,
-    # experiment_batch, and experiment_replicate columns
-    result_df = result_df.merge(experiment_counts_df[['tf_id',
-                                                      'experiment_batch',
-                                                      'experiment_replicate']],
-                                on='experiment_id', how='left')
 
     return result_df
 
