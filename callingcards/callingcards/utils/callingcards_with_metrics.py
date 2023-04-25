@@ -21,8 +21,9 @@ Functions
 
 import logging
 import time
+import itertools
 
-from django.db.models import F, Q, Count
+from django.db.models import F, Count
 import scipy.stats as scistat
 import pandas as pd
 
@@ -135,7 +136,7 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
     promoter_queryset = filtered_promoters.qs
     start_time = time.time()
     index = 0
-    for i, promoter_region in enumerate(promoter_queryset):
+    for promoter_region in promoter_queryset:
         # get the number of hops for each experiment over this promoter
         experiment_hops_list = []
         for experiment, experiment_details_dict in experiment_counts_dict.items():
@@ -191,50 +192,54 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
                     'background_total_hops': background_total_hops
                 }
             )
-        # for each experiment ...
-        for m, experiment_hops_dict in enumerate(experiment_hops_list):
-            # for each background ...
-            for n, background_hops_dict in enumerate(background_hops_list):
-                # record the results
-                output_dict = {
-                    'promoter_id': promoter_region.id,
-                    'experiment_id': experiment_hops_dict['experiment_id'],
-                    'tf_id': experiment_hops_dict['tf_id'],
-                    'experiment_batch': experiment_hops_dict['experiment_batch'],
-                    'experiment_replicate': experiment_hops_dict['experiment_replicate'],
-                    'target_gene_id': promoter_region.associated_feature_id,
-                    'background_source':
-                        background_hops_dict['background_source'],
-                        'promoter_source': promoter_region.source,
-                        'background_total_hops':
-                        background_hops_dict['background_total_hops'],
-                        'experiment_total_hops':
-                        experiment_hops_dict['experiment_total_hops'],
-                        'background_hops':
-                        background_hops_dict['background_hops'],
-                        'experiment_hops':
-                        experiment_hops_dict['experiment_hops'],
-                        'callingcards_enrichment': enrichment(
-                            background_hops_dict['background_total_hops'],
-                            experiment_hops_dict['experiment_total_hops'],
-                            background_hops_dict['background_hops'],
-                            experiment_hops_dict['experiment_hops'],
-                            query_params_dict.get('pseudo_count', 0.2)),
-                        'poisson_pval': poisson_pval(
-                            background_hops_dict['background_total_hops'],
-                            experiment_hops_dict['experiment_total_hops'],
-                            background_hops_dict['background_hops'],
-                            experiment_hops_dict['experiment_hops'],
-                            query_params_dict.get('pseudo_count', 0.2)),
-                        'hypergeometric_pval': hypergeom_pval(
-                            background_hops_dict['background_total_hops'],
-                            experiment_hops_dict['experiment_total_hops'],
-                            background_hops_dict['background_hops'],
-                            experiment_hops_dict['experiment_hops']),
-                }
 
-                results[index] = output_dict
-                index = index + 1
+        # create an iterable containing all possible pairs of experiment hops
+        # and background hops
+        experiment_background_pairs = itertools.product(
+            experiment_hops_list, background_hops_list)
+        # iterate over the pairs and compute the results
+        for experiment_hops_dict, background_hops_dict in \
+                experiment_background_pairs:
+            # record the results
+            output_dict = {
+                'promoter_id': promoter_region.id,
+                'experiment_id': experiment_hops_dict['experiment_id'],
+                'tf_id': experiment_hops_dict['tf_id'],
+                'experiment_batch': experiment_hops_dict['experiment_batch'],
+                'experiment_replicate': experiment_hops_dict['experiment_replicate'],
+                'target_gene_id': promoter_region.associated_feature_id,
+                'background_source':
+                    background_hops_dict['background_source'],
+                    'promoter_source': promoter_region.source,
+                    'background_total_hops':
+                    background_hops_dict['background_total_hops'],
+                    'experiment_total_hops':
+                    experiment_hops_dict['experiment_total_hops'],
+                    'background_hops':
+                    background_hops_dict['background_hops'],
+                    'experiment_hops':
+                    experiment_hops_dict['experiment_hops'],
+                    'callingcards_enrichment': enrichment(
+                        background_hops_dict['background_total_hops'],
+                        experiment_hops_dict['experiment_total_hops'],
+                        background_hops_dict['background_hops'],
+                        experiment_hops_dict['experiment_hops'],
+                        query_params_dict.get('pseudo_count', 0.2)),
+                    'poisson_pval': poisson_pval(
+                        background_hops_dict['background_total_hops'],
+                        experiment_hops_dict['experiment_total_hops'],
+                        background_hops_dict['background_hops'],
+                        experiment_hops_dict['experiment_hops'],
+                        query_params_dict.get('pseudo_count', 0.2)),
+                    'hypergeometric_pval': hypergeom_pval(
+                        background_hops_dict['background_total_hops'],
+                        experiment_hops_dict['experiment_total_hops'],
+                        background_hops_dict['background_hops'],
+                        experiment_hops_dict['experiment_hops']),
+            }
+
+            results[index] = output_dict
+            index = index + 1
 
     logger.info('Time to process %s promoters: %s',
                 len(promoter_queryset), time.time() - start_time)
