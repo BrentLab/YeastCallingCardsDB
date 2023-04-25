@@ -1,6 +1,6 @@
 import pytest
-import pandas as pd
-import pandas.testing as pdt
+# import pandas as pd
+# import pandas.testing as pdt
 from rest_framework.test import APITestCase
 from .factories import PromoterRegionsFactory, HopsFactory, BackgroundFactory
 from ..utils.callingcards_with_metrics import (enrichment,
