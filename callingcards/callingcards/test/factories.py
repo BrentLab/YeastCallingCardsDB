@@ -1,7 +1,6 @@
 import random
 from math import floor
 import factory
-import uuid
 
 
 from callingcards.users.test.factories import UserFactory
@@ -180,19 +179,19 @@ class HopsFactory(BaseModelFactoryMixin,
     depth = factory.Sequence(lambda n: floor(random.uniform(1, 200)))
     experiment = factory.SubFactory(CCExperimentFactory)
 
-class HopsReplicateSigFactory(BaseModelFactoryMixin,
-                              factory.django.DjangoModelFactory):
+# class HopsReplicateSigFactory(BaseModelFactoryMixin,
+#                               factory.django.DjangoModelFactory):
 
-    class Meta:
-        model = 'callingcards.HopsReplicateSig'
+#     class Meta:
+#         model = 'callingcards.HopsReplicateSig'
 
-    experiment = factory.SubFactory(CCExperimentFactory)
-    promoter = factory.SubFactory(PromoterRegionsFactory)
-    bg_hops = factory.Sequence(lambda n: floor(random.uniform(0, 200)))
-    expr_hops = factory.Sequence(lambda n: floor(random.uniform(0, 200)))
-    poisson_pval = factory.Sequence(lambda n: round(random.uniform(0, 1), 5))
-    hypergeom_pval = factory.LazyAttribute(lambda o: close_value(o.poisson_pval))
-    background = factory.Iterator(['adh1'])
+#     experiment = factory.SubFactory(CCExperimentFactory)
+#     promoter = factory.SubFactory(PromoterRegionsFactory)
+#     bg_hops = factory.Sequence(lambda n: floor(random.uniform(0, 200)))
+#     expr_hops = factory.Sequence(lambda n: floor(random.uniform(0, 200)))
+#     poisson_pval = factory.Sequence(lambda n: round(random.uniform(0, 1), 5))
+#     hypergeom_pval = factory.LazyAttribute(lambda o: close_value(o.poisson_pval))
+#     background = factory.Iterator(['adh1'])
 
 class QcMetricsFactory(BaseModelFactoryMixin,
                        factory.django.DjangoModelFactory):

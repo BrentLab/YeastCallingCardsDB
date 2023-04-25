@@ -6,7 +6,7 @@ from .factories import (ChrMapFactory, GeneFactory, PromoterRegionsFactory,
                         HarbisonChIPFactory, KemmerenTFKOFactory,
                         McIsaacZEVFactory, BackgroundFactory, CCTFFactory,
                         CCExperimentFactory, HopsFactory,
-                        HopsReplicateSigFactory, QcMetricsFactory,
+                        QcMetricsFactory,
                         QcManualReviewFactory, QcR1ToR2TfFactory,
                         QcTfToTransposonFactory)
 
@@ -19,12 +19,10 @@ from ..serializers import (ChrMapSerializer, GeneSerializer,
                            BackgroundSerializer, CCTFSerializer,
                            CCTFListSerializer,
                            CCExperimentSerializer, HopsSerializer,
-                           HopsReplicateSigSerializer,
                            QcMetricsSerializer, QcManualReviewSerializer,
                            QcR1ToR2TfSerializer,
                            QcTfToTransposonSerializer,
-                           ExpressionViewSetSerializer,
-                           HopsReplicateSigAnnotatedSerializer)
+                           ExpressionViewSetSerializer)
 
 from ..models import HarbisonChIP, PromoterRegions
 
@@ -261,21 +259,6 @@ class TestHops(TestCase):
         assert serializer.is_valid() is True
 
 
-class TestHopsReplicateSig(TestCase):
-
-    def setUp(self):
-        pass
-
-    def test_serializer_with_empty_data(self):
-        serializer = HopsReplicateSigSerializer(data={})  # noqa
-        assert serializer.is_valid() is False
-
-    def test_serializer_with_valid_data(self):
-        serializer = HopsReplicateSigSerializer(
-            data=model_to_dict(HopsReplicateSigFactory.create()))
-        assert serializer.is_valid() is True
-
-
 class TestQcMetrics(TestCase):
 
     def setUp(self):
@@ -369,44 +352,3 @@ class ExpressionViewSetSerializerTestCase(TestCase):
         assert serializer.is_valid() is False
 
 
-class TestHopsReplicateSigAnnotatedSerializer(TestCase):
-
-    def setUp(self):
-        user = UserFactory()
-        chr_record = ChrMapFactory(uploader=user)
-        gene_record_1 = GeneFactory(chr=chr_record, uploader=user)
-        gene_record_2 = GeneFactory(chr=chr_record, uploader=user)
-        cctf_record = CCTFFactory(uploader=user, tf=gene_record_1)
-        experiment_record = CCExperimentFactory(uploader=user, tf=cctf_record)
-        promoter_region = PromoterRegionsFactory(
-            chr=chr_record, uploader=user, associated_feature=gene_record_2)
-        hops_replicate_sig = HopsReplicateSigFactory(
-            uploader=user, promoter=promoter_region, experiment=experiment_record)
-
-        self.hops_replicate_sig_query_data = {
-            'tf_id_alias': cctf_record.tf_id,
-            'tf_locus_tag': gene_record_1.locus_tag,
-            'tf_gene': gene_record_1.gene,
-            'target_gene_id': gene_record_2.id,
-            'target_locus_tag': gene_record_2.locus_tag,
-            'target_gene': gene_record_2.gene,
-            'bg_hops': hops_replicate_sig.bg_hops,
-            'expr_hops': hops_replicate_sig.expr_hops,
-            'poisson_pval': hops_replicate_sig.poisson_pval,
-            'hypergeom_pval': hops_replicate_sig.hypergeom_pval,
-            'experiment': experiment_record.id,
-            'experiment_batch': experiment_record.batch,
-            'experiment_batch_replicate': experiment_record.batch_replicate,
-            'background': hops_replicate_sig.background,
-            'promoter_id': promoter_region.id,
-            'promoter_source': promoter_region.source,
-        }
-
-    def test_serializer_with_empty_data(self):
-        serializer = HopsReplicateSigAnnotatedSerializer(data={})
-        assert serializer.is_valid() is False
-
-    def test_serializer_with_valid_data(self):
-        serializer = HopsReplicateSigAnnotatedSerializer(
-            data=self.hops_replicate_sig_query_data)
-        assert serializer.is_valid() is True

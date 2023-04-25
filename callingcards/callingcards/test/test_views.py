@@ -24,8 +24,7 @@ from callingcards.users.test.factories import UserFactory
 from callingcards.callingcards.models import (ChrMap, Gene, PromoterRegions,
                                               HarbisonChIP, KemmerenTFKO,
                                               McIsaacZEV, Background, CCTF,
-                                              CCExperiment, Hops,
-                                              HopsReplicateSig, QcMetrics,
+                                              CCExperiment, Hops, QcMetrics,
                                               QcR1ToR2Tf, QcR2ToR1Tf,
                                               QcTfToTransposon)
 
@@ -36,7 +35,7 @@ from .factories import (ChrMapFactory, GeneFactory, PromoterRegionsFactory,
                         HarbisonChIPFactory, KemmerenTFKOFactory,
                         McIsaacZEVFactory, BackgroundFactory, CCTFFactory,
                         CCExperimentFactory, HopsFactory,
-                        HopsReplicateSigFactory, QcMetricsFactory,
+                        QcMetricsFactory,
                         QcManualReviewFactory,
                         QcR1ToR2TfFactory, QcR2ToR1TfFactory,
                         QcTfToTransposonFactory)
@@ -740,129 +739,6 @@ class TestHops(APITestCase):
         assert hops.chr.pk == self.hops_data.get('chr')
         assert hops.experiment.pk == self.hops_data.get('experiment')
         assert hops.uploader.username == self.user.username
-
-class TestHopsReplicateSig(APITestCase):
-    """
-    Tests /hopsreplicatesig detail operations.
-    """
-
-    def setUp(self):
-        logging.basicConfig(level=logging.DEBUG)
-        self.user = UserFactory.create()
-        self.experiment_record = CCExperimentFactory.create()
-        self.promoter_record = PromoterRegionsFactory.create()
-        self.client.credentials(
-            HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
-        self.hopsreplicatesig_data = factory.build(
-            dict, FACTORY_CLASS=HopsReplicateSigFactory)
-        self.hopsreplicatesig_data['experiment'] = self.experiment_record.pk
-        self.hopsreplicatesig_data['promoter'] = self.promoter_record.pk
-        for attr in AUTO_ADD_FIELDS:
-            self.hopsreplicatesig_data.pop(attr, None)
-        self.url = reverse('hopsreplicatesig-list')
-        settings.DEBUG = True
-
-    def test_post_fail(self):
-        response = self.client.post(self.url, {})
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    def test_get_url(self):
-        response = self.client.get(self.url)
-        assert response.status_code == status.HTTP_200_OK
-
-    def test_put_single(self):
-        response = self.client.post(self.url, self.hopsreplicatesig_data)
-        assert response.status_code == status.HTTP_201_CREATED
-
-        hopsreplicatesig = HopsReplicateSig.objects\
-            .get(pk=response.data.get('id'))
-        assert hopsreplicatesig.promoter.pk == \
-            self.hopsreplicatesig_data.get('promoter')
-        assert hopsreplicatesig.experiment.pk == \
-            self.hopsreplicatesig_data.get('experiment')
-        assert hopsreplicatesig.uploader.username == \
-            self.user.username
-
-
-class TestHopsReplicateSigAnnotatedViewSet(APITestCase):
-    """
-    Tests /hops_replicate_sig with_annotations operations.
-    """
-
-    def setUp(self):
-        self.user = UserFactory.create()
-        self.client.credentials(
-            HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
-
-        # create test data
-        self.gene_1 = GeneFactory.create(uploader=self.user)
-        self.gene_2 = GeneFactory.create(uploader=self.user)
-        self.cctf = CCTFFactory.create(uploader=self.user,
-                                       tf=self.gene_1)
-        self.experiment = CCExperimentFactory.create(uploader=self.user,
-                                                     tf=self.cctf)
-        self.promoter = PromoterRegionsFactory\
-            .create(uploader=self.user, associated_feature=self.gene_2)
-        self.hops_replicate_sig = HopsReplicateSigFactory\
-            .create(uploader=self.user,
-                    experiment=self.experiment,
-                    promoter=self.promoter)
-
-        self.url = reverse('hopsreplicatesig-with-annote')
-
-    def test_with_annotations_query(self):
-        # perform query
-        response = self.client.get(self.url)
-
-        # check response status code
-        assert response.status_code == status.HTTP_200_OK
-
-        # check that the expected hops replicate sig is in the response
-        self.assertIn('tf_locus_tag', response.data['results'][0])
-        self.assertEqual(response.data['results'][0]['tf_locus_tag'],
-                         self.gene_1.locus_tag)
-        self.assertIn('target_locus_tag', response.data['results'][0])
-        self.assertEqual(response.data['results'][0]['target_locus_tag'],
-                         self.gene_2.locus_tag)
-
-    def test_with_annotations_filter(self):
-        # perform query with tf_locus_tag filter
-        response = self.client.get(self.url,
-                                   {'tf_locus_tag': self.gene_1.locus_tag})
-
-        # check response status code
-        assert response.status_code == status.HTTP_200_OK
-
-        # check that the expected hops replicate sig is in the response
-        self.assertIn('tf_locus_tag', response.data['results'][0])
-        self.assertEqual(response.data['results'][0]['tf_locus_tag'],
-                         self.gene_1.locus_tag)
-
-    def test_with_annotations_count(self):
-        # perform count query for with_annotations
-        count_url = reverse('hopsreplicatesig-with-annote-count')
-        response = self.client.get(count_url)
-
-        # check response status code
-        assert response.status_code == status.HTTP_200_OK
-
-        # check that the expected count is in the response
-        assert response.data['count'] == 1
-
-    def test_with_annotations_pagination_info(self):
-        # Construct the URL for the with_annotations_pagination_info endpoint
-        pagination_info_url = \
-            reverse('hopsreplicatesig-with-annote-pagination-info')
-
-        # Perform a GET request to the endpoint
-        response = self.client.get(pagination_info_url)
-
-        # Check if the response status code is HTTP 200 OK
-        assert response.status_code == status.HTTP_200_OK
-
-        # Check if the response data contains the expected keys
-        self.assertIn('default_page_size', response.data)
-        self.assertIn('page_size_limit', response.data)
 
 
 class TestQcMetrics(APITestCase):

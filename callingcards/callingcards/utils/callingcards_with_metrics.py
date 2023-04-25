@@ -22,7 +22,7 @@ Functions
 import logging
 import time
 
-from django.db.models import Q, Count
+from django.db.models import F, Q, Count
 import scipy.stats as scistat
 import pandas as pd
 
@@ -68,24 +68,33 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
         queryset=PromoterRegions.objects.all())
 
     # filter the Hops (calling cards experiments) model objects
-    filtered_experiment = HopsFilter(
+    filtered_experiment_queryset = HopsFilter(
         query_params_dict,
-        queryset=Hops.objects.all())
+        queryset=Hops.objects.all())\
+        .qs\
+        .select_related('experiment')
 
     # Group by the experiment_id
     # count the number of records per group
     # and remove the default ordering, if any
     unique_experiment_counts = (
-        filtered_experiment.qs
+        filtered_experiment_queryset
         .values('experiment_id')
-        .annotate(record_count=Count('id'))
+        .annotate(record_count=Count('id'),
+                  tf_id=F('experiment__tf__tf_id'),
+                  experiment_batch=F('experiment__batch'),
+                  experiment_replicate=F('experiment__batch_replicate'))
         .order_by()
     )
     # Convert the result to a dictionary with experiment_id
     # as key and record_count as value
-    experiment_counts_dict = {entry['experiment_id']:
-                              entry['record_count'] for
-                              entry in unique_experiment_counts}
+    experiment_counts_dict = {
+        entry['experiment_id']:
+        {'total': entry['record_count'],
+         'tf_id': entry['tf_id'],
+         'experiment_batch': entry['experiment_batch'],
+         'experiment_replicate':
+         entry['experiment_replicate']} for entry in unique_experiment_counts}
 
     # filter the Background model objects
     filtered_background = BackgroundFilter(
@@ -120,13 +129,14 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
     for promoter_region in promoter_queryset:
         # get the number of hops for each experiment over this promoter
         experiment_hops_list = []
-        for experiment, experiment_total_hops in \
+        for experiment, experiment_details_dict in \
                 experiment_counts_dict.items():
-            experiment_hops = filtered_experiment.qs.filter(
-                chr_id=promoter_region.chr_id,
-                start__gte=promoter_region.start,
-                start__lte=promoter_region.end,
-                experiment_id=experiment)
+            experiment_hops = filtered_experiment_queryset\
+                .filter(
+                    chr_id=promoter_region.chr_id,
+                    start__gte=promoter_region.start,
+                    start__lte=promoter_region.end,
+                    experiment_id=experiment)
 
             if consider_strand and promoter_region.strand != "*":
                 experiment_hops = experiment_hops.filter(
@@ -138,8 +148,14 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
                 {
                     'promoter_id': promoter_region.id,
                     'experiment_id': experiment,
+                    'experiment_batch': 
+                    experiment_details_dict.get('experiment_batch'),
+                    'experiment_replicate': 
+                    experiment_details_dict.get('experiment_replicate'),
+                    'tf_id': experiment_details_dict.get('tf_id'),
                     'experiment_hops': experiment_hops.count(),
-                    'experiment_total_hops': experiment_total_hops
+                    'experiment_total_hops': 
+                    experiment_details_dict.get('total')
                 }
             )
         # get the number of hops for each background source over this promoter
@@ -174,8 +190,11 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
                 results.append(
                     {
                         'promoter_id': promoter_region.id,
-                        'target_gene_id': promoter_region.associated_feature_id,
                         'experiment_id': experiment_hops_dict['experiment_id'],
+                        'tf_id': experiment_hops_dict['tf_id'],
+                        'experiment_batch': experiment_hops_dict['experiment_batch'],
+                        'experiment_replicate': experiment_hops_dict['experiment_replicate'],
+                        'target_gene_id': promoter_region.associated_feature_id,
                         'background_source':
                         background_hops_dict['background_source'],
                         'promoter_source': promoter_region.source,
