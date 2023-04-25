@@ -96,6 +96,10 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
          'experiment_replicate':
          entry['experiment_replicate']} for entry in unique_experiment_counts}
 
+    # Convert experiment_counts_dict to a DataFrame
+    filtered_experiment_df = pd.DataFrame\
+        .from_records(filtered_experiment_queryset.values())
+
     # filter the Background model objects
     filtered_background = BackgroundFilter(
         query_params_dict,
@@ -116,6 +120,10 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
                               entry['record_count'] for
                               entry in unique_background_counts}
 
+    # Convert background hops data to a DataFrame
+    filtered_background_df = pd.DataFrame\
+        .from_records(filtered_background.qs.values())
+
     # by default, False
     consider_strand = bool(query_params_dict.get('consider_strand', False))
 
@@ -129,56 +137,56 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
     for promoter_region in promoter_queryset:
         # get the number of hops for each experiment over this promoter
         experiment_hops_list = []
-        for experiment, experiment_details_dict in \
-                experiment_counts_dict.items():
-            experiment_hops = filtered_experiment_queryset\
-                .filter(
-                    chr_id=promoter_region.chr_id,
-                    start__gte=promoter_region.start,
-                    start__lte=promoter_region.end,
-                    experiment_id=experiment)
+        for experiment, experiment_details_dict in experiment_counts_dict.items():
+            experiment_hops = filtered_experiment_df[
+                (filtered_experiment_df['chr_id'] == promoter_region.chr_id) &
+                (filtered_experiment_df['start'] >= promoter_region.start) &
+                (filtered_experiment_df['start'] <= promoter_region.end) &
+                (filtered_experiment_df['experiment_id'] == experiment)
+            ]
 
             if consider_strand and promoter_region.strand != "*":
-                experiment_hops = experiment_hops.filter(
-                    Q(strand=promoter_region.strand) |
-                    Q(strand="*"))
+                experiment_hops = experiment_hops[
+                    (experiment_hops['strand'] == promoter_region.strand) |
+                    (experiment_hops['strand'] == "*")
+                ]
 
             # record experiment data
             experiment_hops_list.append(
                 {
                     'promoter_id': promoter_region.id,
                     'experiment_id': experiment,
-                    'experiment_batch': 
-                    experiment_details_dict.get('experiment_batch'),
-                    'experiment_replicate': 
-                    experiment_details_dict.get('experiment_replicate'),
+                    'experiment_batch': experiment_details_dict.get('experiment_batch'),
+                    'experiment_replicate': experiment_details_dict.get('experiment_replicate'),
                     'tf_id': experiment_details_dict.get('tf_id'),
-                    'experiment_hops': experiment_hops.count(),
-                    'experiment_total_hops': 
-                    experiment_details_dict.get('total')
+                    'experiment_hops': len(experiment_hops),
+                    'experiment_total_hops': experiment_details_dict.get('total')
                 }
             )
         # get the number of hops for each background source over this promoter
         background_hops_list = []
         for background_source, background_total_hops in \
                 background_counts_dict.items():
-            background_hops = filtered_background.qs.filter(
-                chr_id=promoter_region.chr_id,
-                start__gte=promoter_region.start,
-                start__lte=promoter_region.end,
-                source=background_source)
+
+            background_hops = filtered_background_df[
+                (filtered_background_df['chr_id'] == promoter_region.chr_id) &
+                (filtered_background_df['start'] >= promoter_region.start) &
+                (filtered_background_df['start'] <= promoter_region.end) &
+                (filtered_background_df['source'] == background_source)
+            ]
 
             if consider_strand and promoter_region.strand != "*":
-                background_hops = background_hops.filter(
-                    Q(strand=promoter_region.strand) |
-                    Q(strand="*"))
+                background_hops = background_hops[
+                    (background_hops['strand'] == promoter_region.strand) |
+                    (background_hops['strand'] == "*")
+                ]
 
             # record background data
             background_hops_list.append(
                 {
                     'promoter_id': promoter_region.id,
                     'background_source': background_source,
-                    'background_hops': background_hops.count(),
+                    'background_hops': len(background_hops),
                     'background_total_hops': background_total_hops
                 }
             )
