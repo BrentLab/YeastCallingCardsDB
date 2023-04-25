@@ -6,18 +6,6 @@ from .models import (Gene, McIsaacZEV, KemmerenTFKO, Background,
                      QcManualReview, QcR1ToR2Tf, QcR2ToR1Tf,
                      QcTfToTransposon)
 
-class HopsFilter(django_filters.FilterSet):
-    tf_id = django_filters.NumberFilter(field_name="experiment__tf__id")
-    tf_locus_tag = django_filters.CharFilter(field_name="experiment__tf__locus_tag")
-    tf_gene = django_filters.CharFilter(field_name="experiment__tf__gene")
-    experiment = django_filters.CharFilter(field_name="experiment__id")
-    experiment_id = django_filters.CharFilter(field_name="experiment__id")
-
-    class Meta:
-        model = Hops
-        fields = ['tf_id', 'tf_locus_tag', 'tf_gene', 
-                  'experiment', 'experiment_id']
-
 
 class BackgroundFilter(django_filters.FilterSet):
     background_source = django_filters.CharFilter(field_name="source")
@@ -211,8 +199,6 @@ class HopsFilter(django_filters.FilterSet):
         model = Hops
         fields = ['tf_id', 'tf_locus_tag', 'tf_gene', 
                   'experiment', 'experiment_id']
-
->>>>>>> Stashed changes
 
 
 class QcMetricsFilter(django_filters.FilterSet):
