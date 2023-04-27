@@ -1,11 +1,30 @@
 import django_filters
 from .models.mixins.GenomicCoordinatesMixin import GenonomicCoordinatesMixin
 from .models import (Gene, McIsaacZEV, KemmerenTFKO, Background,
+<<<<<<< HEAD
                      Hops, CCExperiment,
+=======
+                     CallingCardsSig, Hops, Hops_s3, CCExperiment,
+>>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
                      PromoterRegions, HarbisonChIP, QcMetrics,
                      QcManualReview, QcR1ToR2Tf, QcR2ToR1Tf,
                      QcTfToTransposon)
 
+<<<<<<< HEAD
+=======
+class Hops_s3Filter(django_filters.FilterSet):
+    tf_id = django_filters.NumberFilter(field_name="experiment__tf__tf__id")
+    tf_locus_tag = django_filters.CharFilter(field_name="experiment__tf__tf__locus_tag")
+    tf_gene = django_filters.CharFilter(field_name="experiment__tf__tf__gene")
+    experiment_id = django_filters.CharFilter(field_name="experiment__id")
+    batch = django_filters.CharFilter(field_name="experiment__batch")
+
+    class Meta:
+        model = Hops_s3
+        fields = ['tf_id', 'tf_locus_tag',
+                  'tf_gene', 'experiment_id', 'batch']
+
+>>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
 
 class BackgroundFilter(django_filters.FilterSet):
     background_source = django_filters.CharFilter(field_name="source")
@@ -15,6 +34,10 @@ class BackgroundFilter(django_filters.FilterSet):
         fields = [f.name for f in model._meta.fields if f.name != 'source']
         fields += ['background_source']
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
 class GeneFilter(django_filters.FilterSet):
     chr = django_filters.CharFilter(field_name="chr__ucsc")
     start = django_filters.NumberFilter()
@@ -164,8 +187,13 @@ class HarbisonChIPFilter(django_filters.FilterSet):
 
 class CCExperimentFilter(django_filters.FilterSet):
     experiment = django_filters.NumberFilter(
+<<<<<<< HEAD
         field_name="pk",
         lookup_expr="in")
+=======
+        field_name="id",
+        lookup_expr="exact")
+>>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
     batch = django_filters.CharFilter(
         field_name="batch",
         lookup_expr="iexact")
@@ -184,7 +212,11 @@ class CCExperimentFilter(django_filters.FilterSet):
 
     class Meta:
         model = CCExperiment
+<<<<<<< HEAD
         fields = ['experiment', 'batch', 'batch_replicate',
+=======
+        fields = ['id', 'experiment', 'batch', 'batch_replicate',
+>>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
                   'tf_id', 'tf_locus_tag', 'tf_gene']
 
 
@@ -197,10 +229,32 @@ class HopsFilter(django_filters.FilterSet):
 
     class Meta:
         model = Hops
+<<<<<<< HEAD
         fields = ['tf_id', 'tf_locus_tag', 'tf_gene', 
                   'experiment', 'experiment_id']
 
 
+=======
+        fields = ['tf_id', 'tf_locus_tag', 'tf_gene',
+                  'experiment', 'experiment_id']
+
+
+class CallingCardsSigFilter(django_filters.FilterSet):
+    tf_id = django_filters.NumberFilter('experiment__tf__tf__id')
+    tf_locus_tag = django_filters.CharFilter('experiment__tf__tf__locus_tag')
+    tf_gene = django_filters.CharFilter('experiment__tf__tf__gene')
+    experiment_id = django_filters.NumberFilter('experiment__id')
+    background_source_id = django_filters.NumberFilter('background__id')
+    promoter_source_id = django_filters.NumberFilter('promoter_source__id')
+
+    class Meta:
+        model = CallingCardsSig
+        fields = ['experiment', 'experiment_id', 'tf_id', 'tf_locus_tag',
+                  'tf_gene', 'background_source', 'background_source_id',
+                  'promoter_source', 'promoter_source_id']
+
+
+>>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
 class QcMetricsFilter(django_filters.FilterSet):
 
     class Meta:

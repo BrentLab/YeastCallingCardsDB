@@ -3,6 +3,10 @@ from django.forms.models import model_to_dict
 
 from callingcards.users.test.factories import UserFactory
 from .factories import (ChrMapFactory, GeneFactory, PromoterRegionsFactory,
+<<<<<<< HEAD
+=======
+                        PromoterRegionsSourceFactory,
+>>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
                         HarbisonChIPFactory, KemmerenTFKOFactory,
                         McIsaacZEVFactory, BackgroundFactory, CCTFFactory,
                         CCExperimentFactory, HopsFactory,
@@ -87,10 +91,21 @@ class TestPromoterRegionsTargetsOnly(TestCase):
         user = UserFactory()
         chr_record = ChrMapFactory(uploader=user,
                                    modifiedBy=user)
+<<<<<<< HEAD
         self.gene = GeneFactory(uploader=user, modifiedBy=user, chr=chr_record)
         self.promoter_region = PromoterRegionsFactory(
             modifiedBy=user,
             associated_feature=self.gene)
+=======
+        self.promoter_source = PromoterRegionsSourceFactory()
+        self.gene = GeneFactory(uploader=user, 
+                                modifiedBy=user, 
+                                chr=chr_record)
+        self.promoter_region = PromoterRegionsFactory(
+            modifiedBy=user,
+            associated_feature=self.gene,
+            source=self.promoter_source)
+>>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
         self.annotated_queryset = PromoterRegions.objects\
             .targets().filter(id=self.promoter_region.id)
 
@@ -105,7 +120,11 @@ class TestPromoterRegionsTargetsOnly(TestCase):
                 'target_gene_id': self.gene.id,
                 'target_locus_tag': self.gene.locus_tag,
                 'target_gene': self.gene.gene,
+<<<<<<< HEAD
                 'source': self.promoter_region.source
+=======
+                'source': self.promoter_source.pk
+>>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
             }
         ]
 

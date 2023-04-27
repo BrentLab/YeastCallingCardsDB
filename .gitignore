@@ -2,6 +2,10 @@ migrations/
 *.sqlite-shm
 *.sqlite-wal
 *.sqlite
+<<<<<<< HEAD
+=======
+testing_orm.ipynb
+>>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
 
 # fixture data
 fixtures

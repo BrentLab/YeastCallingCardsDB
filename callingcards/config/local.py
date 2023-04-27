@@ -33,3 +33,15 @@ class Local(Common):
             "NAME": BASE_DIR + "/test.sqlite",
         }
     }
+
+    # Static files (CSS, JavaScript, Images)
+    # https://docs.djangoproject.com/en/2.0/howto/static-files/
+    # http://django-storages.readthedocs.org/en/latest/index.html
+    STORAGES = {
+        'default': {
+            'BACKEND': 'django.core.files.storage.FileSystemStorage',
+        },
+        'staticfiles': {
+            'BACKEND': 'django.core.files.storage.FileSystemStorage',
+        },
+    }

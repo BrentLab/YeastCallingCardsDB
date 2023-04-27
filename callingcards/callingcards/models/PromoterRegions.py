@@ -19,6 +19,10 @@ from django.core.validators import MaxValueValidator
 
 from .BaseModel import BaseModel
 from .mixins.GenomicCoordinatesMixin import GenonomicCoordinatesMixin
+<<<<<<< HEAD
+=======
+from .mixins.ProvidenceMixin import ProvidenceMixin
+>>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
 
 
 class PromoterRegionsQuerySet(models.QuerySet):
@@ -282,11 +286,17 @@ class PromoterRegions(GenonomicCoordinatesMixin,
         default=100,
         validators=[MaxValueValidator(100)]
     )
+<<<<<<< HEAD
     source = models.CharField(
         max_length=10,
         choices=SOURCE_CHOICES,
         db_index=True
     )
+=======
+    source = models.ForeignKey(
+        "PromoterRegionsSource",
+        models.CASCADE)
+>>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
 
     class Meta:
         managed = True

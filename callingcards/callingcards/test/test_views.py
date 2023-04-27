@@ -4,6 +4,10 @@ import json
 from unittest import mock
 import io
 import csv
+<<<<<<< HEAD
+=======
+import os
+>>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
 from decimal import Decimal
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -33,12 +37,23 @@ from callingcards.callingcards.serializers import (HarbisonChIPSerializer,
 
 from .factories import (ChrMapFactory, GeneFactory, PromoterRegionsFactory,
                         HarbisonChIPFactory, KemmerenTFKOFactory,
+<<<<<<< HEAD
                         McIsaacZEVFactory, BackgroundFactory, CCTFFactory,
+=======
+                        McIsaacZEVFactory, BackgroundFactory, 
+                        BackgroundSourceFactory, CCTFFactory,
+>>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
                         CCExperimentFactory, HopsFactory,
                         QcMetricsFactory,
                         QcManualReviewFactory,
                         QcR1ToR2TfFactory, QcR2ToR1TfFactory,
+<<<<<<< HEAD
                         QcTfToTransposonFactory)
+=======
+                        QcTfToTransposonFactory,
+                        CallingCardsSigFactory,
+                        PromoterRegionsSourceFactory)
+>>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
 
 from ..views import ExpressionViewSet
 
@@ -222,6 +237,10 @@ class TestPromoterRegionsViewSet(APITestCase):
         self.user = UserFactory.create()
         self.chr_record = ChrMapFactory.create()
         self.gene_record = GeneFactory.create()
+<<<<<<< HEAD
+=======
+        self.promoterregionssource = PromoterRegionsSourceFactory.create()
+>>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
         self.client.credentials(
             HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
         self.promoter_regions_data = factory.build(
@@ -229,6 +248,11 @@ class TestPromoterRegionsViewSet(APITestCase):
             FACTORY_CLASS=PromoterRegionsFactory)
         self.promoter_regions_data['chr'] = self.chr_record.pk
         self.promoter_regions_data['associated_feature'] = self.gene_record.pk
+<<<<<<< HEAD
+=======
+        self.promoter_regions_data['source'] = \
+            self.promoterregionssource.pk
+>>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
         for attr in AUTO_ADD_FIELDS:
             self.promoter_regions_data.pop(attr, None)
         self.url = reverse('promoterregions-list')
@@ -284,6 +308,7 @@ class TestPromoterRegionsViewSet(APITestCase):
         assert set(response.data.keys()) == \
             {'readable', 'writable', 'automatically_generated', 'filter'}
 
+<<<<<<< HEAD
     def test_promoter_stats_view(self):
         experiment1 = CCExperimentFactory.create()
         experiment2 = CCExperimentFactory.create()
@@ -338,6 +363,45 @@ class TestPromoterRegionsViewSet(APITestCase):
         # self.assertEqual(response.json()[0]['background_hops'], 3)
         # self.assertAlmostEqual(response.json()[0]['effect'], 1.1142857142857143)
         # self.assertEqual(response.json()[1]['promoter_id'], '2')
+=======
+    def test_callingcards_endpoint(self):
+        # Create a CCExperiment instance to have some data to test with
+        filepath = os.path.join(
+            'analysis',
+            'run_5690',
+            'ccexperiment_75_yiming.csv.gz')
+        experiment = CCExperimentFactory.create(
+            id=75,
+            uploader=self.user,
+            batch='run_5690')
+        background_source = BackgroundSourceFactory.create(
+            source = 'adh1'
+        )
+
+        # Create a CallingCardsSig instance to have some data to test with
+        callingcards_sig = CallingCardsSigFactory.create(
+            experiment=experiment,
+            background_source = background_source,
+            promoter_source = self.promoterregionssource,
+            file=filepath)
+
+        callingcards_url = reverse('promoterregions-callingcards')
+        response = self.client.get(callingcards_url)
+
+        # Check the response status code
+        assert response.status_code == status.HTTP_200_OK
+
+        # Check the content type
+        assert response['Content-Type'] == 'application/gzip'
+
+        # Check the content encoding
+        assert response['Content-Encoding'] == 'gzip'
+
+        # Check the content disposition
+        assert response['Content-Disposition'] == \
+            'attachment; filename="data.csv.gz"'
+
+>>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
 
 
 class TestHarbisonChIP(APITestCase):
@@ -597,6 +661,10 @@ class TestBackground(APITestCase):
     def setUp(self):
         self.user = UserFactory.create()
         self.chr_record = ChrMapFactory.create()
+<<<<<<< HEAD
+=======
+        self.backgroundsource = BackgroundSourceFactory.create()
+>>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
         self.client.credentials(
             HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
         self.url = reverse('background-list')
@@ -613,6 +681,10 @@ class TestBackground(APITestCase):
         background_data = factory.build(
             dict, FACTORY_CLASS=BackgroundFactory)
         background_data['chr'] = self.chr_record.pk
+<<<<<<< HEAD
+=======
+        background_data['source'] = self.backgroundsource.pk
+>>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
         for attr in AUTO_ADD_FIELDS:
             background_data.pop(attr, None)
         response = self.client.post(self.url, background_data)
