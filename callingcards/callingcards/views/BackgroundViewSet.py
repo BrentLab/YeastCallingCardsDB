@@ -18,6 +18,6 @@ class BackgroundViewSet(ListModelFieldsMixin,
     """
     API endpoint that allows users to be viewed or edited.
     """
-    queryset = Background.objects.all().order_by('id')  # noqa
+    queryset = Background.objects.all().order_by('pk')  # noqa
     serializer_class = BackgroundSerializer  # noqa
     permission_classes = (AllowAny,)

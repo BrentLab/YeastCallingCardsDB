@@ -2,7 +2,11 @@ import pytest
 # import pandas as pd
 # import pandas.testing as pdt
 from rest_framework.test import APITestCase
-from .factories import PromoterRegionsFactory, HopsFactory, BackgroundFactory
+from .factories import (PromoterRegionsFactory, 
+                        HopsFactory, 
+                        BackgroundFactory,
+                        BackgroundSourceFactory,
+                        PromoterRegionsSourceFactory)
 from ..utils.callingcards_with_metrics import (enrichment,
                                                poisson_pval,
                                                hypergeom_pval,
@@ -12,9 +16,15 @@ class TestCallingCardsWithMetrics(APITestCase):
 
     def setUp(self):
         # Create a test dataset using factories
-        self.promoter_regions = PromoterRegionsFactory.create_batch(10)
+        promoter_source = PromoterRegionsSourceFactory.create()
+        self.promoter_regions = PromoterRegionsFactory.create_batch(
+            10,
+            source=promoter_source)
+        background_source = BackgroundSourceFactory.create()
         self.hops = HopsFactory.create_batch(10)
-        self.backgrounds = BackgroundFactory.create_batch(10)
+        self.backgrounds = BackgroundFactory.create_batch(
+            10,
+            source = background_source)
 
     def test_callingcards_with_metrics(self):
         # query_params_dict = {
@@ -32,6 +42,9 @@ class TestCallingCardsWithMetrics(APITestCase):
         assert len(actual_1) == 100
 
         query_params_dict_2 = {
+            'experiment_id': 1,
+            'background_source': 'adh1',
+            'promoter_source': 'yiming',
             'consider_strand': True
         }
 

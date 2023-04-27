@@ -1,3 +1,4 @@
+import os
 import random
 from math import floor
 import factory
@@ -87,6 +88,15 @@ class GeneFactory(BaseModelFactoryMixin,
     alias = factory.Sequence(lambda n: f'unknown_{n}')
     note = 'none'
 
+class PromoterRegionsSourceFactory(BaseModelFactoryMixin,
+                                   factory.django.DjangoModelFactory):
+    source = 'yiming'
+    providence = 'some_providence'
+    notes = 'none'
+
+    class Meta:
+        model = 'callingcards.PromoterRegionsSource'
+
 class PromoterRegionsFactory(BaseModelFactoryMixin,
                              factory.django.DjangoModelFactory):
 
@@ -99,7 +109,8 @@ class PromoterRegionsFactory(BaseModelFactoryMixin,
     strand = factory.Iterator(['+', '-', '*'])
     associated_feature = factory.SubFactory(GeneFactory)
     score = 100
-    source = factory.Iterator(['not_orf', 'yiming'])
+    source = factory.SubFactory(PromoterRegionsSourceFactory)  # factory.Iterator(['not_orf', 'yiming'])
+
 
 class HarbisonChIPFactory(BaseModelFactoryMixin,
                           factory.django.DjangoModelFactory):
@@ -134,6 +145,16 @@ class McIsaacZEVFactory(BaseModelFactoryMixin,
     effect = factory.LazyFunction(lambda: round(random.uniform(-5, 5), 2))
     tf = factory.SubFactory(GeneFactory)
 
+
+class BackgroundSourceFactory(BaseModelFactoryMixin,
+                              factory.django.DjangoModelFactory):
+    source = 'adh1'
+    providence = 'some_providence'
+    notes = 'none'
+
+    class Meta:
+        model = 'callingcards.BackgroundSource'
+
 class BackgroundFactory(BaseModelFactoryMixin,
                         factory.django.DjangoModelFactory):
 
@@ -141,10 +162,11 @@ class BackgroundFactory(BaseModelFactoryMixin,
         model = 'callingcards.Background'
 
     chr = factory.SubFactory(ChrMapFactory)
+    source = factory.SubFactory(BackgroundSourceFactory)
     start = 1
     end = 100
     depth = 100
-    source = 'adh1'
+    source = factory.SubFactory(BackgroundSourceFactory)
 
 class CCTFFactory(BaseModelFactoryMixin,
                   factory.django.DjangoModelFactory):
@@ -269,3 +291,21 @@ class QcTfToTransposonFactory(BaseModelFactoryMixin,
     edit_dist = 0
     tally = 4
     note = 'some notes'
+
+
+class CallingCardsSigFactory(BaseModelFactoryMixin,
+                             factory.django.DjangoModelFactory):
+
+    experiment = factory.SubFactory(CCExperimentFactory)
+    background_source = factory.SubFactory(BackgroundSourceFactory)
+    promoter_source = factory.SubFactory(PromoterRegionsSourceFactory)
+    file = factory.django.FileField(
+        from_path=os.path.join(
+            'media',
+            'analysis',
+            'run_5690',
+            'ccexperiment_75_yiming.csv.gz'))
+    notes = factory.Faker('text', max_nb_chars=50)
+
+    class Meta:
+        model = 'callingcards.callingcardssig'

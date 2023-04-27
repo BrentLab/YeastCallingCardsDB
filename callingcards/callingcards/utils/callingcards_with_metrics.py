@@ -21,7 +21,6 @@ Functions
 
 import logging
 import time
-import itertools
 
 from django.db.models import F, Count
 import scipy.stats as scistat
@@ -87,13 +86,13 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
     # and remove the default ordering, if any
     unique_background_counts = (
         filtered_background.qs
-        .values('source')
+        .values('source_id')
         .annotate(record_count=Count('id'))
         .order_by()
     )
     # Convert the result to a dictionary with experiment_id
     # as key and record_count as value
-    background_counts_dict = {entry['source']:
+    background_counts_dict = {entry['source_id']:
                               {'background_total_hops': entry['record_count']}
                               for entry in unique_background_counts}
 
@@ -114,7 +113,7 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
     background_counts_df = pd.DataFrame(
         background_counts_dict.values(),
         index=background_counts_dict.keys())
-    background_counts_df.index.name = 'source'
+    background_counts_df.index.name = 'source_id'
 
     # Prepare filtered_experiment_df and filtered_background_df for merging
     filtered_experiment_df = filtered_experiment_df.merge(
@@ -122,7 +121,7 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
 
     # Prepare filtered_experiment_df and filtered_background_df for merging
     filtered_background_df = filtered_background_df.merge(
-        background_counts_df, on='source', how='left')
+        background_counts_df, on='source_id', how='left')
 
     # Create a helper function to filter the data based on strand
     def filter_strand_data(hops_df, promoter_row, consider_strand):
@@ -185,15 +184,15 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
             (filtered_bg_hops['chr_id'] == promoter_row['chr_id']) &
             (filtered_bg_hops['start'] >= promoter_row['start']) &
             (filtered_bg_hops['start'] <= promoter_row['end'])]\
-            .groupby('source')\
+            .groupby('source_id')\
             .agg({'background_total_hops': 'first', 'chr_id': 'count'})\
             .reset_index()\
             .rename(columns={'chr_id': 'background_hops'})
 
         # Perform an outer merge with background_counts_df
         bg_hops_count = background_counts_df\
-            .merge(bg_hops_count, on='source', how='left')\
-            .rename(columns={'source': 'background_source'})
+            .merge(bg_hops_count, on='source_id', how='left')\
+            .rename(columns={'source_id': 'background_source'})
 
         bg_hops_count['background_total_hops'] = \
             bg_hops_count['background_total_hops_x']\
@@ -214,7 +213,8 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
             .merge(bg_hops_count, on='key')\
             .drop('key', axis=1)
 
-        # Create a boolean mask for columns starting with "background" or "experiment"
+        # Create a boolean mask for columns starting with 
+        # "background" or "experiment"
         column_mask = merged_df.columns.str.endswith("hops")
 
         # Get the selected columns
@@ -232,13 +232,14 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
         merged_df = pd.concat([merged_df, result_df], axis=1)
 
         merged_df['promoter_id'] = promoter_row['id']
-        merged_df['promoter_source'] = promoter_row['source']
+        merged_df['promoter_source'] = promoter_row['source_id']
         merged_df['target_gene_id'] = promoter_row['associated_feature_id']
                                        
         return merged_df
 
     start_time = time.time()
-    # Apply the process_promoter_row function to each row in filtered_promoters_df
+    # Apply the process_promoter_row function to each row 
+    # in filtered_promoters_df
     result_df = filtered_promoters_df.apply(process_promoter_row,
                                             axis=1,
                                             args=(experiment_counts_df,

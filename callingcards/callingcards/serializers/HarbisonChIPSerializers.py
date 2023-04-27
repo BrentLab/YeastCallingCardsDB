@@ -7,7 +7,6 @@ from ..models import HarbisonChIP
 logging.getLogger(__name__)
 
 
-
 class HarbisonChIPSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
     modifiedBy = serializers.CharField(
