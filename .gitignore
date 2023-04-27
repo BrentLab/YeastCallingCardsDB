@@ -2,7 +2,6 @@ migrations/
 *.sqlite-shm
 *.sqlite-wal
 *.sqlite
-media
 testing_orm.ipynb
 
 # fixture data
