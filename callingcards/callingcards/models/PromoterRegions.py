@@ -286,17 +286,9 @@ class PromoterRegions(GenonomicCoordinatesMixin,
         default=100,
         validators=[MaxValueValidator(100)]
     )
-<<<<<<< HEAD
-    source = models.CharField(
-        max_length=10,
-        choices=SOURCE_CHOICES,
-        db_index=True
-    )
-=======
     source = models.ForeignKey(
         "PromoterRegionsSource",
         models.CASCADE)
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
 
     class Meta:
         managed = True

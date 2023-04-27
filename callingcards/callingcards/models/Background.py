@@ -17,10 +17,7 @@ from django.db import models  # pylint: disable=import-error # noqa # type: igno
 
 from .BaseModel import BaseModel
 from .mixins.GenomicCoordinatesMixin import GenonomicCoordinatesMixin
-<<<<<<< HEAD
-=======
 from .mixins.ProvidenceMixin import ProvidenceMixin
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
 
 
 class Background(GenonomicCoordinatesMixin, BaseModel):
@@ -73,17 +70,10 @@ class Background(GenonomicCoordinatesMixin, BaseModel):
                       (ADH1, 'adh1'))
 
     depth = models.PositiveIntegerField()
-<<<<<<< HEAD
-    source = models.CharField(
-        max_length=5,
-        choices=SOURCE_CHOICES,
-        db_index=True)
-=======
     source = models.ForeignKey(
         "BackgroundSource",
         on_delete=models.CASCADE
     )
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
 
     class Meta:
         managed = True
