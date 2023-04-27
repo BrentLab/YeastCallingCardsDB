@@ -1,13 +1,4 @@
 import logging
-<<<<<<< HEAD
-from django.db.models import F
-from rest_framework import viewsets, status
-from rest_framework.filters import SearchFilter
-from rest_framework.permissions import AllowAny
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from django_filters import rest_framework as filters
-=======
 import os
 import gzip
 import io
@@ -22,7 +13,6 @@ from django_filters import rest_framework as filters
 from django.http import HttpResponse
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
 
 import pandas as pd
 
@@ -32,12 +22,6 @@ from .mixins import (ListModelFieldsMixin,
                      CountModelMixin,
                      UpdateModifiedMixin,
                      CustomValidateMixin)
-<<<<<<< HEAD
-from ..models import PromoterRegions
-from ..serializers import (PromoterRegionsSerializer,
-                           PromoterRegionsTargetsOnlySerializer)
-from ..filters import PromoterRegionsFilter, BackgroundFilter, HopsFilter
-=======
 from ..models import (PromoterRegions, CallingCardsSig,
                       CCExperiment, BackgroundSource,
                       PromoterRegionsSource)
@@ -45,7 +29,6 @@ from ..serializers import (PromoterRegionsSerializer,
                            PromoterRegionsTargetsOnlySerializer)
 from ..filters import (PromoterRegionsFilter, CCExperimentFilter,
                        CallingCardsSigFilter)
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
 from ..utils.callingcards_with_metrics import callingcards_with_metrics
 
 logger = logging.getLogger(__name__)
@@ -122,67 +105,6 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
     @action(detail=False, methods=['get'], url_path='callingcards',
             url_name='callingcards')
     def callingcards(self, request, *args, **kwargs):
-<<<<<<< HEAD
-        result_df = callingcards_with_metrics(self.request.query_params)
-
-        # Convert the DataFrame to a list of dictionaries
-        data = result_df.to_dict(orient='records')
-
-        # Paginate the data if needed
-        paginator = self.paginator
-        if paginator is not None:
-            paginated_data = paginator.paginate_queryset(data, request)
-            return paginator.get_paginated_response(paginated_data)
-
-        # Return the data as a JSON response
-        return Response(data)
-
-    @action(detail=False, url_path='callingcards/count',
-            url_name='callingcards-count')
-    def callingcards_count(self, request, *args, **kwargs) -> Response:
-        filtered_queryset = self.filter_queryset(self.get_queryset())
-        content = {'count': self.get_count(filtered_queryset)}
-        return Response(content)
-
-    @action(detail=False, url_path='callingcards/pagination_info',
-            url_name='callingcards-pagination-info')
-    def callingcards_pagination_info(self, request,
-                                     *args, **kwargs) -> Response:
-        return self.pagination_info(request, *args, **kwargs)
-
-    @action(detail=False, methods=['get'], url_path='callingcards/fields',
-            url_name='callingcards-fields')
-    def callingcards_fields(self, request, *args, **kwargs):
-        readable = [
-            'promoter_id',
-            'target_gene_id',
-            'experiment_id',
-            'background_source',
-            'promoter_source',
-            'background_total_hops',
-            'experiment_total_hops',
-            'background_hops',
-            'experiment_hops',
-            'callingcards_enrichment',
-            'callingcards_poisson_pvalue',
-            'callingcards_hypergeometric_pvalue',
-
-        ]
-        writable = None
-        automatically_generated = None
-        filter_columns = (PromoterRegionsFilter.Meta.fields
-                          + BackgroundFilter.Meta.fields
-                          + HopsFilter.Meta.fields
-                          + ['consider_strand'])
-
-        # Return the readable fields as a JSON response
-        return Response({"readable": readable,
-                         "writable": writable,
-                         "automatically_generated":
-                         automatically_generated,
-                         "filter": filter_columns},
-                        status=status.HTTP_200_OK)
-=======
         # user the auth token to get the user object
         auth_header = request.META.get("HTTP_AUTHORIZATION")
         if auth_header:
@@ -303,4 +225,3 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
                 'attachment; filename="data.csv.gz"'
 
             return response
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca

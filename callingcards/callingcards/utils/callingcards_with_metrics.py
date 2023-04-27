@@ -21,10 +21,6 @@ Functions
 
 import logging
 import time
-<<<<<<< HEAD
-import itertools
-=======
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
 
 from django.db.models import F, Count
 import scipy.stats as scistat
@@ -90,21 +86,13 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
     # and remove the default ordering, if any
     unique_background_counts = (
         filtered_background.qs
-<<<<<<< HEAD
-        .values('source')
-=======
         .values('source_id')
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
         .annotate(record_count=Count('id'))
         .order_by()
     )
     # Convert the result to a dictionary with experiment_id
     # as key and record_count as value
-<<<<<<< HEAD
-    background_counts_dict = {entry['source']:
-=======
     background_counts_dict = {entry['source_id']:
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
                               {'background_total_hops': entry['record_count']}
                               for entry in unique_background_counts}
 
@@ -125,11 +113,7 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
     background_counts_df = pd.DataFrame(
         background_counts_dict.values(),
         index=background_counts_dict.keys())
-<<<<<<< HEAD
-    background_counts_df.index.name = 'source'
-=======
     background_counts_df.index.name = 'source_id'
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
 
     # Prepare filtered_experiment_df and filtered_background_df for merging
     filtered_experiment_df = filtered_experiment_df.merge(
@@ -137,11 +121,7 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
 
     # Prepare filtered_experiment_df and filtered_background_df for merging
     filtered_background_df = filtered_background_df.merge(
-<<<<<<< HEAD
-        background_counts_df, on='source', how='left')
-=======
         background_counts_df, on='source_id', how='left')
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
 
     # Create a helper function to filter the data based on strand
     def filter_strand_data(hops_df, promoter_row, consider_strand):
@@ -204,24 +184,15 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
             (filtered_bg_hops['chr_id'] == promoter_row['chr_id']) &
             (filtered_bg_hops['start'] >= promoter_row['start']) &
             (filtered_bg_hops['start'] <= promoter_row['end'])]\
-<<<<<<< HEAD
-            .groupby('source')\
-=======
             .groupby('source_id')\
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
             .agg({'background_total_hops': 'first', 'chr_id': 'count'})\
             .reset_index()\
             .rename(columns={'chr_id': 'background_hops'})
 
         # Perform an outer merge with background_counts_df
         bg_hops_count = background_counts_df\
-<<<<<<< HEAD
-            .merge(bg_hops_count, on='source', how='left')\
-            .rename(columns={'source': 'background_source'})
-=======
             .merge(bg_hops_count, on='source_id', how='left')\
             .rename(columns={'source_id': 'background_source'})
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
 
         bg_hops_count['background_total_hops'] = \
             bg_hops_count['background_total_hops_x']\
@@ -242,12 +213,8 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
             .merge(bg_hops_count, on='key')\
             .drop('key', axis=1)
 
-<<<<<<< HEAD
-        # Create a boolean mask for columns starting with "background" or "experiment"
-=======
         # Create a boolean mask for columns starting with 
         # "background" or "experiment"
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
         column_mask = merged_df.columns.str.endswith("hops")
 
         # Get the selected columns
@@ -265,22 +232,14 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
         merged_df = pd.concat([merged_df, result_df], axis=1)
 
         merged_df['promoter_id'] = promoter_row['id']
-<<<<<<< HEAD
-        merged_df['promoter_source'] = promoter_row['source']
-=======
         merged_df['promoter_source'] = promoter_row['source_id']
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
         merged_df['target_gene_id'] = promoter_row['associated_feature_id']
                                        
         return merged_df
 
     start_time = time.time()
-<<<<<<< HEAD
-    # Apply the process_promoter_row function to each row in filtered_promoters_df
-=======
     # Apply the process_promoter_row function to each row 
     # in filtered_promoters_df
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
     result_df = filtered_promoters_df.apply(process_promoter_row,
                                             axis=1,
                                             args=(experiment_counts_df,
@@ -325,225 +284,6 @@ def metrics_wrapper(row: pd.Series, pseudocount: float = 0.2) -> pd.Series:
         'poisson_pval': poisson_pval_res,
         'hypergeometric_pval': hypergeometric_pval_res
     })
-
-
-# def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
-#     """
-#     Compute metrics for promoter regions in a set of Calling Card experiments
-#     using filtered PromoterRegions, Hops, and Background querysets.
-
-#     :param query_params_dict: A dictionary containing filter parameters for
-#         PromoterRegions, Hops, and Background querysets.
-#     :type query_params_dict: dict
-#     :return: A DataFrame containing metrics for each promoter region,
-#         experiment, and background source, including effect, Poisson p-value,
-#         and hypergeometric p-value. If outside_data is True, the following
-#         changes are made: the expression_effect, expression_pval and
-#         expression_source are added, and by default the CallingCards poisson
-#         pvalue is transformed to 'binding_signal'. the 'experiment' column is
-#         used to denote the source of the binding_data.
-#     :rtype: pandas.DataFrame
-
-#     The input `query_params_dict` may contain fields which are in the filter
-#     parameters for the PromoterRegions, Hops, and Background model filters.
-
-#     Example filter parameters in `query_params_dict` may include:
-
-#     - 'promoter_source': 'yiming
-#     - 'experiment_id': 75
-#     - 'background_source': 'adh1'
-#     - 'consider_strand': False
-#     """
-
-#     logging.debug(query_params_dict)
-
-#     # filter the PromoterRegions model objects
-#     filtered_promoters = PromoterRegionsFilter(
-#         query_params_dict,
-#         queryset=PromoterRegions.objects.all())
-
-#     filtered_promoters_df = pd.DataFrame.from_records(
-#         filtered_promoters.qs.values())
-
-#     # filter the Hops (calling cards experiments) model objects
-#     filtered_experiment_queryset = HopsFilter(
-#         query_params_dict,
-#         queryset=Hops.objects.all())\
-#         .qs\
-#         .select_related('experiment')
-
-#     # Group by the experiment_id
-#     # count the number of records per group
-#     # and remove the default ordering, if any
-#     unique_experiment_counts = (
-#         filtered_experiment_queryset
-#         .values('experiment_id')
-#         .annotate(record_count=Count('id'),
-#                   tf_id=F('experiment__tf__tf_id'),
-#                   experiment_batch=F('experiment__batch'),
-#                   experiment_replicate=F('experiment__batch_replicate'))
-#         .order_by()
-#     )
-#     # Convert the result to a dictionary with experiment_id
-#     # as key and record_count as value
-#     experiment_counts_dict = {
-#         entry['experiment_id']:
-#         {'total': entry['record_count'],
-#          'tf_id': entry['tf_id'],
-#          'experiment_batch': entry['experiment_batch'],
-#          'experiment_replicate':
-#          entry['experiment_replicate']} for entry in unique_experiment_counts}
-
-#     # Convert experiment_counts_dict to a DataFrame
-#     filtered_experiment_df = pd.DataFrame\
-#         .from_records(filtered_experiment_queryset.values())
-
-#     # filter the Background model objects
-#     filtered_background = BackgroundFilter(
-#         query_params_dict,
-#         queryset=Background.objects.all())
-
-#     # Group by the experiment_id
-#     # count the number of records per group
-#     # and remove the default ordering, if any
-#     unique_background_counts = (
-#         filtered_background.qs
-#         .values('source')
-#         .annotate(record_count=Count('id'))
-#         .order_by()
-#     )
-#     # Convert the result to a dictionary with experiment_id
-#     # as key and record_count as value
-#     background_counts_dict = {entry['source']:
-#                               entry['record_count'] for
-#                               entry in unique_background_counts}
-
-#     # Convert background hops data to a DataFrame
-#     filtered_background_df = pd.DataFrame\
-#         .from_records(filtered_background.qs.values())
-
-#     # by default, False
-#     consider_strand = bool(query_params_dict.get('consider_strand', False))
-
-#     # iterate over the filtered PromoterRegions records. For each record,
-#     # iterate over the set of experiments and count the number over hops
-#     # over that promoter region. Do the same for each background source.
-#     # Then, calculate the enrichment score for each promoter region
-#     results = [None]*(len(filtered_promoters.qs)*len(experiment_counts_dict)*len(background_counts_dict))
-#     promoter_queryset = filtered_promoters.qs
-#     start_time = time.time()
-#     index = 0
-#     for promoter_region in promoter_queryset:
-#         # get the number of hops for each experiment over this promoter
-#         experiment_hops_list = []
-#         for experiment, experiment_details_dict in experiment_counts_dict.items():
-#             experiment_hops = filtered_experiment_df[
-#                 (filtered_experiment_df['chr_id'] == promoter_region.chr_id) &
-#                 (filtered_experiment_df['start'] >= promoter_region.start) &
-#                 (filtered_experiment_df['start'] <= promoter_region.end) &
-#                 (filtered_experiment_df['experiment_id'] == experiment)
-#             ]
-
-#             if consider_strand and promoter_region.strand != "*":
-#                 experiment_hops = experiment_hops[
-#                     (experiment_hops['strand'] == promoter_region.strand) |
-#                     (experiment_hops['strand'] == "*")
-#                 ]
-
-#             # record experiment data
-#             experiment_hops_list.append(
-#                 {
-#                     'promoter_id': promoter_region.id,
-#                     'experiment_id': experiment,
-#                     'experiment_batch': experiment_details_dict.get('experiment_batch'),
-#                     'experiment_replicate': experiment_details_dict.get('experiment_replicate'),
-#                     'tf_id': experiment_details_dict.get('tf_id'),
-#                     'experiment_hops': len(experiment_hops),
-#                     'experiment_total_hops': experiment_details_dict.get('total')
-#                 }
-#             )
-#         # get the number of hops for each background source over this promoter
-#         background_hops_list = []
-#         for background_source, background_total_hops in \
-#                 background_counts_dict.items():
-
-#             background_hops = filtered_background_df[
-#                 (filtered_background_df['chr_id'] == promoter_region.chr_id) &
-#                 (filtered_background_df['start'] >= promoter_region.start) &
-#                 (filtered_background_df['start'] <= promoter_region.end) &
-#                 (filtered_background_df['source'] == background_source)
-#             ]
-
-#             if consider_strand and promoter_region.strand != "*":
-#                 background_hops = background_hops[
-#                     (background_hops['strand'] == promoter_region.strand) |
-#                     (background_hops['strand'] == "*")
-#                 ]
-
-#             # record background data
-#             background_hops_list.append(
-#                 {
-#                     'promoter_id': promoter_region.id,
-#                     'background_source': background_source,
-#                     'background_hops': len(background_hops),
-#                     'background_total_hops': background_total_hops
-#                 }
-#             )
-
-#         # create an iterable containing all possible pairs of experiment hops
-#         # and background hops
-#         experiment_background_pairs = itertools.product(
-#             experiment_hops_list, background_hops_list)
-#         # iterate over the pairs and compute the results
-#         for experiment_hops_dict, background_hops_dict in \
-#                 experiment_background_pairs:
-#             # record the results
-#             output_dict = {
-#                 'promoter_id': promoter_region.id,
-#                 'experiment_id': experiment_hops_dict['experiment_id'],
-#                 'tf_id': experiment_hops_dict['tf_id'],
-#                 'experiment_batch': experiment_hops_dict['experiment_batch'],
-#                 'experiment_replicate': experiment_hops_dict['experiment_replicate'],
-#                 'target_gene_id': promoter_region.associated_feature_id,
-#                 'background_source':
-#                     background_hops_dict['background_source'],
-#                     'promoter_source': promoter_region.source,
-#                     'background_total_hops':
-#                     background_hops_dict['background_total_hops'],
-#                     'experiment_total_hops':
-#                     experiment_hops_dict['experiment_total_hops'],
-#                     'background_hops':
-#                     background_hops_dict['background_hops'],
-#                     'experiment_hops':
-#                     experiment_hops_dict['experiment_hops'],
-#                     'callingcards_enrichment': enrichment(
-#                         background_hops_dict['background_total_hops'],
-#                         experiment_hops_dict['experiment_total_hops'],
-#                         background_hops_dict['background_hops'],
-#                         experiment_hops_dict['experiment_hops'],
-#                         query_params_dict.get('pseudo_count', 0.2)),
-#                     'poisson_pval': poisson_pval(
-#                         background_hops_dict['background_total_hops'],
-#                         experiment_hops_dict['experiment_total_hops'],
-#                         background_hops_dict['background_hops'],
-#                         experiment_hops_dict['experiment_hops'],
-#                         query_params_dict.get('pseudo_count', 0.2)),
-#                     'hypergeometric_pval': hypergeom_pval(
-#                         background_hops_dict['background_total_hops'],
-#                         experiment_hops_dict['experiment_total_hops'],
-#                         background_hops_dict['background_hops'],
-#                         experiment_hops_dict['experiment_hops']),
-#             }
-
-#             results[index] = output_dict
-#             index = index + 1
-
-#     logger.info('Time to process %s promoters: %s',
-#                 len(promoter_queryset), time.time() - start_time)
-
-#     result_df = pd.DataFrame.from_dict(results)
-
-#     return result_df
 
 
 def enrichment(total_background_hops: int,

@@ -4,10 +4,7 @@ import json
 from unittest import mock
 import io
 import csv
-<<<<<<< HEAD
-=======
 import os
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
 from decimal import Decimal
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -37,23 +34,15 @@ from callingcards.callingcards.serializers import (HarbisonChIPSerializer,
 
 from .factories import (ChrMapFactory, GeneFactory, PromoterRegionsFactory,
                         HarbisonChIPFactory, KemmerenTFKOFactory,
-<<<<<<< HEAD
-                        McIsaacZEVFactory, BackgroundFactory, CCTFFactory,
-=======
                         McIsaacZEVFactory, BackgroundFactory, 
                         BackgroundSourceFactory, CCTFFactory,
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
                         CCExperimentFactory, HopsFactory,
                         QcMetricsFactory,
                         QcManualReviewFactory,
                         QcR1ToR2TfFactory, QcR2ToR1TfFactory,
-<<<<<<< HEAD
-                        QcTfToTransposonFactory)
-=======
                         QcTfToTransposonFactory,
                         CallingCardsSigFactory,
                         PromoterRegionsSourceFactory)
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
 
 from ..views import ExpressionViewSet
 
@@ -237,10 +226,7 @@ class TestPromoterRegionsViewSet(APITestCase):
         self.user = UserFactory.create()
         self.chr_record = ChrMapFactory.create()
         self.gene_record = GeneFactory.create()
-<<<<<<< HEAD
-=======
         self.promoterregionssource = PromoterRegionsSourceFactory.create()
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
         self.client.credentials(
             HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
         self.promoter_regions_data = factory.build(
@@ -248,11 +234,8 @@ class TestPromoterRegionsViewSet(APITestCase):
             FACTORY_CLASS=PromoterRegionsFactory)
         self.promoter_regions_data['chr'] = self.chr_record.pk
         self.promoter_regions_data['associated_feature'] = self.gene_record.pk
-<<<<<<< HEAD
-=======
         self.promoter_regions_data['source'] = \
             self.promoterregionssource.pk
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
         for attr in AUTO_ADD_FIELDS:
             self.promoter_regions_data.pop(attr, None)
         self.url = reverse('promoterregions-list')
@@ -279,7 +262,8 @@ class TestPromoterRegionsViewSet(APITestCase):
     def test_targets_endpoint(self):
         # Create a PromoterRegions instance to have some data to test with
         PromoterRegionsFactory.create(uploader=self.user,
-                                      associated_feature=self.gene_record)
+                                      associated_feature=self.gene_record,
+                                      source=self.promoterregionssource)
 
         targets_url = reverse('promoterregions-targets')
         response = self.client.get(targets_url)
@@ -308,62 +292,6 @@ class TestPromoterRegionsViewSet(APITestCase):
         assert set(response.data.keys()) == \
             {'readable', 'writable', 'automatically_generated', 'filter'}
 
-<<<<<<< HEAD
-    def test_promoter_stats_view(self):
-        experiment1 = CCExperimentFactory.create()
-        experiment2 = CCExperimentFactory.create()
-
-        chr_record = ChrMapFactory.create()
-        hops_data = [
-            {'chr': chr_record, 'start': 1, 'end': 2, 'strand': '+',
-             'depth': 1000, 'experiment': experiment1},
-            {'chr': chr_record, 'start': 2, 'end': 3, 'strand': '-',
-             'depth': 6, 'experiment': experiment1},
-            {'chr': chr_record, 'start': 3, 'end': 4, 'strand': '+',
-             'depth': 2, 'experiment': experiment2},
-            {'chr': chr_record, 'start': 365, 'end': 366, 'strand': '+',
-             'depth': 10, 'experiment': experiment2},
-            {'chr': chr_record, 'start': 367, 'end': 368, 'strand': '-',
-             'depth': 10, 'experiment': experiment2}
-        ]
-        background_data = [
-            {'chr': chr_record, 'start': 1, 'end': 2, 'strand': '+',
-             'depth': 50, 'source': 'adh1'},
-            {'chr': chr_record, 'start': 2, 'end': 3, 'strand': '-',
-             'depth': 8, 'source': 'adh1'},
-            {'chr': chr_record, 'start': 3, 'end': 4, 'strand': '+',
-             'depth': 10, 'source': 'adh1'}
-        ]
-        promoter_regions_data = [
-            {'chr': chr_record, 'start': 0, 'end': 365,
-             'strand': '+', 'source': 'yiming'},
-            {'chr': chr_record, 'start': 10, 'end': 400,
-             'strand': '-', 'source': 'yiming'},
-            {'chr': chr_record, 'start': 50, 'end': 300,
-             'strand': '+', 'source': 'not_orf'}
-        ]
-        for hop in hops_data:
-            HopsFactory.create(**hop)
-        for bg in background_data:
-            BackgroundFactory.create(**bg)
-        for prom in promoter_regions_data:
-            PromoterRegionsFactory.create(**prom)
-
-        promoter_filter = {}
-        hops_filter = {}
-        background_filter = {}
-        consider_strand = True
-
-        # # Test without filtering
-        response = self.client.get(reverse('promoterregions-callingcards'))
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['results']), 6)
-        # self.assertEqual(response.json()[0]['promoter_id'], '1')
-        # self.assertEqual(response.json()[0]['expression_hops'], 3)
-        # self.assertEqual(response.json()[0]['background_hops'], 3)
-        # self.assertAlmostEqual(response.json()[0]['effect'], 1.1142857142857143)
-        # self.assertEqual(response.json()[1]['promoter_id'], '2')
-=======
     def test_callingcards_endpoint(self):
         # Create a CCExperiment instance to have some data to test with
         filepath = os.path.join(
@@ -401,7 +329,6 @@ class TestPromoterRegionsViewSet(APITestCase):
         assert response['Content-Disposition'] == \
             'attachment; filename="data.csv.gz"'
 
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
 
 
 class TestHarbisonChIP(APITestCase):
@@ -661,10 +588,7 @@ class TestBackground(APITestCase):
     def setUp(self):
         self.user = UserFactory.create()
         self.chr_record = ChrMapFactory.create()
-<<<<<<< HEAD
-=======
         self.backgroundsource = BackgroundSourceFactory.create()
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
         self.client.credentials(
             HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
         self.url = reverse('background-list')
@@ -681,10 +605,7 @@ class TestBackground(APITestCase):
         background_data = factory.build(
             dict, FACTORY_CLASS=BackgroundFactory)
         background_data['chr'] = self.chr_record.pk
-<<<<<<< HEAD
-=======
         background_data['source'] = self.backgroundsource.pk
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
         for attr in AUTO_ADD_FIELDS:
             background_data.pop(attr, None)
         response = self.client.post(self.url, background_data)

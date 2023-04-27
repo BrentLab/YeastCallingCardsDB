@@ -1,7 +1,4 @@
-<<<<<<< HEAD
-=======
 import os
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
 import random
 from math import floor
 import factory
@@ -91,8 +88,6 @@ class GeneFactory(BaseModelFactoryMixin,
     alias = factory.Sequence(lambda n: f'unknown_{n}')
     note = 'none'
 
-<<<<<<< HEAD
-=======
 class PromoterRegionsSourceFactory(BaseModelFactoryMixin,
                                    factory.django.DjangoModelFactory):
     source = 'yiming'
@@ -102,7 +97,6 @@ class PromoterRegionsSourceFactory(BaseModelFactoryMixin,
     class Meta:
         model = 'callingcards.PromoterRegionsSource'
 
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
 class PromoterRegionsFactory(BaseModelFactoryMixin,
                              factory.django.DjangoModelFactory):
 
@@ -115,14 +109,9 @@ class PromoterRegionsFactory(BaseModelFactoryMixin,
     strand = factory.Iterator(['+', '-', '*'])
     associated_feature = factory.SubFactory(GeneFactory)
     score = 100
-<<<<<<< HEAD
-    source = factory.Iterator(['not_orf', 'yiming'])
-
-=======
     source = factory.SubFactory(PromoterRegionsSourceFactory)  # factory.Iterator(['not_orf', 'yiming'])
 
 
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
 class HarbisonChIPFactory(BaseModelFactoryMixin,
                           factory.django.DjangoModelFactory):
 
@@ -156,8 +145,6 @@ class McIsaacZEVFactory(BaseModelFactoryMixin,
     effect = factory.LazyFunction(lambda: round(random.uniform(-5, 5), 2))
     tf = factory.SubFactory(GeneFactory)
 
-<<<<<<< HEAD
-=======
 
 class BackgroundSourceFactory(BaseModelFactoryMixin,
                               factory.django.DjangoModelFactory):
@@ -168,7 +155,6 @@ class BackgroundSourceFactory(BaseModelFactoryMixin,
     class Meta:
         model = 'callingcards.BackgroundSource'
 
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
 class BackgroundFactory(BaseModelFactoryMixin,
                         factory.django.DjangoModelFactory):
 
@@ -305,8 +291,6 @@ class QcTfToTransposonFactory(BaseModelFactoryMixin,
     edit_dist = 0
     tally = 4
     note = 'some notes'
-<<<<<<< HEAD
-=======
 
 
 class CallingCardsSigFactory(BaseModelFactoryMixin,
@@ -325,4 +309,3 @@ class CallingCardsSigFactory(BaseModelFactoryMixin,
 
     class Meta:
         model = 'callingcards.callingcardssig'
->>>>>>> 419f5fae9547a0b963b8cd27cadfb475b0f264ca
