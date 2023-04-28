@@ -36,10 +36,9 @@ from ..utils.callingcards_with_metrics import callingcards_with_metrics
 logger = logging.getLogger(__name__)
 
 # TODO: the callingcards endpoint should be moved to its own url, most likely.
-# otherwise, the logic in that endpoint needs to be split into functions and
-# saved separately -- it is too long to read and manage. Hard to keep track of
+# otherwise, the logic in that endpoint needs to be split into functions and 
+# saved separately -- it is too long to read and manage. Hard to keep track of 
 # the levels of indentation.
-
 
 class PromoterRegionsViewSet(ListModelFieldsMixin,
                              CustomCreateMixin,
@@ -172,10 +171,13 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
                             self.request.query_params
                                 .get('promoter_source', None)})
                 except ValueError as err:
-                    # log the info and continue on to the next item in
+                    # log the info and continue on to the next item in 
                     # the experiment_id_list
                     logger.error('callingcards_with_metrics failed: '
                                  '{}'.format(err))
+                    # do not continue with the rest of the curren iteration
+                    # TODO refactor to remove continue
+                    continue
                 # cache the result in the database
                 grouped = result_df.groupby(['experiment_id',
                                              'background_source',
