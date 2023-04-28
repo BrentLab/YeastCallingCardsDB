@@ -197,7 +197,7 @@ class Common(Configuration):
             },
             'callingcards.callingcards.views': {
                 'handlers': ['console', 'file'],
-                'level': 'INFO',
+                'level': 'DEBUG',
                 'propagate': False,
             },
             'callingcards.callingcards.utils': {
