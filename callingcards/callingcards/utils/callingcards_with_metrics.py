@@ -26,234 +26,237 @@ from django.db.models import F, Count
 import scipy.stats as scistat
 import pandas as pd
 
-from ..models import (PromoterRegions, Hops, Background)
+from ..models import (PromoterRegions, Hops, Background, CCTF)
 from ..filters import PromoterRegionsFilter, HopsFilter, BackgroundFilter
 
 logger = logging.getLogger(__name__)
 
 
 def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
-    logging.debug(query_params_dict)
-
-    # filter the PromoterRegions model objects
-    filtered_promoters = PromoterRegionsFilter(
-        query_params_dict,
-        queryset=PromoterRegions.objects.all())
-
-    filtered_promoters_df = pd.DataFrame.from_records(
-        filtered_promoters.qs.values())
-
     # filter the Hops (calling cards experiments) model objects
     filtered_experiment_queryset = HopsFilter(
         query_params_dict,
         queryset=Hops.objects.all())\
         .qs\
-        .select_related('experiment')
+        .select_related('experiment')\
+        .exclude(experiment__tf__tf__locus_tag='undetermined')
+    # if there are no hops, raise an error and exit
+    if len(filtered_experiment_queryset.distinct('experiment_id')) == 0:
+        raise ValueError('No experiments found for {}. No action taken.'
+                         .format(query_params_dict))
+    else: 
+        # filter the PromoterRegions model objects
+        filtered_promoters = PromoterRegionsFilter(
+            query_params_dict,
+            queryset=PromoterRegions.objects.all())
 
-    # Group by the experiment_id
-    # count the number of records per group
-    # and remove the default ordering, if any
-    unique_experiment_counts = (
-        filtered_experiment_queryset
-        .values('experiment_id')
-        .annotate(record_count=Count('id'),
-                  tf_id=F('experiment__tf__tf_id'),
-                  experiment_batch=F('experiment__batch'),
-                  experiment_replicate=F('experiment__batch_replicate'))
-        .order_by()
-    )
-    # Convert the result to a dictionary with experiment_id
-    # as key and record_count as value
-    experiment_counts_dict = {
-        entry['experiment_id']:
-        {'experiment_total_hops': entry['record_count'],
-         'tf_id': entry['tf_id'],
-         'experiment_batch': entry['experiment_batch'],
-         'experiment_replicate':
-         entry['experiment_replicate']} for entry in unique_experiment_counts}
+        filtered_promoters_df = pd.DataFrame.from_records(
+            filtered_promoters.qs.values())
 
-    # Convert experiment_counts_dict to a DataFrame
-    filtered_experiment_df = pd.DataFrame\
-        .from_records(filtered_experiment_queryset.values())
+        # Group by the experiment_id
+        # count the number of records per group
+        # and remove the default ordering, if any
+        unique_experiment_counts = (
+            filtered_experiment_queryset
+            .values('experiment_id')
+            .annotate(record_count=Count('id'),
+                    tf_id=F('experiment__tf__tf_id'),
+                    experiment_batch=F('experiment__batch'),
+                    experiment_replicate=F('experiment__batch_replicate'))
+            .order_by()
+        )
+        # Convert the result to a dictionary with experiment_id
+        # as key and record_count as value
+        experiment_counts_dict = {
+            entry['experiment_id']:
+            {'experiment_total_hops': entry['record_count'],
+            'tf_id': entry['tf_id'],
+            'experiment_batch': entry['experiment_batch'],
+            'experiment_replicate':
+            entry['experiment_replicate']} for entry in unique_experiment_counts}
 
-    # filter the Background model objects
-    filtered_background = BackgroundFilter(
-        query_params_dict,
-        queryset=Background.objects.all())
+        # Convert experiment_counts_dict to a DataFrame
+        filtered_experiment_df = pd.DataFrame\
+            .from_records(filtered_experiment_queryset.values())
 
-    # Group by the experiment_id
-    # count the number of records per group
-    # and remove the default ordering, if any
-    unique_background_counts = (
-        filtered_background.qs
-        .values('source_id')
-        .annotate(record_count=Count('id'))
-        .order_by()
-    )
-    # Convert the result to a dictionary with experiment_id
-    # as key and record_count as value
-    background_counts_dict = {entry['source_id']:
-                              {'background_total_hops': entry['record_count']}
-                              for entry in unique_background_counts}
+        # filter the Background model objects
+        filtered_background = BackgroundFilter(
+            query_params_dict,
+            queryset=Background.objects.all())
 
-    # Convert background hops data to a DataFrame
-    filtered_background_df = pd.DataFrame\
-        .from_records(filtered_background.qs.values())
+        # Group by the experiment_id
+        # count the number of records per group
+        # and remove the default ordering, if any
+        unique_background_counts = (
+            filtered_background.qs
+            .values('source_id')
+            .annotate(record_count=Count('id'))
+            .order_by()
+        )
+        # Convert the result to a dictionary with experiment_id
+        # as key and record_count as value
+        background_counts_dict = {entry['source_id']:
+                                {'background_total_hops': entry['record_count']}
+                                for entry in unique_background_counts}
 
-    # by default, False
-    consider_strand = bool(query_params_dict.get('consider_strand', False))
+        # Convert background hops data to a DataFrame
+        filtered_background_df = pd.DataFrame\
+            .from_records(filtered_background.qs.values())
 
-    # Convert experiment_counts_dict to a DataFrame
-    experiment_counts_df = pd.DataFrame(
-        experiment_counts_dict.values(),
-        index=experiment_counts_dict.keys())
-    experiment_counts_df.index.name = 'experiment_id'
+        # by default, False
+        consider_strand = bool(query_params_dict.get('consider_strand', False))
 
-    # Create a DataFrame with background_counts_dict
-    background_counts_df = pd.DataFrame(
-        background_counts_dict.values(),
-        index=background_counts_dict.keys())
-    background_counts_df.index.name = 'source_id'
+        # Convert experiment_counts_dict to a DataFrame
+        experiment_counts_df = pd.DataFrame(
+            experiment_counts_dict.values(),
+            index=experiment_counts_dict.keys())
+        experiment_counts_df.index.name = 'experiment_id'
 
-    # Prepare filtered_experiment_df and filtered_background_df for merging
-    filtered_experiment_df = filtered_experiment_df.merge(
-        experiment_counts_df, on='experiment_id', how='left')
+        # Create a DataFrame with background_counts_dict
+        background_counts_df = pd.DataFrame(
+            background_counts_dict.values(),
+            index=background_counts_dict.keys())
+        background_counts_df.index.name = 'source_id'
 
-    # Prepare filtered_experiment_df and filtered_background_df for merging
-    filtered_background_df = filtered_background_df.merge(
-        background_counts_df, on='source_id', how='left')
+        # Prepare filtered_experiment_df and filtered_background_df for merging
+        filtered_experiment_df = filtered_experiment_df.merge(
+            experiment_counts_df, on='experiment_id', how='left')
 
-    # Create a helper function to filter the data based on strand
-    def filter_strand_data(hops_df, promoter_row, consider_strand):
-        if consider_strand and promoter_row['strand'] != "*":
-            return hops_df[
-                (hops_df['strand'] == promoter_row['strand']) |
-                (hops_df['strand'] == "*")
-            ]
-        else:
-            return hops_df
+        # Prepare filtered_experiment_df and filtered_background_df for merging
+        filtered_background_df = filtered_background_df.merge(
+            background_counts_df, on='source_id', how='left')
 
-    # Use apply to process each promoter row
-    def process_promoter_row(promoter_row,
-                             experiment_counts_df,
-                             filtered_experiment_df,
-                             background_counts_df,
-                             filtered_background_df,
-                             consider_strand):
-        # Filter experiment and background hops based on promoter and strand
-        filtered_exp_hops = filter_strand_data(
-            filtered_experiment_df,
-            promoter_row,
-            consider_strand)
+        # Create a helper function to filter the data based on strand
+        def filter_strand_data(hops_df, promoter_row, consider_strand):
+            if consider_strand and promoter_row['strand'] != "*":
+                return hops_df[
+                    (hops_df['strand'] == promoter_row['strand']) |
+                    (hops_df['strand'] == "*")
+                ]
+            else:
+                return hops_df
 
-        filtered_bg_hops = filter_strand_data(
-            filtered_background_df,
-            promoter_row,
-            consider_strand)
+        # Use apply to process each promoter row
+        def process_promoter_row(promoter_row,
+                                experiment_counts_df,
+                                filtered_experiment_df,
+                                background_counts_df,
+                                filtered_background_df,
+                                consider_strand):
+            # Filter experiment and background hops based on promoter and strand
+            filtered_exp_hops = filter_strand_data(
+                filtered_experiment_df,
+                promoter_row,
+                consider_strand)
 
-        # Calculate hops counts in the promoter region
-        # note that counting on the chr_id field is arbitrary
-        exp_hops_count = filtered_exp_hops[
-            (filtered_exp_hops['chr_id'] == promoter_row['chr_id']) &
-            (filtered_exp_hops['start'] >= promoter_row['start']) &
-            (filtered_exp_hops['start'] <= promoter_row['end'])]\
-            .groupby('experiment_id')\
-            .agg({'experiment_total_hops': 'first', 'chr_id': 'count'})\
-            .reset_index()\
-            .rename(columns={'chr_id': 'experiment_hops'})
+            filtered_bg_hops = filter_strand_data(
+                filtered_background_df,
+                promoter_row,
+                consider_strand)
 
-        # Perform an outer merge with experiment_counts_df
-        exp_hops_count = experiment_counts_df.merge(
-            exp_hops_count, on='experiment_id', how='left')
+            # Calculate hops counts in the promoter region
+            # note that counting on the chr_id field is arbitrary
+            exp_hops_count = filtered_exp_hops[
+                (filtered_exp_hops['chr_id'] == promoter_row['chr_id']) &
+                (filtered_exp_hops['start'] >= promoter_row['start']) &
+                (filtered_exp_hops['start'] <= promoter_row['end'])]\
+                .groupby('experiment_id')\
+                .agg({'experiment_total_hops': 'first', 'chr_id': 'count'})\
+                .reset_index()\
+                .rename(columns={'chr_id': 'experiment_hops'})
 
-        exp_hops_count['experiment_total_hops'] = \
-            exp_hops_count['experiment_total_hops_x']\
-            .fillna(exp_hops_count['experiment_total_hops_y'])
+            # Perform an outer merge with experiment_counts_df
+            exp_hops_count = experiment_counts_df.merge(
+                exp_hops_count, on='experiment_id', how='left')
 
-        exp_hops_count.drop(['experiment_total_hops_x',
-                             'experiment_total_hops_y'],
+            exp_hops_count['experiment_total_hops'] = \
+                exp_hops_count['experiment_total_hops_x']\
+                .fillna(exp_hops_count['experiment_total_hops_y'])
+
+            exp_hops_count.drop(['experiment_total_hops_x',
+                                'experiment_total_hops_y'],
+                                axis=1, inplace=True)
+
+            # Fill missing values with 0 for experiment_hops
+            exp_hops_count['experiment_hops'] = \
+                exp_hops_count['experiment_hops'].fillna(0)
+
+            # count the number of background hops
+            # note the renaming of background_source
+            bg_hops_count = filtered_bg_hops[
+                (filtered_bg_hops['chr_id'] == promoter_row['chr_id']) &
+                (filtered_bg_hops['start'] >= promoter_row['start']) &
+                (filtered_bg_hops['start'] <= promoter_row['end'])]\
+                .groupby('source_id')\
+                .agg({'background_total_hops': 'first', 'chr_id': 'count'})\
+                .reset_index()\
+                .rename(columns={'chr_id': 'background_hops'})
+
+            # Perform an outer merge with background_counts_df
+            bg_hops_count = background_counts_df\
+                .merge(bg_hops_count, on='source_id', how='left')\
+                .rename(columns={'source_id': 'background_source'})
+
+            bg_hops_count['background_total_hops'] = \
+                bg_hops_count['background_total_hops_x']\
+                .fillna(bg_hops_count['background_total_hops_y'])
+
+            bg_hops_count.drop(['background_total_hops_x',
+                                'background_total_hops_y'],
                             axis=1, inplace=True)
 
-        # Fill missing values with 0 for experiment_hops
-        exp_hops_count['experiment_hops'] = \
-            exp_hops_count['experiment_hops'].fillna(0)
+            # Fill missing values with 0 for experiment_hops
+            bg_hops_count['background_hops'] = \
+                bg_hops_count['background_hops'].fillna(0)
 
-        # count the number of background hops
-        # note the renaming of background_source
-        bg_hops_count = filtered_bg_hops[
-            (filtered_bg_hops['chr_id'] == promoter_row['chr_id']) &
-            (filtered_bg_hops['start'] >= promoter_row['start']) &
-            (filtered_bg_hops['start'] <= promoter_row['end'])]\
-            .groupby('source_id')\
-            .agg({'background_total_hops': 'first', 'chr_id': 'count'})\
-            .reset_index()\
-            .rename(columns={'chr_id': 'background_hops'})
+            # Prepare data for merging
+            exp_hops_count['key'] = 1
+            bg_hops_count['key'] = 1
+            merged_df = exp_hops_count\
+                .merge(bg_hops_count, on='key')\
+                .drop('key', axis=1)
 
-        # Perform an outer merge with background_counts_df
-        bg_hops_count = background_counts_df\
-            .merge(bg_hops_count, on='source_id', how='left')\
-            .rename(columns={'source_id': 'background_source'})
+            # Create a boolean mask for columns starting with 
+            # "background" or "experiment"
+            column_mask = merged_df.columns.str.endswith("hops")
 
-        bg_hops_count['background_total_hops'] = \
-            bg_hops_count['background_total_hops_x']\
-            .fillna(bg_hops_count['background_total_hops_y'])
+            # Get the selected columns
+            selected_columns = merged_df.columns[column_mask]
 
-        bg_hops_count.drop(['background_total_hops_x',
-                            'background_total_hops_y'],
-                           axis=1, inplace=True)
+            # Convert each column to int individually
+            for col in selected_columns:
+                merged_df[col] = merged_df[col].astype(int)
 
-        # Fill missing values with 0 for experiment_hops
-        bg_hops_count['background_hops'] = \
-            bg_hops_count['background_hops'].fillna(0)
+            # Perform calculations using vectorized operations
+            pseudo_count = query_params_dict.get('pseudo_count', 0.2)
+            # Replace 'pseudo_count' with the actual value you are using
+            result_df = merged_df\
+                .apply(lambda row: metrics_wrapper(row, pseudo_count), axis=1)
+            merged_df = pd.concat([merged_df, result_df], axis=1)
 
-        # Prepare data for merging
-        exp_hops_count['key'] = 1
-        bg_hops_count['key'] = 1
-        merged_df = exp_hops_count\
-            .merge(bg_hops_count, on='key')\
-            .drop('key', axis=1)
+            merged_df['promoter_id'] = promoter_row['id']
+            merged_df['promoter_source'] = promoter_row['source_id']
+            merged_df['target_gene_id'] = promoter_row['associated_feature_id']
+                                        
+            return merged_df
 
-        # Create a boolean mask for columns starting with 
-        # "background" or "experiment"
-        column_mask = merged_df.columns.str.endswith("hops")
+        start_time = time.time()
+        # Apply the process_promoter_row function to each row 
+        # in filtered_promoters_df
+        result_df = filtered_promoters_df.apply(process_promoter_row,
+                                                axis=1,
+                                                args=(experiment_counts_df,
+                                                    filtered_experiment_df,
+                                                    background_counts_df,
+                                                    filtered_background_df,
+                                                    consider_strand))
+        logger.info("Time taken to process %s promoters: %s seconds",
+                    len(filtered_promoters_df), time.time() - start_time)
 
-        # Get the selected columns
-        selected_columns = merged_df.columns[column_mask]
+        # Concatenate the resulting DataFrames and reset the index
+        result_df = pd.concat(result_df.tolist(), ignore_index=True)
 
-        # Convert each column to int individually
-        for col in selected_columns:
-            merged_df[col] = merged_df[col].astype(int)
-
-        # Perform calculations using vectorized operations
-        pseudo_count = query_params_dict.get('pseudo_count', 0.2)
-        # Replace 'pseudo_count' with the actual value you are using
-        result_df = merged_df\
-            .apply(lambda row: metrics_wrapper(row, pseudo_count), axis=1)
-        merged_df = pd.concat([merged_df, result_df], axis=1)
-
-        merged_df['promoter_id'] = promoter_row['id']
-        merged_df['promoter_source'] = promoter_row['source_id']
-        merged_df['target_gene_id'] = promoter_row['associated_feature_id']
-                                       
-        return merged_df
-
-    start_time = time.time()
-    # Apply the process_promoter_row function to each row 
-    # in filtered_promoters_df
-    result_df = filtered_promoters_df.apply(process_promoter_row,
-                                            axis=1,
-                                            args=(experiment_counts_df,
-                                                  filtered_experiment_df,
-                                                  background_counts_df,
-                                                  filtered_background_df,
-                                                  consider_strand))
-    logger.info("Time taken to process %s promoters: %s seconds",
-                len(filtered_promoters_df), time.time() - start_time)
-
-    # Concatenate the resulting DataFrames and reset the index
-    result_df = pd.concat(result_df.tolist(), ignore_index=True)
-
-    return result_df
+        return result_df
 
 
 def metrics_wrapper(row: pd.Series, pseudocount: float = 0.2) -> pd.Series:
