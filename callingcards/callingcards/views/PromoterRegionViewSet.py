@@ -242,24 +242,29 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
 
         start = time.time()
         # save the dataframe to file (compressed)
-        df_concatenated = pd.concat(df_list, ignore_index=True)
-        # create a file-like buffer to receive the compressed data
-        compressed_buffer = io.BytesIO()
+        try:
+            df_concatenated = pd.concat(df_list, ignore_index=True)
+            # create a file-like buffer to receive the compressed data
+            compressed_buffer = io.BytesIO()
 
-        # compress the dataframe and write it to the buffer
-        with gzip.GzipFile(fileobj=compressed_buffer, mode='wb') as gz:
-            df_concatenated.to_csv(gz, index=False, encoding='utf-8')
+            # compress the dataframe and write it to the buffer
+            with gzip.GzipFile(fileobj=compressed_buffer, mode='wb') as gz:
+                df_concatenated.to_csv(gz, index=False, encoding='utf-8')
 
-        logger.info('served data prep time: {}'
-                    .format(time.time() - start))
-        # create the response object and set its content
-        # and content type
-        response = HttpResponse(compressed_buffer.getvalue(),
-                                content_type='application/gzip')
+            logger.info('served data prep time: {}'
+                        .format(time.time() - start))
+            # create the response object and set its content
+            # and content type
+            response = HttpResponse(compressed_buffer.getvalue(),
+                                    content_type='application/gzip')
 
-        # set the content encoding and filename
-        response['Content-Encoding'] = 'gzip'
-        response['Content-Disposition'] = \
-            'attachment; filename="data.csv.gz"'
+            # set the content encoding and filename
+            response['Content-Encoding'] = 'gzip'
+            response['Content-Disposition'] = \
+                'attachment; filename="data.csv.gz"'
 
-        return response
+            return response
+        except ValueError as err:
+            logger.error('ValueError: {}'.format(err))
+            return Response("ValueError: {}".format(err),
+                            status=status.HTTP_400_BAD_REQUEST)
