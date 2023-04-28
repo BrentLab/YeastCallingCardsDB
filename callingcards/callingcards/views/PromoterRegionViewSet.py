@@ -3,6 +3,7 @@ import logging
 import os
 import gzip
 import io
+import time
 import datetime
 from rest_framework import viewsets, status
 from rest_framework.response import Response
@@ -213,6 +214,7 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
             # if there are records already in the database, get them, read
             # them in and append them to the list
             else:
+                start = time.time()
                 for significance_file in cached_sig:
                     # Get the file field from the queryset
                     file_field = significance_file.file
@@ -224,7 +226,10 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
                     df = pd.read_csv(file_content, compression='gzip')
                     # append it to the list
                     df_list.append(df)
-
+                logger.info('promoterregions/callingcards cached_sig time: '
+                             '{}'.format(time.time() - start))
+            
+            start = time.time()
             # save the dataframe to file (compressed)
             df_concatenated = pd.concat(df_list, ignore_index=True)
             # create a file-like buffer to receive the compressed data
@@ -234,6 +239,8 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
             with gzip.GzipFile(fileobj=compressed_buffer, mode='wb') as gz:
                 df_concatenated.to_csv(gz, index=False, encoding='utf-8')
 
+            logger.info('promoterregions/callingcards served '
+                         'data prep time: {}'.format(time.time() - start))
             # create the response object and set its content
             # and content type
             response = HttpResponse(compressed_buffer.getvalue(),
