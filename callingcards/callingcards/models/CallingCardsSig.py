@@ -20,13 +20,9 @@ class CallingCardsSig(BaseModel):
     experiment = models.ForeignKey('CCExperiment',
                                    on_delete=models.CASCADE)
     background_source = models.ForeignKey('BackgroundSource',
-                                          on_delete=models.CASCADE,
-                                          blank=True,
-                                          null=True)
+                                          on_delete=models.CASCADE)
     promoter_source = models.ForeignKey('PromoterRegionsSource',
-                                        on_delete=models.CASCADE,
-                                        blank=True,
-                                        null=True)
+                                        on_delete=models.CASCADE)
     file = models.FileField(upload_to=cc_replicate_sig_filepath)
     notes = models.CharField(max_length=50, default='none')
 
