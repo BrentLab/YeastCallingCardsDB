@@ -143,6 +143,7 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
         df_list = []
         for experiment in experiment_id_list:
             # check if the file exists in the cache
+            logger.debug('working on experiment: {}'.format(experiment))
             cached_sig = CallingCardsSigFilter(
                 {'experiment_id': experiment,
                  'background_source': self.request.query_params.get(
@@ -151,8 +152,7 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
                      'promoter_source', None)},
                 queryset=CallingCardsSig.objects.all()).qs
             # log the length of the cached file
-            logger.debug('promoterregions/callingcards cached_sig len: '
-                         '{}'.format(len(cached_sig)))
+            logger.debug('cached_sig len: {}'.format(len(cached_sig)))
 
             # if there are no cached files, calculate the metrics by replicate
             if len(cached_sig) == 0:
@@ -170,8 +170,7 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
                                              'background_source',
                                              'promoter_source'])
                 for name, group in grouped:
-                    logger.debug('promoterregions/callingcards group name: '
-                                 '{}'.format(name))
+                    logger.debug('processing group: {}'.format(name))
                     experiment_id, background_source, promoter_source = name
 
                     # Compress the dataframe and write it to the buffer
@@ -190,7 +189,7 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
                         f'ccexperiment_{experiment_id}'
                         f'_{promoter_source}.csv.gz')
 
-                    logger.debug("CallingCardsSig filepath: %s", filepath)
+                    logger.debug("filepath: %s", filepath)
 
                     default_storage.save(
                         filepath,
@@ -226,9 +225,8 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
                     df = pd.read_csv(file_content, compression='gzip')
                     # append it to the list
                     df_list.append(df)
-                logger.info('promoterregions/callingcards cached_sig time: '
-                             '{}'.format(time.time() - start))
-            
+                logger.info('cached_sig time: {}'.format(time.time() - start))
+
             start = time.time()
             # save the dataframe to file (compressed)
             df_concatenated = pd.concat(df_list, ignore_index=True)
@@ -239,8 +237,8 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
             with gzip.GzipFile(fileobj=compressed_buffer, mode='wb') as gz:
                 df_concatenated.to_csv(gz, index=False, encoding='utf-8')
 
-            logger.info('promoterregions/callingcards served '
-                         'data prep time: {}'.format(time.time() - start))
+            logger.info('served data prep time: {}'
+                        .format(time.time() - start))
             # create the response object and set its content
             # and content type
             response = HttpResponse(compressed_buffer.getvalue(),
