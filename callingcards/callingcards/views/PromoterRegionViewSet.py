@@ -1,3 +1,4 @@
+# pylint: disable=C0209,W1202
 import logging
 import os
 import gzip
@@ -122,6 +123,9 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
             return Response("Invalid token",
                             status=status.HTTP_401_UNAUTHORIZED)
 
+        logger.debug('promoterregions/callingcards queryparams: '
+                     '{}'.format(user))
+
         # first, get all associated experiment_ids
         experiment_id_qs = CCExperimentFilter(
             self.request.query_params,
@@ -130,6 +134,8 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
             .values_list('id', flat=True)\
             .distinct()
         experiment_id_list = list(experiment_id_qs)
+        logger.debug('promoterregions/callingcards experiment_id_list: '
+                     '{}'.format(experiment_id_list))
 
         # iterate over the experiment ids and either get the cached file
         # or calculate the dataframe
@@ -137,8 +143,17 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
         for experiment in experiment_id_list:
             # check if the file exists in the cache
             cached_sig = CallingCardsSigFilter(
-                self.request.query_params,
+                {'experiment_id': experiment,
+                 'background_source': self.request.query_params.get(
+                     'background_source', None),
+                 'promoter_source': self.request.query_params.get(
+                     'promoter_source', None)},
                 queryset=CallingCardsSig.objects.all()).qs
+            # log the length of the cached file
+            logger.debug('promoterregions/callingcards cached_sig len: '
+                         '{}'.format(len(cached_sig)))
+
+            # if there are no cached files, calculate the metrics by replicate
             if len(cached_sig) == 0:
                 # if not, calculate
                 result_df = callingcards_with_metrics(
@@ -154,6 +169,8 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
                                              'background_source',
                                              'promoter_source'])
                 for name, group in grouped:
+                    logger.debug('promoterregions/callingcards group name: '
+                                 '{}'.format(name))
                     experiment_id, background_source, promoter_source = name
 
                     # Compress the dataframe and write it to the buffer
@@ -193,17 +210,20 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
                         file=filepath)
 
                 df_list.append(result_df)
+            # if there are records already in the database, get them, read
+            # them in and append them to the list
             else:
-                # Get the file field from the queryset
-                file_field = cached_sig[0].file
-                # Open the file using the storage backend
-                with default_storage.open(file_field.name, 'rb') as f:
-                    # Read the file content into a BytesIO buffer
-                    file_content = io.BytesIO(f.read())
-                # Read the file content with pandas
-                df = pd.read_csv(file_content, compression='gzip')
-                # append it to the list
-                df_list.append(df)
+                for significance_file in cached_sig:
+                    # Get the file field from the queryset
+                    file_field = significance_file.file
+                    # Open the file using the storage backend
+                    with default_storage.open(file_field.name, 'rb') as f:
+                        # Read the file content into a BytesIO buffer
+                        file_content = io.BytesIO(f.read())
+                    # Read the file content with pandas
+                    df = pd.read_csv(file_content, compression='gzip')
+                    # append it to the list
+                    df_list.append(df)
 
             # save the dataframe to file (compressed)
             df_concatenated = pd.concat(df_list, ignore_index=True)
