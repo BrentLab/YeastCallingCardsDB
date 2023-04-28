@@ -6,9 +6,11 @@ from .models import (Gene, McIsaacZEV, KemmerenTFKO, Background,
                      QcManualReview, QcR1ToR2Tf, QcR2ToR1Tf,
                      QcTfToTransposon)
 
+
 class Hops_s3Filter(django_filters.FilterSet):
     tf_id = django_filters.NumberFilter(field_name="experiment__tf__tf__id")
-    tf_locus_tag = django_filters.CharFilter(field_name="experiment__tf__tf__locus_tag")
+    tf_locus_tag = django_filters.CharFilter(
+        field_name="experiment__tf__tf__locus_tag")
     tf_gene = django_filters.CharFilter(field_name="experiment__tf__tf__gene")
     experiment_id = django_filters.CharFilter(field_name="experiment__id")
     batch = django_filters.CharFilter(field_name="experiment__batch")
@@ -26,6 +28,7 @@ class BackgroundFilter(django_filters.FilterSet):
         model = Background
         fields = [f.name for f in model._meta.fields if f.name != 'source']
         fields += ['background_source']
+
 
 class GeneFilter(django_filters.FilterSet):
     chr = django_filters.CharFilter(field_name="chr__ucsc")
@@ -48,6 +51,7 @@ class GeneFilter(django_filters.FilterSet):
             'locus_tag', 'gene', 'source', 'alias', 'note'
         ]
 
+
 class PromoterRegionsFilter(django_filters.FilterSet):
     """
     PromoterRegionsFilter is a FilterSet for the PromoterRegions model.
@@ -63,7 +67,8 @@ class PromoterRegionsFilter(django_filters.FilterSet):
     - source: Source (either 'not_orf' or 'yiming')
     """
     chr_ucsc = django_filters.CharFilter('chr__ucsc')
-    target_locus_tag = django_filters.CharFilter('associated_feature__locus_tag')
+    target_locus_tag = django_filters.CharFilter(
+        'associated_feature__locus_tag')
     target_gene = django_filters.CharFilter('associated_feature__gene')
     promoter_source = django_filters.CharFilter(field_name="source")
 
@@ -174,10 +179,15 @@ class HarbisonChIPFilter(django_filters.FilterSet):
         fields = ['tf_id', 'tf_locus_tag', 'tf_gene',
                   'target_locus_tag', 'target_gene']
 
+
 class CCExperimentFilter(django_filters.FilterSet):
     experiment = django_filters.NumberFilter(
         field_name="id",
         lookup_expr="exact")
+    experiment_id = django_filters.NumberFilter(
+        field_name='id',
+        lookup_expr='exact'
+    )
     batch = django_filters.CharFilter(
         field_name="batch",
         lookup_expr="iexact")
@@ -196,13 +206,14 @@ class CCExperimentFilter(django_filters.FilterSet):
 
     class Meta:
         model = CCExperiment
-        fields = ['id', 'experiment', 'batch', 'batch_replicate',
-                  'tf_id', 'tf_locus_tag', 'tf_gene']
+        fields = ['id', 'experiment', 'experiment_id', 'batch',
+                  'batch_replicate', 'tf_id', 'tf_locus_tag', 'tf_gene']
 
 
 class HopsFilter(django_filters.FilterSet):
     tf_id = django_filters.NumberFilter(field_name="experiment__tf__tf__id")
-    tf_locus_tag = django_filters.CharFilter(field_name="experiment__tf__tf__locus_tag")
+    tf_locus_tag = django_filters.CharFilter(
+        field_name="experiment__tf__tf__locus_tag")
     tf_gene = django_filters.CharFilter(field_name="experiment__tf__tf__gene")
     experiment = django_filters.CharFilter(field_name="experiment__id")
     experiment_id = django_filters.CharFilter(field_name="experiment__id")

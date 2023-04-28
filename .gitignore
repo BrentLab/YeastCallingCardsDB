@@ -1,4 +1,5 @@
 migrations/
+tmp/*
 *.sqlite-shm
 *.sqlite-wal
 *.sqlite
