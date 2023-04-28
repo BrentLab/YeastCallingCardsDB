@@ -1,6 +1,3 @@
-migrations/
-tmp/*
-media/qbed/run_1234/
 *.sqlite-shm
 *.sqlite-wal
 *.sqlite
@@ -75,7 +72,6 @@ coverage.xml
 *.log
 .static_storage/
 .media/
-migrations
 
 # Flask stuff:
 instance/
