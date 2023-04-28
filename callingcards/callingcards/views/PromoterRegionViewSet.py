@@ -35,6 +35,10 @@ from ..utils.callingcards_with_metrics import callingcards_with_metrics
 
 logger = logging.getLogger(__name__)
 
+# TODO: the callingcards endpoint should be moved to its own url, most likely.
+# otherwise, the logic in that endpoint needs to be split into functions and 
+# saved separately -- it is too long to read and manage. Hard to keep track of 
+# the levels of indentation.
 
 class PromoterRegionsViewSet(ListModelFieldsMixin,
                              CustomCreateMixin,
@@ -227,26 +231,26 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
                     df_list.append(df)
                 logger.info('cached_sig time: {}'.format(time.time() - start))
 
-            start = time.time()
-            # save the dataframe to file (compressed)
-            df_concatenated = pd.concat(df_list, ignore_index=True)
-            # create a file-like buffer to receive the compressed data
-            compressed_buffer = io.BytesIO()
+        start = time.time()
+        # save the dataframe to file (compressed)
+        df_concatenated = pd.concat(df_list, ignore_index=True)
+        # create a file-like buffer to receive the compressed data
+        compressed_buffer = io.BytesIO()
 
-            # compress the dataframe and write it to the buffer
-            with gzip.GzipFile(fileobj=compressed_buffer, mode='wb') as gz:
-                df_concatenated.to_csv(gz, index=False, encoding='utf-8')
+        # compress the dataframe and write it to the buffer
+        with gzip.GzipFile(fileobj=compressed_buffer, mode='wb') as gz:
+            df_concatenated.to_csv(gz, index=False, encoding='utf-8')
 
-            logger.info('served data prep time: {}'
-                        .format(time.time() - start))
-            # create the response object and set its content
-            # and content type
-            response = HttpResponse(compressed_buffer.getvalue(),
-                                    content_type='application/gzip')
+        logger.info('served data prep time: {}'
+                    .format(time.time() - start))
+        # create the response object and set its content
+        # and content type
+        response = HttpResponse(compressed_buffer.getvalue(),
+                                content_type='application/gzip')
 
-            # set the content encoding and filename
-            response['Content-Encoding'] = 'gzip'
-            response['Content-Disposition'] = \
-                'attachment; filename="data.csv.gz"'
+        # set the content encoding and filename
+        response['Content-Encoding'] = 'gzip'
+        response['Content-Disposition'] = \
+            'attachment; filename="data.csv.gz"'
 
-            return response
+        return response
