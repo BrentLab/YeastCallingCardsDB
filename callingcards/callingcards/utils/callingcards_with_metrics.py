@@ -21,6 +21,8 @@ Functions
 
 import logging
 import time
+import requests
+import tempfile
 
 from django.core.files.storage import default_storage
 from django.db.models import Count
@@ -236,9 +238,28 @@ def experiment_data(query_params_dict):
     for record in filtered_experiment_queryset:
         # Get the experiment_id
         experiment_id = record.experiment_id
-        # Read the file into a pandas DataFrame
-        df = pd.read_csv(record.qbed.path,
-                         sep='\t')
+
+        # get the experiment data
+        # TODO write this as a function -- note the diff btwn .path and .url
+        # .path works when the storage is a filesystem. .url is necessary 
+        # when the storage is s3
+        try:
+            file_location = record.qbed.path
+        except NotImplementedError:
+            file_location = record.qbed.url
+
+        if file_location.startswith('http'):
+            response = requests.get(file_location)
+
+            with tempfile.NamedTemporaryFile() as temp_file:
+                temp_file.write(response.content)
+                temp_file.flush()
+                df = pd.read_csv(temp_file.name, sep='\t')
+        else:
+            df = pd.read_csv(file_location, sep='\t')
+        
+        if record.chr_format != 'id':
+            df = translate_chr_to_id(df, record.chr_format)
         
         if record.chr_format != 'id':
             df = translate_chr_to_id(df, record.chr_format)
