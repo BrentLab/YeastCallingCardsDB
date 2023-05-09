@@ -203,6 +203,8 @@ class Hops_s3ViewSet(ListModelFieldsMixin,
             return Response({'error': 'Missing required field(s): {}'
                              .format(', '.join(key_check_diff))},
                             status=status.HTTP_400_BAD_REQUEST)
+        
+        token = str(request.auth)
 
         # Check that the uploaded file has the correct format
         experiment_id = request.data.get('experiment')
@@ -219,7 +221,7 @@ class Hops_s3ViewSet(ListModelFieldsMixin,
                                  'Batch replicate number not provided.'},
                                 status=status.HTTP_400_BAD_REQUEST)
             try:
-                cctf_id = get_cctf_id(request.data, request.auth)
+                cctf_id = get_cctf_id(request.data, token)
             except ValueError as exc:
                 return Response({'error': str(exc)},
                                 status=status.HTTP_400_BAD_REQUEST)
@@ -227,7 +229,7 @@ class Hops_s3ViewSet(ListModelFieldsMixin,
             experiment_id = create_ccexperiment(cctf_id,
                                                 batch,
                                                 batch_replicate,
-                                                request.auth)
+                                                token)
 
             request.data['experiment'] = experiment_id
 
@@ -290,7 +292,7 @@ class Hops_s3ViewSet(ListModelFieldsMixin,
 
         try:
             manual_review_id = create_manual_review(experiment_id,
-                                                    request.auth)
+                                                    token)
             logger.info(f"Qc manual review ID: {manual_review_id} "
                         f"for experiment: {experiment_id}")
         except RuntimeError as exc:
