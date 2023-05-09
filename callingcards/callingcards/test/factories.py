@@ -228,7 +228,7 @@ class Hops_s3Factory(BaseModelFactoryMixin, factory.django.DjangoModelFactory):
     class Meta:
         model = 'callingcards.Hops_s3'
     
-    chr_format = 'id'
+    chr_format = 'mitra'
     source = factory.SubFactory(HopsSourceFactory)
     experiment = factory.SubFactory(CCExperimentFactory)
     qbed = random_file_from_media_directory('qbed')

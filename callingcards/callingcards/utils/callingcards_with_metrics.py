@@ -28,7 +28,7 @@ from django.db.utils import NotSupportedError
 import scipy.stats as scistat
 import pandas as pd
 
-from ..models import (PromoterRegions, Background, Hops_s3)
+from ..models import (ChrMap, PromoterRegions, Background, Hops_s3)
 from ..filters import PromoterRegionsFilter, Hops_s3Filter, BackgroundFilter
 
 logger = logging.getLogger(__name__)
@@ -182,6 +182,28 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
 
     return result_df
 
+def translate_chr_to_id(df, chr_format):
+    """Given a dataframe with the column `chr` and a chromosome format, 
+    which is a field in the ChrMap model, use the ChrMap model to translate 
+    the original `chr` field in the dataframe to the corresponding `chr_id`
+    
+    :param df: A dataframe representing a qbed format file
+    :dtype df: pandas.DataFrame
+    :param chr_format: A string representing the chromosome format
+    :dtype chr_format: str
+
+    :return: A dataframe with the `chr` field replaced by `chr_id`
+    :rtype: pandas.DataFrame
+    """
+    # Get the corresponding ChrMap object
+    chr_map_dict = dict(ChrMap.objects.values_list(chr_format, 'id'))
+
+
+    # Replace the chr column with chr_id
+    df['chr'] = df['chr'].map(chr_map_dict)
+
+    return df
+
 
 def experiment_data(query_params_dict):
 
@@ -217,6 +239,10 @@ def experiment_data(query_params_dict):
         # Read the file into a pandas DataFrame
         df = pd.read_csv(record.qbed.path,
                          sep='\t')
+        
+        if record.chr_format != 'id':
+            df = translate_chr_to_id(df, record.chr_format)
+
         df.rename(columns={'chr': 'chr_id'}, inplace=True)
         df['experiment_id'] = experiment_id
 
