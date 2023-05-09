@@ -102,6 +102,12 @@ class Gene(GenonomicCoordinatesMixin, BaseModel):
             self.alias = f'unknown_{max_id + 1}'
 
         super().save(*args, **kwargs)
+      
+    def __str__(self):
+        """
+        Returns a string representation of the `Gene` model.
+        """
+        return f'{self.gene}({self.locus_tag}; GeneID: {self.id}'  # pylint: disable=no-member # noqa
 
     class Meta:
         managed = True

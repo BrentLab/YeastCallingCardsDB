@@ -10,7 +10,7 @@ regions (preferably a link to code which reconstructs the promoter regions),
 and any notes
 
 .. moduleauthor:: Chase Mateusiak
-.. date:: 2023-04-26
+.. date:: 2023-05-07
 """
 import logging
 from django.db import models
@@ -20,9 +20,12 @@ logger = logging.getLogger(__name__)
 
 class ProvidenceMixin(models.Model):
     source = models.CharField(primary_key=True,
-                                  max_length=100)
+                              max_length=100)
     providence = models.CharField(max_length=100, default='none')
     notes = models.CharField(max_length=500, default='none')
+
+    def __str__(self):
+        return str(self.source)
 
     class Meta:
         abstract = True

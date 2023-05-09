@@ -2,8 +2,9 @@ import pytest
 # import pandas as pd
 # import pandas.testing as pdt
 from rest_framework.test import APITestCase
-from .factories import (PromoterRegionsFactory, 
-                        HopsFactory, 
+from .factories import (PromoterRegionsFactory,
+                        HopsFactory,
+                        Hops_s3Factory,
                         BackgroundFactory,
                         BackgroundSourceFactory,
                         PromoterRegionsSourceFactory)
@@ -12,8 +13,8 @@ from ..utils.callingcards_with_metrics import (enrichment,
                                                hypergeom_pval,
                                                callingcards_with_metrics)
 
-class TestCallingCardsWithMetrics(APITestCase):
 
+class TestCallingCardsWithMetrics(APITestCase):
     def setUp(self):
         # Create a test dataset using factories
         promoter_source = PromoterRegionsSourceFactory.create()
@@ -21,10 +22,11 @@ class TestCallingCardsWithMetrics(APITestCase):
             10,
             source=promoter_source)
         background_source = BackgroundSourceFactory.create()
-        self.hops = HopsFactory.create_batch(10)
+        # self.hops = HopsFactory.create_batch(10)
+        self.hops_s3 = Hops_s3Factory.create_batch(10)
         self.backgrounds = BackgroundFactory.create_batch(
             10,
-            source = background_source)
+            source=background_source)
 
     def test_callingcards_with_metrics(self):
         # query_params_dict = {
@@ -70,6 +72,7 @@ class TestCallingCardsWithMetrics(APITestCase):
         # Compare the resulting DataFrame with the expected result
         # pdt.assert_frame_equal(actual, expected, check_dtype=False)
 
+
 def test_enrichment():
     test_1 = {
         'total_background_hops': 10,
@@ -109,6 +112,7 @@ def test_enrichment():
     assert actual_3 == pytest.approx(expected_3,
                                      rel=1e-9)
 
+
 def test_poisson_pval():
     test_1 = {
         'total_background_hops': 10,
@@ -135,6 +139,7 @@ def test_poisson_pval():
     expected_2 = 1
     assert actual_2 == pytest.approx(expected_2,
                                      rel=1e-4)
+
 
 def test_hypergeom_pval():
     test_1 = {

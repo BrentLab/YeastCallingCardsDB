@@ -180,7 +180,7 @@ class PromoterRegionsQuerySet(models.QuerySet):
               that a read be on the same strand as the promoter region. Default
               is False, which means reads on either strand in the promoter
               range are counted
-        
+
         :return: A queryset of annotated experiment hops counts for each
         promoter.
         :rtype: QuerySet
@@ -205,17 +205,17 @@ class PromoterRegionsQuerySet(models.QuerySet):
                 chr__background__chr_id=F('chr'),
                 chr__background__start__gte=F('start'),
                 chr__background__start__lte=F('end'))
-        
+
         if promoter_source:
             background_hops = background_hops\
                 .filter(
                     source=promoter_source)
-            
+
         if background_source:
             background_hops = background_hops\
                 .filter(
                     chr__background__source=background_source)
-        
+
         if consider_strand:
             background_hops = background_hops\
                 .filter(
@@ -286,6 +286,12 @@ class PromoterRegions(GenonomicCoordinatesMixin,
     source = models.ForeignKey(
         "PromoterRegionsSource",
         models.CASCADE)
+
+    def __str__(self) -> str:
+        return ('source: ' + str(self.source) + '::'
+                + str(self.chr_id) + ':' 
+                + str(self.start) + '-' + str(self.end)
+                + '; ID: ' + str(self.id))  # pylint: disable=no-member
 
     class Meta:
         managed = True

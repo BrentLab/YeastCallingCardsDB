@@ -14,6 +14,7 @@ from callingcards.callingcards import models
     models.HarbisonChIP,
     models.Hops_s3,
     models.Hops,
+    models.HopsSource,
     models.KemmerenTFKO,
     models.McIsaacZEV,
     models.PromoterRegions,

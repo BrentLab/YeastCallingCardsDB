@@ -7,10 +7,11 @@ import csv
 import os
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.files.storage import default_storage
 from django.test import override_settings
 from django.urls import reverse
-from django.conf import settings
 from rest_framework.settings import api_settings
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
@@ -25,7 +26,8 @@ from callingcards.users.test.factories import UserFactory
 from callingcards.callingcards.models import (ChrMap, Gene, PromoterRegions,
                                               HarbisonChIP, KemmerenTFKO,
                                               McIsaacZEV, Background, CCTF,
-                                              CCExperiment, Hops, QcMetrics,
+                                              CCExperiment, Hops, Hops_s3,
+                                              QcMetrics,
                                               QcR1ToR2Tf, QcR2ToR1Tf,
                                               QcTfToTransposon)
 
@@ -34,15 +36,17 @@ from callingcards.callingcards.serializers import (HarbisonChIPSerializer,
 
 from .factories import (ChrMapFactory, GeneFactory, PromoterRegionsFactory,
                         HarbisonChIPFactory, KemmerenTFKOFactory,
-                        McIsaacZEVFactory, BackgroundFactory, 
+                        McIsaacZEVFactory, BackgroundFactory,
                         BackgroundSourceFactory, CCTFFactory,
-                        CCExperimentFactory, HopsFactory,
+                        CCExperimentFactory,
+                        HopsSourceFactory, HopsFactory,
                         QcMetricsFactory,
                         QcManualReviewFactory,
                         QcR1ToR2TfFactory, QcR2ToR1TfFactory,
                         QcTfToTransposonFactory,
                         CallingCardsSigFactory,
-                        PromoterRegionsSourceFactory)
+                        PromoterRegionsSourceFactory,
+                        random_file_from_media_directory)
 
 from ..views import ExpressionViewSet
 
@@ -303,14 +307,14 @@ class TestPromoterRegionsViewSet(APITestCase):
             uploader=self.user,
             batch='run_5690')
         background_source = BackgroundSourceFactory.create(
-            source = 'adh1'
+            source='adh1'
         )
 
         # Create a CallingCardsSig instance to have some data to test with
         callingcards_sig = CallingCardsSigFactory.create(
             experiment=experiment,
-            background_source = background_source,
-            promoter_source = self.promoterregionssource,
+            background_source=background_source,
+            promoter_source=self.promoterregionssource,
             file=filepath)
 
         callingcards_url = reverse('promoterregions-callingcards')
@@ -328,7 +332,6 @@ class TestPromoterRegionsViewSet(APITestCase):
         # Check the content disposition
         assert response['Content-Disposition'] == \
             'attachment; filename="data.csv.gz"'
-
 
 
 class TestHarbisonChIP(APITestCase):
@@ -464,6 +467,7 @@ class TestHarbisonChIP(APITestCase):
             annotated_queryset, many=True).data
         assert response.data['results'] == expected_data
 
+
 @override_settings(DATABASES={'default':
                               {'ENGINE':
                                'django.db.backends.postgresql_psycopg2'}})
@@ -543,6 +547,7 @@ class TestKemmerenTFKO(APITestCase):
             assert record.uploadDate is not None
             assert record.modified is not None
 
+
 class TestMcIsaacZEV(APITestCase):
     """
     Tests /mcisaac_zev detail operations.
@@ -614,6 +619,7 @@ class TestBackground(APITestCase):
         background = Background.objects.get(pk=response.data.get('id'))
         assert background.chr.pk == background_data.get('chr')
         assert background.uploader.username == self.user.username
+
 
 class TestCCTF(APITestCase):
     """
@@ -695,6 +701,111 @@ class TestCCExperiment(APITestCase):
         assert ccexperiment.tf.pk == self.ccexperiment_data.get('tf')
         assert ccexperiment.uploader.username == self.user.username
 
+
+class TestHops_s3(APITestCase):
+    """
+    Tests /hops_s3 detail operations.
+    """
+
+    def setUp(self):
+        logging.basicConfig(level=logging.DEBUG)
+        self.user = UserFactory.create()
+        self.source_record = HopsSourceFactory.create()
+        self.experiment_record = CCExperimentFactory.create()
+        self.tf_gene = GeneFactory.create(gene='TFGENE')
+        self.tf_locus_tag = GeneFactory.create(locus_tag='TFLOCUSTAG')
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
+        self.url = reverse('hopss3-list')
+
+    def test_post_fail(self):
+        response = self.client.post(self.url, {})
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_create_hops_s3_with_ccexpr(self):
+        media_directory = default_storage.location
+        qbed_file = random_file_from_media_directory('qbed')
+
+        upload_file = os.path.join(media_directory, qbed_file)
+
+        with open(upload_file, 'rb') as f:
+            post_data = {
+                'chr_format': 'mitra',
+                'source': self.source_record.pk,
+                'experiment': self.experiment_record.pk,
+                'qbed': f,
+                'notes': 'some notes'
+            }
+
+            # Test the create() method
+            response = self.client.post(self.url,
+                                        post_data,
+                                        format='multipart')
+            
+        assert response.status_code == status.HTTP_201_CREATED
+
+        hops_s3 = Hops_s3.objects.get(pk=response.data.get('id'))
+        assert hops_s3.source.pk == post_data.get('source')
+        assert hops_s3.experiment.pk == post_data.get('experiment')
+        assert hops_s3.notes == post_data.get('notes')
+    
+    def test_create_hops_s3_no_ccexpr_gene(self):
+        media_directory = default_storage.location
+        qbed_file = random_file_from_media_directory('qbed')
+
+        upload_file = os.path.join(media_directory, qbed_file)
+
+        with open(upload_file, 'rb') as f:
+            post_data = {
+                'chr_format': 'mitra',
+                'tf_gene': 'TFGENE',
+                'batch': 'run_1234',
+                'batch_replicate': 1,
+                'source': self.source_record.pk,
+                'qbed': f,
+                'notes': 'some notes'
+            }
+
+            # Test the create() method
+            response = self.client.post(self.url,
+                                        post_data,
+                                        format='multipart')
+            
+        assert response.status_code == status.HTTP_201_CREATED
+
+        hops_s3 = Hops_s3.objects.get(pk=response.data.get('id'))
+        assert hops_s3.source.pk == post_data.get('source')
+        assert hops_s3.experiment.pk != post_data.get('experiment')
+        assert hops_s3.notes == post_data.get('notes')
+
+    def test_create_hops_s3_no_ccexpr_locus_tag(self):
+        media_directory = default_storage.location
+        qbed_file = random_file_from_media_directory('qbed')
+
+        upload_file = os.path.join(media_directory, qbed_file)
+
+        with open(upload_file, 'rb') as f:
+            post_data = {
+                'chr_format': 'mitra',
+                'tf_locus_tag': 'TFLOCUSTAG',
+                'batch': 'run_1234',
+                'batch_replicate': 1,
+                'source': self.source_record.pk,
+                'qbed': f,
+                'notes': 'some notes'
+            }
+
+            # Test the create() method
+            response = self.client.post(self.url,
+                                        post_data,
+                                        format='multipart')
+            
+        assert response.status_code == status.HTTP_201_CREATED
+
+        hops_s3 = Hops_s3.objects.get(pk=response.data.get('id'))
+        assert hops_s3.source.pk == post_data.get('source')
+        assert hops_s3.experiment.pk != post_data.get('experiment')
+        assert hops_s3.notes == post_data.get('notes')
 
 class TestHops(APITestCase):
     """
@@ -807,6 +918,7 @@ class TestQcR1ToR2Tf(APITestCase):
             self.qcr1tor2tf_data.get('experiment')
         assert qcr1tor2tf.uploader.username == self.user.username
 
+
 class TestQcR2ToR1Tf(APITestCase):
     """
     Tests /qcr2tor1tf detail operations.
@@ -842,6 +954,7 @@ class TestQcR2ToR1Tf(APITestCase):
         assert qcr2tor1tf.experiment.pk == \
             self.qcr2tor1tf_data.get('experiment')
         assert qcr2tor1tf.uploader.username == self.user.username
+
 
 class TestQcTfToTransposon(APITestCase):
     """
@@ -969,6 +1082,7 @@ class TestQcReviewViewSet(APITestCase):
     #     # Check if the updated fields in the response match the input data
     #     for key, value in update_data.items():
     #         assert response.data[key] == value
+
 
 class TestExpressionViewSet(APITestCase):
     def setUp(self):

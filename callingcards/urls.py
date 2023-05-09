@@ -19,6 +19,8 @@ from .callingcards.views import (ChrMapViewSet,
                                  BackgroundViewSet,
                                  CCTFViewSet,
                                  CCExperimentViewSet,
+                                 HopsSourceViewSet,
+                                 Hops_s3ViewSet,
                                  HopsViewSet,
                                  QcMetricsViewSet,
                                  QcManualReviewViewSet,
@@ -63,6 +65,12 @@ router.register(r'cctf',
 router.register(r'ccexperiment',
                 CCExperimentViewSet,
                 basename='ccexperiment')
+router.register(r'hops_source',
+                HopsSourceViewSet,
+                basename='hopssource')
+router.register(r'hops_s3',
+                Hops_s3ViewSet,
+                basename='hopss3')
 router.register(r'hops',
                 HopsViewSet,
                 basename='hops')
@@ -102,9 +110,11 @@ urlpatterns = [
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     # the 'api-root' from django rest-frameworks default router
     # http://www.django-rest-framework.org/api-guide/routers/#defaultrouter
-    re_path(r'^$', RedirectView.as_view(url=reverse_lazy('api-root'), permanent=False)),
+    re_path(r'^$', RedirectView.as_view(
+        url=reverse_lazy('api-root'), permanent=False)),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('api/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/swagger-ui/',
+         SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

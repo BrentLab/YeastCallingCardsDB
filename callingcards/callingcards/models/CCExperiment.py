@@ -49,8 +49,17 @@ class CCExperiment(BaseModel):
     # when the same tf is used in multiple experiments, each sample should be
     # uniquely identified by batch_replicate
     batch_replicate = models.PositiveSmallIntegerField(
-        default=1
-    )
+        default=1)
+    # lab = models.ForeignKey(
+    #     'lab',
+    #     models.CASCADE,
+    #     db_index=True)
+
+    def __str__(self):
+        return (str(self.batch) + '; '
+                + str(self.tf) + '; '
+                + 'batch_rep: ' + str(self.batch_replicate) + '; '
+                + 'ID: ' + str(self.id))  # pylint: disable=no-member
 
     class Meta:
         managed = True

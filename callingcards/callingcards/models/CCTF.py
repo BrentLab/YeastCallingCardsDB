@@ -72,6 +72,9 @@ class CCTF(BaseModel):
         default='none'
     )
 
+    def __str__(self):
+        return str(self.tf) + '_' + str(self.id)  # pylint: disable=no-member
+
     class Meta:
         managed = True
         db_table = 'cc_tf'

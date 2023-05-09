@@ -63,6 +63,9 @@ class ChrMap(BaseModel):
     )
     chr = models.CharField(
         max_length=12)
+    
+    def __str__(self):
+        return f'{self.ucsc}(chrID:{self.id}'  # pylint: disable=no-member
 
     class Meta:
         managed = True
