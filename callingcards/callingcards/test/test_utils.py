@@ -1,13 +1,21 @@
 import pytest
 # import pandas as pd
 # import pandas.testing as pdt
+import os
+from django.core.files.storage import default_storage
+from django.urls import reverse
 from rest_framework.test import APITestCase
 from .factories import (PromoterRegionsFactory,
                         HopsFactory,
+                        HopsSourceFactory,
                         Hops_s3Factory,
                         BackgroundFactory,
                         BackgroundSourceFactory,
-                        PromoterRegionsSourceFactory)
+                        PromoterRegionsSourceFactory,
+                        GeneFactory)
+
+from callingcards.users.test.factories import UserFactory
+
 from ..utils.callingcards_with_metrics import (enrichment,
                                                poisson_pval,
                                                hypergeom_pval,
@@ -17,6 +25,10 @@ from ..utils.callingcards_with_metrics import (enrichment,
 class TestCallingCardsWithMetrics(APITestCase):
     def setUp(self):
         # Create a test dataset using factories
+        self.user = UserFactory.create()
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
+        self.source_record = HopsSourceFactory.create()
         promoter_source = PromoterRegionsSourceFactory.create()
         self.promoter_regions = PromoterRegionsFactory.create_batch(
             10,
@@ -27,30 +39,38 @@ class TestCallingCardsWithMetrics(APITestCase):
         self.backgrounds = BackgroundFactory.create_batch(
             10,
             source=background_source)
+        self.gene_record = GeneFactory.create(gene='INO2')
 
     def test_callingcards_with_metrics(self):
-        # query_params_dict = {
-        #     'promoter_source': 'yiming',
-        #     'experiment_id': 75,
-        #     'background_source': 'adh1',
-        #     'consider_strand': False
-        # }
+        media_directory = default_storage.location
+        qbed_file = 'qbed/run_6437/INO2_chrI.ccf'
 
-        query_params_dict_1 = {}
+        upload_file = os.path.join(media_directory, qbed_file)
 
-        # Call the function with the test dataset
-        actual_1 = callingcards_with_metrics(query_params_dict_1)
+        with open(upload_file, 'rb') as f:
+            post_data = {
+                'chr_format': 'ucsc',
+                'tf_gene': 'INO2',
+                'batch': 'run_6437',
+                'batch_replicate': 1,
+                'source': self.source_record.pk,
+                'qbed': f,
+                'notes': 'some notes'
+            }
 
-        assert len(actual_1) == 100
+            # Test the create() method
+            response = self.client.post(reverse('hopss3-list'),
+                                        post_data,
+                                        format='multipart')
 
-        query_params_dict_2 = {
-            'experiment_id': 1,
-            'background_source': 'adh1',
-            'promoter_source': 'yiming',
-            'consider_strand': True
-        }
+        query_params = {
+                'experiment_id': response.json()['experiment'],
+                'background_source': 'adh1',
+                'promoter_source': 'yiming'
+            }
 
-        actual_2 = callingcards_with_metrics(query_params_dict_2)
+
+        actual = callingcards_with_metrics(query_params)
 
         assert 2 == 2
 

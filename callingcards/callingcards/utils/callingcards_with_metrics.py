@@ -184,11 +184,12 @@ def callingcards_with_metrics(query_params_dict: dict) -> pd.DataFrame:
 
     return result_df
 
+
 def translate_chr_to_id(df, chr_format):
     """Given a dataframe with the column `chr` and a chromosome format, 
     which is a field in the ChrMap model, use the ChrMap model to translate 
     the original `chr` field in the dataframe to the corresponding `chr_id`
-    
+
     :param df: A dataframe representing a qbed format file
     :dtype df: pandas.DataFrame
     :param chr_format: A string representing the chromosome format
@@ -199,7 +200,6 @@ def translate_chr_to_id(df, chr_format):
     """
     # Get the corresponding ChrMap object
     chr_map_dict = dict(ChrMap.objects.values_list(chr_format, 'id'))
-
 
     # Replace the chr column with chr_id
     df['chr'] = df['chr'].map(chr_map_dict)
@@ -222,15 +222,15 @@ def experiment_data(query_params_dict):
         if len(filtered_experiment_queryset.distinct('experiment_id')) == 0:
             raise ValueError('No experiments found for {}. No action taken.'
                              .format(query_params_dict))
-    except NotSupportedError:
+    except NotSupportedError as exc:
         # Alternate method if DISTINCT ON fields is not supported
         experiment_ids = filtered_experiment_queryset.values_list(
             'experiment_id', flat=True)
         unique_experiment_ids = set(experiment_ids)
 
         if len(unique_experiment_ids) == 0:
-            raise ValueError('No experiments found for {}. No action taken.'
-                             .format(query_params_dict))
+            raise ValueError(f'No experiments found for {query_params_dict}. '
+                             f'No action taken.') from exc
 
     dataframes = []
     experiment_counts_dict = {}
@@ -241,7 +241,7 @@ def experiment_data(query_params_dict):
 
         # get the experiment data
         # TODO write this as a function -- note the diff btwn .path and .url
-        # .path works when the storage is a filesystem. .url is necessary 
+        # .path works when the storage is a filesystem. .url is necessary
         # when the storage is s3
         try:
             file_location = record.qbed.path
@@ -257,10 +257,7 @@ def experiment_data(query_params_dict):
                 df = pd.read_csv(temp_file.name, sep='\t')
         else:
             df = pd.read_csv(file_location, sep='\t')
-        
-        if record.chr_format != 'id':
-            df = translate_chr_to_id(df, record.chr_format)
-        
+
         if record.chr_format != 'id':
             df = translate_chr_to_id(df, record.chr_format)
 
