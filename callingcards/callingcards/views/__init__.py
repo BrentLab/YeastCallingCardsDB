@@ -13,6 +13,7 @@ from .HopsSourceViewSet import HopsSourceViewSet
 from .Hops_s3ViewSet import Hops_s3ViewSet
 from .HopsViewSet import HopsViewSet
 from .KemmerenTFKOViewSet import KemmerenTFKOViewSet
+from .LabViewSet import LabViewSet
 from .McIsaacZEVViewSet import McIsaacZEVViewSet
 from .PromoterRegionViewSet import PromoterRegionsViewSet
 from .QcManualReviewViewSet import QcManualReviewViewSet

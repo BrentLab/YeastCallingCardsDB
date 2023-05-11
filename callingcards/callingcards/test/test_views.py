@@ -10,6 +10,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.files.storage import default_storage
+from django.forms.models import model_to_dict
 from django.test import override_settings
 from django.urls import reverse
 from rest_framework.settings import api_settings
@@ -39,6 +40,7 @@ from .factories import (ChrMapFactory, GeneFactory, PromoterRegionsFactory,
                         McIsaacZEVFactory, BackgroundFactory,
                         BackgroundSourceFactory, CCTFFactory,
                         CCExperimentFactory,
+                        LabFactory,
                         HopsSourceFactory, HopsFactory,
                         QcMetricsFactory,
                         QcManualReviewFactory,
@@ -807,24 +809,23 @@ class TestHops_s3(APITestCase):
         assert hops_s3.experiment.pk != post_data.get('experiment')
         assert hops_s3.notes == post_data.get('notes')
 
-class TestHops(APITestCase):
+class TestQcTfToTransposon(APITestCase):
     """
-    Tests /hops detail operations.
+    Tests /qctftotransposon detail operations.
     """
 
     def setUp(self):
         logging.basicConfig(level=logging.DEBUG)
         self.user = UserFactory.create()
-        self.chr_record = ChrMapFactory.create()
         self.experiment_record = CCExperimentFactory.create()
         self.client.credentials(
             HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
-        self.hops_data = factory.build(dict, FACTORY_CLASS=HopsFactory)
-        self.hops_data['chr'] = self.chr_record.pk
-        self.hops_data['experiment'] = self.experiment_record.pk
+        self.qctftotransposon_data = factory.build(
+            dict, FACTORY_CLASS=QcTfToTransposonFactory)
+        self.qctftotransposon_data['experiment'] = self.experiment_record.pk
         for attr in AUTO_ADD_FIELDS:
-            self.hops_data.pop(attr, None)
-        self.url = reverse('hops-list')
+            self.qctftotransposon_data.pop(attr, None)
+        self.url = reverse('qctftotransposon-list')
         settings.DEBUG = True
 
     def test_post_fail(self):
@@ -836,13 +837,42 @@ class TestHops(APITestCase):
         assert response.status_code == status.HTTP_200_OK
 
     def test_put_single(self):
-        response = self.client.post(self.url, self.hops_data)
+        response = self.client.post(self.url, self.qctftotransposon_data)
         assert response.status_code == status.HTTP_201_CREATED
 
-        hops = Hops.objects.get(pk=response.data.get('id'))
-        assert hops.chr.pk == self.hops_data.get('chr')
-        assert hops.experiment.pk == self.hops_data.get('experiment')
-        assert hops.uploader.username == self.user.username
+        qctftotransposon = QcTfToTransposon.objects\
+            .get(pk=response.data.get('id'))
+        assert qctftotransposon.experiment.pk == \
+            self.qctftotransposon_data.get('experiment')
+        assert qctftotransposon.uploader.username == self.user.username
+
+class TestLabViewSet(APITestCase):
+    """
+    Tests /hops detail operations.
+    """
+
+    def setUp(self):
+        logging.basicConfig(level=logging.DEBUG)
+        settings.DEBUG = True
+        self.user = UserFactory.create()
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
+        self.url = reverse('lab-list')
+
+    def test_post_fail(self):
+        response = self.client.post(self.url, {})
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_get_url(self):
+        LabFactory.create()
+        response = self.client.get(self.url)
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_put_single(self):
+        lab_record = model_to_dict(LabFactory.build())
+        data = {k: v for k, v in lab_record.items() if k in {'lab', 'notes'}}
+        response = self.client.post(self.url, data)
+        assert response.status_code == status.HTTP_201_CREATED
 
 
 class TestQcMetrics(APITestCase):

@@ -12,6 +12,7 @@ from .Hops import Hops
 from .Hops_s3 import Hops_s3
 from .HopsSource import HopsSource
 from .KemmerenTFKO import KemmerenTFKO
+from .Lab import Lab
 from .McIsaacZEV import McIsaacZEV
 from .PromoterRegions import PromoterRegions
 from .PromoterRegionsSource import PromoterRegionsSource

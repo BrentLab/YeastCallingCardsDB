@@ -7,6 +7,7 @@ from .factories import (ChrMapFactory, GeneFactory, PromoterRegionsFactory,
                         HarbisonChIPFactory, KemmerenTFKOFactory,
                         McIsaacZEVFactory, BackgroundFactory, CCTFFactory,
                         CCExperimentFactory, HopsFactory,
+                        LabFactory,
                         QcMetricsFactory,
                         QcManualReviewFactory, QcR1ToR2TfFactory,
                         QcTfToTransposonFactory)
@@ -18,6 +19,7 @@ from ..serializers import (ChrMapSerializer, GeneSerializer,
                            HarbisonChIPAnnotatedSerializer,
                            KemmerenTFKOSerializer, McIsaacZEVSerializer,
                            BackgroundSerializer, CCTFSerializer,
+                           LabSerializer,
                            CCTFListSerializer,
                            CCExperimentSerializer, HopsSerializer,
                            QcMetricsSerializer, QcManualReviewSerializer,
@@ -26,6 +28,7 @@ from ..serializers import (ChrMapSerializer, GeneSerializer,
                            ExpressionViewSetSerializer)
 
 from ..models import HarbisonChIP, PromoterRegions
+
 
 class TestCreateChrMap(TestCase):
 
@@ -55,7 +58,7 @@ class TestGeneSerializer(TestCase):
 
     def test_serializer_with_valid_data(self):
         data_dict = model_to_dict(self.factory.create())
-        # since the record is already created, if we verify now it will fail 
+        # since the record is already created, if we verify now it will fail
         # on the locus_tag field b/c it is not unique (it matches itself)
         serializer = self.serializer(
             data=data_dict)
@@ -89,8 +92,8 @@ class TestPromoterRegionsTargetsOnly(TestCase):
         chr_record = ChrMapFactory(uploader=user,
                                    modifiedBy=user)
         self.promoter_source = PromoterRegionsSourceFactory()
-        self.gene = GeneFactory(uploader=user, 
-                                modifiedBy=user, 
+        self.gene = GeneFactory(uploader=user,
+                                modifiedBy=user,
                                 chr=chr_record)
         self.promoter_region = PromoterRegionsFactory(
             modifiedBy=user,
@@ -249,6 +252,23 @@ class TestCCExperiment(TestCase):
             data=model_to_dict(self.factory.create()))
         assert serializer.is_valid() is True
 
+
+class TestLab(TestCase):
+
+    def setUp(self):
+        self.serializer = LabSerializer
+        self.factory = LabFactory
+
+    def test_serializer_with_empty_data(self):
+        serializer = self.serializer(data={})  # noqa
+        assert serializer.is_valid() is False
+
+    def test_serializer_with_valid_data(self):
+        serializer = self.serializer(
+            data=model_to_dict(self.factory.build()))
+        assert serializer.is_valid() is True
+
+
 class TestHops(TestCase):
 
     def setUp(self):
@@ -326,6 +346,7 @@ class TestQcTfToTransposon(TestCase):
             data=model_to_dict(self.factory.create()))
         assert serializer.is_valid() is True
 
+
 class ExpressionViewSetSerializerTestCase(TestCase):
 
     def setUp(self):
@@ -355,5 +376,3 @@ class ExpressionViewSetSerializerTestCase(TestCase):
         }
         serializer = ExpressionViewSetSerializer(data=data)
         assert serializer.is_valid() is False
-
-

@@ -13,6 +13,7 @@ from .HopsSourceSerializers import HopsSourceSerializer
 from .Hops_s3Serializers import Hops_s3Serializer
 from .HopsSerializers import HopsSerializer
 from .KemmerenTFKOSerializers import KemmerenTFKOSerializer
+from .LabSerializers import LabSerializer
 from .McIsaacZEVSerializers import McIsaacZEVSerializer
 from .PromoterRegionsSerializers import (PromoterRegionsSerializer,
                                          PromoterRegionsTargetsOnlySerializer,

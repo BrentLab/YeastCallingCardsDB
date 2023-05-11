@@ -9,6 +9,7 @@ from .HopsSourceFilter import HopsSourceFilter
 from .Hops_s3Filter import Hops_s3Filter
 from .HopsFilter import HopsFilter
 from .KemmerenTfkoFilter import KemmerenTfkoFilter
+from .LabFilter import LabFilter
 from .McIsaacZevFilter import McIsaacZevFilter
 from .PromoterRegionsFilter import PromoterRegionsFilter
 from .QcManualReviewFilter import QcManualReviewFilter

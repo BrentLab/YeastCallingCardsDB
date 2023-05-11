@@ -14,16 +14,17 @@ and any notes
 """
 import logging
 from django.db import models
+from .BaseModel import BaseModel
 
 logger = logging.getLogger(__name__)
 
 
-class Lab(models.Model):
+class Lab(BaseModel):
     lab = models.CharField(primary_key=True, max_length=25)
     notes = models.CharField(max_length=100, default='none')
 
     def __str__(self):
-        return str(self.source)
+        return str(self.lab)
 
     class Meta:
-        abstract = True
+        db_table = 'lab'

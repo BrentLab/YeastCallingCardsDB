@@ -22,6 +22,7 @@ from .callingcards.views import (ChrMapViewSet,
                                  HopsSourceViewSet,
                                  Hops_s3ViewSet,
                                  HopsViewSet,
+                                 LabViewSet,
                                  QcMetricsViewSet,
                                  QcManualReviewViewSet,
                                  QcR1ToR2ViewSet,
@@ -71,6 +72,9 @@ router.register(r'hops_source',
 router.register(r'hops_s3',
                 Hops_s3ViewSet,
                 basename='hopss3')
+router.register(r'lab',
+                LabViewSet,
+                basename='lab')
 router.register(r'hops',
                 HopsViewSet,
                 basename='hops')
