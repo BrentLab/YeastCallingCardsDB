@@ -1,3 +1,4 @@
+# pylint: disable=W1203
 import logging
 from rest_framework import viewsets, status
 from rest_framework.permissions import AllowAny
@@ -13,7 +14,7 @@ from .mixins import (ListModelFieldsMixin,
                      CountModelMixin,
                      UpdateModifiedMixin,
                      CustomValidateMixin)
-from ..models import Hops_s3, CCTF, Gene, QcManualReview
+from ..models import Hops_s3, CCTF, CCExperiment, Gene, QcManualReview
 from ..serializers import (Hops_s3Serializer,)
 from ..filters import Hops_s3Filter
 from ..utils.validate_qbed_upload import (validate_chromosomes,
@@ -109,10 +110,39 @@ def get_cctf_id(query_params_dict: dict, user_auth_token: str) -> int:
                                f"{response.data}")
 
 
-def create_ccexperiment(cctf_id: int,
+def get_ccexperiment_id(cctf_id: int,
                         batch: str,
                         batch_replicate: int,
                         user_auth_token: str) -> int:
+    """
+    Check to see if a CCExperiment object for a given cctf_id, batch and 
+    batch_replicate exists. If it does, return the id of that object. If it 
+    does not, create a new CCExperiment object and return the id of that 
+    object.
+
+    :param cctf_id: id of CCTF object
+    :type cctf_id: int
+    :param batch: batch name
+    :type batch: str
+    :param batch_replicate: batch replicate number
+    :type batch_replicate: int
+    :param user_auth_token: user authentication token   
+    :type user_auth_token: str
+    :return: id of CCExperiment object
+    :rtype: int
+
+    :raises RuntimeError: if the POST request fails to create a record
+    """
+    # check if CCExperiment object exists
+    try:
+        return CCExperiment.objects.get(tf=cctf_id,
+                                        batch=batch,
+                                        batch_replicate=batch_replicate).id
+    except CCExperiment.DoesNotExist:
+        logger.info(f"No CCExperiment record exists for tf {cctf_id}, "
+                    f"batch {batch}, and batch_replicate {batch_replicate}. "
+                    "Creating new CCExperiment record.")
+
     client = APIClient()
     client.credentials(HTTP_AUTHORIZATION=f'Token {user_auth_token}')
 
@@ -151,7 +181,7 @@ def create_manual_review(experiment_id: int, user_auth_token: str) -> int:
     """
     try:
         return QcManualReview.objects.get(experiment=experiment_id).id
-    except QcManualReview.DoesNotExist:
+    except QcManualReview.DoesNotExist as exc:
         client = APIClient()
         client.credentials(HTTP_AUTHORIZATION=f'Token {user_auth_token}')
 
@@ -169,7 +199,8 @@ def create_manual_review(experiment_id: int, user_auth_token: str) -> int:
             return response.data['id']
         else:
             raise RuntimeError(f"Failed to create QcManualReview "
-                               f"through API endpoint {api_url}: {response.data}")
+                               f"through API endpoint "
+                               f"{api_url}: {response.data}") from exc
 
 
 class Hops_s3ViewSet(ListModelFieldsMixin,
@@ -197,41 +228,19 @@ class Hops_s3ViewSet(ListModelFieldsMixin,
 
     def create(self, request, *args, **kwargs):
 
+        # Check that required fields for all upload methods are presen
         key_check_diff = {'chr_format', 'source'} - set(request.data.keys())
 
         if key_check_diff:
             return Response({'error': 'Missing required field(s): {}'
                              .format(', '.join(key_check_diff))},
                             status=status.HTTP_400_BAD_REQUEST)
-        
+
         token = str(request.auth)
 
-        # Check that the uploaded file has the correct format
-        experiment_id = request.data.get('experiment')
-        if not experiment_id:
-            try:
-                batch = request.data.get('batch')
-            except KeyError:
-                return Response({'error': 'Batch name not provided.'},
-                                status=status.HTTP_400_BAD_REQUEST)
-            try:
-                batch_replicate = request.data.get('batch_replicate')
-            except KeyError:
-                return Response({'error':
-                                 'Batch replicate number not provided.'},
-                                status=status.HTTP_400_BAD_REQUEST)
-            try:
-                cctf_id = get_cctf_id(request.data, token)
-            except ValueError as exc:
-                return Response({'error': str(exc)},
-                                status=status.HTTP_400_BAD_REQUEST)
-
-            experiment_id = create_ccexperiment(cctf_id,
-                                                batch,
-                                                batch_replicate,
-                                                token)
-
-            request.data['experiment'] = experiment_id
+        if not token:
+            return Response({'error': 'Auth Token not found -- contact admin.'},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         # validate the upload file
         try:
@@ -281,15 +290,37 @@ class Hops_s3ViewSet(ListModelFieldsMixin,
                                        f'{validate_strand_list}')},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        # drop unnecessary data from the request
-        drop_keys = set(request.data.keys()) - {'chr_format',
-                                                'source',
-                                                'experiment',
-                                                'qbed',
-                                                'notes'}
-        for key in drop_keys:
-            del request.data[key]
+        # Next, try to get the experiment_id from the query_params. If the
+        # experiment ID is not passed, then create a new CCExperiment object
+        # note that this may require the creation of a new CCTF object, also
+        experiment_id = request.data.get('experiment')
+        if not experiment_id:
+            try:
+                batch = request.data.get('batch')
+            except KeyError:
+                return Response({'error': 'Batch name not provided.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            try:
+                batch_replicate = request.data.get('batch_replicate')
+            except KeyError:
+                return Response({'error':
+                                 'Batch replicate number not provided.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            try:
+                cctf_id = get_cctf_id(request.data, token)
+            except ValueError as exc:
+                return Response({'error': str(exc)},
+                                status=status.HTTP_400_BAD_REQUEST)
 
+            experiment_id = get_ccexperiment_id(cctf_id,
+                                                batch,
+                                                batch_replicate,
+                                                token)
+
+            request.data['experiment'] = experiment_id
+        
+        # check to see if a manaul review exists for this experiment. If it 
+        # does not, create one
         try:
             manual_review_id = create_manual_review(experiment_id,
                                                     token)
@@ -299,5 +330,14 @@ class Hops_s3ViewSet(ListModelFieldsMixin,
             return Response({'error': str(exc)},
                             status=status.HTTP_400_BAD_REQUEST)
 
+        # drop unnecessary data from the request
+        drop_keys = set(request.data.keys()) - {'chr_format',
+                                                'source',
+                                                'experiment',
+                                                'qbed',
+                                                'notes'}
+        for key in drop_keys:
+            del request.data[key]
+
         # Call the parent create() method with the modified request
-        return super().create(request, *args, **kwargs)
+        return super().create(request, *args, **kwargs) 
