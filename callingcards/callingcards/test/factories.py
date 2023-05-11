@@ -4,7 +4,7 @@ from math import floor
 import factory
 from django.core.files.storage import default_storage
 from django.core.exceptions import ObjectDoesNotExist
-from ..models import HopsSource
+from ..models import HopsSource, Lab
 
 
 from callingcards.users.test.factories import UserFactory
@@ -196,17 +196,6 @@ class CCTFFactory(BaseModelFactoryMixin,
     notes = 'none'
 
 
-class CCExperimentFactory(BaseModelFactoryMixin,
-                          factory.django.DjangoModelFactory):
-
-    class Meta:
-        model = 'callingcards.CCExperiment'
-
-    tf = factory.SubFactory(CCTFFactory)
-    batch = 'run_1234'
-    batch_replicate = 1
-
-
 class LabFactory(BaseModelFactoryMixin,
                  factory.django.DjangoModelFactory):
 
@@ -215,6 +204,18 @@ class LabFactory(BaseModelFactoryMixin,
 
     lab = 'brent'
     notes = 'none'
+
+
+class CCExperimentFactory(BaseModelFactoryMixin,
+                          factory.django.DjangoModelFactory):
+
+    class Meta:
+        model = 'callingcards.CCExperiment'
+
+    tf = factory.SubFactory(CCTFFactory)
+    batch = factory.Sequence(lambda n: f'run_{n}')
+    batch_replicate = 1
+    lab = factory.SubFactory(LabFactory)
 
 
 class HopsSourceFactory(BaseModelFactoryMixin,

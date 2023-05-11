@@ -6,7 +6,8 @@ from django.core.files.storage import default_storage
 from django.urls import reverse
 from rest_framework.test import APITestCase
 from .factories import (PromoterRegionsFactory,
-                        HopsFactory,
+                        LabFactory,
+                        CCExperimentFactory,
                         HopsSourceFactory,
                         Hops_s3Factory,
                         BackgroundFactory,
@@ -34,8 +35,13 @@ class TestCallingCardsWithMetrics(APITestCase):
             10,
             source=promoter_source)
         background_source = BackgroundSourceFactory.create()
+        self.lab_record = LabFactory.create()
         # self.hops = HopsFactory.create_batch(10)
-        self.hops_s3 = Hops_s3Factory.create_batch(10)
+        for i in range(10):
+            ccexperiment = CCExperimentFactory.create(
+                lab=self.lab_record)
+            Hops_s3Factory.create(experiment=ccexperiment)
+
         self.backgrounds = BackgroundFactory.create_batch(
             10,
             source=background_source)
@@ -53,6 +59,7 @@ class TestCallingCardsWithMetrics(APITestCase):
                 'tf_gene': 'INO2',
                 'batch': 'run_6437',
                 'batch_replicate': 1,
+                'lab': self.lab_record.pk,
                 'source': self.source_record.pk,
                 'qbed': f,
                 'notes': 'some notes'
@@ -64,11 +71,10 @@ class TestCallingCardsWithMetrics(APITestCase):
                                         format='multipart')
 
         query_params = {
-                'experiment_id': response.json()['experiment'],
-                'background_source': 'adh1',
-                'promoter_source': 'yiming'
-            }
-
+            'experiment_id': response.json()['experiment'],
+            'background_source': 'adh1',
+            'promoter_source': 'yiming'
+        }
 
         actual = callingcards_with_metrics(query_params)
 

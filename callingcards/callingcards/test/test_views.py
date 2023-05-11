@@ -677,10 +677,12 @@ class TestCCExperiment(APITestCase):
         logging.basicConfig(level=logging.DEBUG)
         self.user = UserFactory.create()
         self.cctf_record = CCTFFactory.create()
+        self.lab_record = LabFactory.create()
         self.client.credentials(
             HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
         self.ccexperiment_data = factory.build(
-            dict, FACTORY_CLASS=CCExperimentFactory)
+            dict, FACTORY_CLASS=CCExperimentFactory,
+            lab=self.lab_record)
         self.ccexperiment_data['tf'] = self.cctf_record.pk
         for attr in AUTO_ADD_FIELDS:
             self.ccexperiment_data.pop(attr, None)
@@ -713,7 +715,9 @@ class TestHops_s3(APITestCase):
         logging.basicConfig(level=logging.DEBUG)
         self.user = UserFactory.create()
         self.source_record = HopsSourceFactory.create()
-        self.experiment_record = CCExperimentFactory.create()
+        self.lab_record = LabFactory.create()
+        self.experiment_record = CCExperimentFactory.create(
+            lab=self.lab_record)
         self.tf_gene = GeneFactory.create(gene='TFGENE')
         self.tf_locus_tag = GeneFactory.create(locus_tag='TFLOCUSTAG')
         self.client.credentials(
@@ -764,6 +768,7 @@ class TestHops_s3(APITestCase):
                 'batch': 'run_1234',
                 'batch_replicate': 1,
                 'source': self.source_record.pk,
+                'lab': self.lab_record.pk,
                 'qbed': f,
                 'notes': 'some notes'
             }
@@ -793,6 +798,7 @@ class TestHops_s3(APITestCase):
                 'batch': 'run_1234',
                 'batch_replicate': 1,
                 'source': self.source_record.pk,
+                'lab': self.lab_record.pk,
                 'qbed': f,
                 'notes': 'some notes'
             }
@@ -808,6 +814,7 @@ class TestHops_s3(APITestCase):
         assert hops_s3.source.pk == post_data.get('source')
         assert hops_s3.experiment.pk != post_data.get('experiment')
         assert hops_s3.notes == post_data.get('notes')
+
 
 class TestQcTfToTransposon(APITestCase):
     """

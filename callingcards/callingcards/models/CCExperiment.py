@@ -50,10 +50,10 @@ class CCExperiment(BaseModel):
     # uniquely identified by batch_replicate
     batch_replicate = models.PositiveSmallIntegerField(
         default=1)
-    # lab = models.ForeignKey(
-    #     'lab',
-    #     models.CASCADE,
-    #     db_index=True)
+    lab = models.ForeignKey(
+        'lab',
+        models.CASCADE,
+        db_index=True)
 
     def __str__(self):
         return (str(self.batch) + '; '

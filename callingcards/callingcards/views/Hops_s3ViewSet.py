@@ -113,6 +113,7 @@ def get_cctf_id(query_params_dict: dict, user_auth_token: str) -> int:
 def get_ccexperiment_id(cctf_id: int,
                         batch: str,
                         batch_replicate: int,
+                        lab: str,
                         user_auth_token: str) -> int:
     """
     Check to see if a CCExperiment object for a given cctf_id, batch and 
@@ -137,6 +138,7 @@ def get_ccexperiment_id(cctf_id: int,
     try:
         return CCExperiment.objects.get(tf=cctf_id,
                                         batch=batch,
+                                        lab=lab,
                                         batch_replicate=batch_replicate).id
     except CCExperiment.DoesNotExist:
         logger.info(f"No CCExperiment record exists for tf {cctf_id}, "
@@ -150,6 +152,7 @@ def get_ccexperiment_id(cctf_id: int,
     data = {
         'tf': cctf_id,
         'batch': batch,
+        'lab': lab,
         'batch_replicate': batch_replicate,
     }
 
@@ -307,6 +310,13 @@ class Hops_s3ViewSet(ListModelFieldsMixin,
                                  'Batch replicate number not provided.'},
                                 status=status.HTTP_400_BAD_REQUEST)
             try:
+                lab = request.data.get('lab')
+            except KeyError:
+                return Response({'error': 'Lab name not provided. The lab '
+                                 'must already exist in the DB. If it '
+                                 'does not, talk to the admin.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            try:
                 cctf_id = get_cctf_id(request.data, token)
             except ValueError as exc:
                 return Response({'error': str(exc)},
@@ -315,6 +325,7 @@ class Hops_s3ViewSet(ListModelFieldsMixin,
             experiment_id = get_ccexperiment_id(cctf_id,
                                                 batch,
                                                 batch_replicate,
+                                                lab,
                                                 token)
 
             request.data['experiment'] = experiment_id
