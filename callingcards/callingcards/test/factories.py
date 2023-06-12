@@ -134,7 +134,7 @@ class ChipExoFactory(BaseModelFactoryMixin,
 
     gene = factory.SubFactory(GeneFactory)
     tf = factory.SubFactory(GeneFactory)
-    pval = factory.LazyFunction(lambda: round(random.random(), 3))
+    strength = factory.LazyFunction(lambda: round(random.random(), 3))
 
 
 class HarbisonChIPFactory(BaseModelFactoryMixin,

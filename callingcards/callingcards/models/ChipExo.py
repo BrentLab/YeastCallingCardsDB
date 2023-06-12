@@ -10,7 +10,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator  # pylint: disable=import-error # noqa # type: ignore
 from .BaseModel import BaseModel
-from .constants import P_VAL_DECIMAL_PLACES, P_VAL_MAX_DIGITS
 
 
 class ChipExoQuerySet(models.QuerySet):
@@ -27,7 +26,7 @@ class ChipExoQuerySet(models.QuerySet):
                 target_locus_tag=models.F('gene__locus_tag'),
                 target_gene=models.F('gene__gene'),
                 target_gene_id=models.F('gene_id'),
-                binding_signal=models.F('pval'),
+                binding_signal=models.F('strength'),
                 promoter_id=models.F('gene__genepromoter__id'),
                 experiment=models.Value('chipexo_yiming'))\
             .values('tf_id', 'tf_locus_tag', 'tf_gene',
@@ -44,7 +43,7 @@ class ChipExo(BaseModel):
           was targeted in the ChIP-seq experiment.
         - `tf`: ForeignKey to the `Gene` model, representing the transcription
           factor that was used in the ChIP-seq experiment.
-        - `pval`: DecimalField with a max digits of 6 and decimal places of 4,
+        - `strength`: DecimalField with a max digits of 6 and decimal places of 4,
           representing the p-value of the ChIP-seq experiment.
 
     Example usage:
@@ -71,10 +70,10 @@ class ChipExo(BaseModel):
         models.PROTECT,
         related_name='chipexo_tf',
         db_index=True)
-    pval = models.DecimalField(
-        validators=[MinValueValidator(0), MaxValueValidator(1)],
-        max_digits=P_VAL_MAX_DIGITS,
-        decimal_places=P_VAL_DECIMAL_PLACES
+    strength = models.DecimalField(
+        validators=[MinValueValidator(0), MaxValueValidator(1e6)],
+        max_digits=10,
+        decimal_places=3
     )
 
     class Meta:
