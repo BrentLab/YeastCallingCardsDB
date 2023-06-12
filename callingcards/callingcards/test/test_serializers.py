@@ -4,6 +4,7 @@ from django.forms.models import model_to_dict
 from callingcards.users.test.factories import UserFactory
 from .factories import (ChrMapFactory, GeneFactory, PromoterRegionsFactory,
                         PromoterRegionsSourceFactory,
+                        ChipExoFactory,
                         HarbisonChIPFactory, KemmerenTFKOFactory,
                         McIsaacZEVFactory, BackgroundFactory, CCTFFactory,
                         CCExperimentFactory, HopsFactory,
@@ -15,6 +16,7 @@ from .factories import (ChrMapFactory, GeneFactory, PromoterRegionsFactory,
 from ..serializers import (ChrMapSerializer, GeneSerializer,
                            PromoterRegionsSerializer,
                            PromoterRegionsTargetsOnlySerializer,
+                           ChipExoSerializer, ChipExoAnnotatedSerializer,
                            HarbisonChIPSerializer,
                            HarbisonChIPAnnotatedSerializer,
                            KemmerenTFKOSerializer, McIsaacZEVSerializer,
@@ -27,7 +29,7 @@ from ..serializers import (ChrMapSerializer, GeneSerializer,
                            QcTfToTransposonSerializer,
                            ExpressionViewSetSerializer)
 
-from ..models import HarbisonChIP, PromoterRegions
+from ..models import HarbisonChIP, PromoterRegions, ChipExo
 
 
 class TestCreateChrMap(TestCase):
@@ -146,6 +148,35 @@ class TestHarbisonChIP(TestCase):
         annotated_data = HarbisonChIP.objects.with_annotations()\
             .get(pk=self.harbisonchip_record.pk)
         serializer = HarbisonChIPAnnotatedSerializer(data=annotated_data)
+        assert serializer.is_valid() is True
+
+
+class TestChipExo(TestCase):
+
+    def setUp(self):
+        user = UserFactory()
+        chr_record = ChrMapFactory(uploader=user)
+        gene_record = GeneFactory(uploader=user,
+                                  chr=chr_record)
+        self.chipexo_record = \
+            ChipExoFactory.build(uploader=user,
+                                 gene=gene_record,
+                                 tf=gene_record)
+        self.chipexo_data = model_to_dict(self.chipexo_record)
+
+    def test_serializer_with_empty_data(self):
+        serializer = ChipExoSerializer(data={})  # noqa
+        assert serializer.is_valid() is False
+
+    def test_serializer_with_valid_data(self):
+        serializer = ChipExoSerializer(data=self.chipexo_data)  # noqa
+        assert serializer.is_valid() is True
+
+    def test_annotated_serializer_with_valid_data(self):
+        self.chipexo_record.save()
+        annotated_data = ChipExo.objects.with_annotations()\
+            .get(pk=self.chipexo_record.pk)
+        serializer = ChipExoAnnotatedSerializer(data=annotated_data)
         assert serializer.is_valid() is True
 
 

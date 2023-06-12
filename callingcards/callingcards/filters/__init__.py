@@ -3,6 +3,7 @@
 from .BackgroundFilter import BackgroundFilter
 from .CallingCardsSigFilter import CallingCardsSigFilter
 from .CCExperimentFilter import CCExperimentFilter
+from .ChipExoFilter import ChipExoFilter
 from .GeneFilter import GeneFilter
 from .HarbisonChIPFilter import HarbisonChIPFilter
 from .HopsSourceFilter import HopsSourceFilter

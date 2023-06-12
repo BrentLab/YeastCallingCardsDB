@@ -2,6 +2,7 @@ from .BackgroundSerializers import BackgroundSerializer
 from .CallingCardsSigSerializers import CallingCardsSigSerializer
 from .CCExperimentSerializers import CCExperimentSerializer
 from .CCTFSerializers import (CCTFSerializer, CCTFListSerializer)
+from .ChipExoSerializers import ChipExoSerializer, ChipExoAnnotatedSerializer
 from .ChrMapSerializers import ChrMapSerializer
 from .ExpressionViewSetSerializer import ExpressionViewSetSerializer
 from .GeneSerializers import GeneSerializer

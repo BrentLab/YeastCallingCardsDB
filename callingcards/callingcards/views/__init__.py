@@ -4,6 +4,7 @@
 from .BackgroundViewSet import BackgroundViewSet
 from .CCExperimentViewSet import CCExperimentViewSet
 from .CCTFViewSet import CCTFViewSet
+from .ChipExoViewSet import ChipExoViewSet
 from .ChrMapViewSet import ChrMapViewSet
 from .ExpressionViewSet import ExpressionViewSet
 from .GeneViewSet import GeneViewSet

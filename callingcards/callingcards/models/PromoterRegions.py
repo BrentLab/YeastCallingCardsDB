@@ -19,7 +19,6 @@ from django.core.validators import MaxValueValidator
 
 from .BaseModel import BaseModel
 from .mixins.GenomicCoordinatesMixin import GenonomicCoordinatesMixin
-from .mixins.ProvidenceMixin import ProvidenceMixin
 
 
 class PromoterRegionsQuerySet(models.QuerySet):

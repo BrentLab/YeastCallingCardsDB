@@ -13,6 +13,7 @@ from .users.views import UserViewSet, UserCreateViewSet
 from .callingcards.views import (ChrMapViewSet,
                                  GeneViewSet,
                                  PromoterRegionsViewSet,
+                                 ChipExoViewSet,
                                  HarbisonChIPViewSet,
                                  KemmerenTFKOViewSet,
                                  McIsaacZEVViewSet,
@@ -48,6 +49,9 @@ router.register(r'genes',
 router.register(r'promoterregions',
                 PromoterRegionsViewSet,
                 basename='promoterregions')
+router.register(r'chipexo',
+                ChipExoViewSet,
+                basename='chipexo')
 router.register(r'harbisonchip',
                 HarbisonChIPViewSet,
                 basename='harbisonchip')

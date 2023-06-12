@@ -4,6 +4,7 @@ from .Background import Background
 from .BackgroundSource import BackgroundSource
 from .CCExperiment import CCExperiment
 from .CCTF import CCTF
+from .ChipExo import ChipExo
 from .ChrMap import ChrMap
 from .CallingCardsSig import CallingCardsSig
 from .Gene import Gene

@@ -25,6 +25,7 @@ from callingcards.callingcards.tasks import process_upload
 from callingcards.users.test.factories import UserFactory
 
 from callingcards.callingcards.models import (ChrMap, Gene, PromoterRegions,
+                                              ChipExo,
                                               HarbisonChIP, KemmerenTFKO,
                                               McIsaacZEV, Background, CCTF,
                                               CCExperiment, Hops, Hops_s3,
@@ -36,6 +37,7 @@ from callingcards.callingcards.serializers import (HarbisonChIPSerializer,
                                                    HarbisonChIPAnnotatedSerializer)  # noqa
 
 from .factories import (ChrMapFactory, GeneFactory, PromoterRegionsFactory,
+                        ChipExoFactory,
                         HarbisonChIPFactory, KemmerenTFKOFactory,
                         McIsaacZEVFactory, BackgroundFactory,
                         BackgroundSourceFactory, CCTFFactory,
@@ -468,6 +470,49 @@ class TestHarbisonChIP(APITestCase):
         expected_data = HarbisonChIPAnnotatedSerializer(
             annotated_queryset, many=True).data
         assert response.data['results'] == expected_data
+
+
+class TestChipExo(APITestCase):
+    """
+    Tests /chipexo detail operations.
+    """
+
+    def setUp(self):
+        logging.basicConfig(level=logging.DEBUG)
+        self.user = UserFactory.create()
+        self.gene_record = GeneFactory.create()
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
+        ChipExoFactory.create(
+            uploader=self.user,
+            gene=self.gene_record,
+            tf=self.gene_record
+        )
+        self.url = reverse('chipexo-list')
+        settings.DEBUG = True
+
+    def test_post_fail(self):
+        response = self.client.post(self.url, {})
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_get_url(self):
+        response = self.client.get(self.url)
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_put_single(self):
+        chipexo_data = factory.build(
+            dict,
+            FACTORY_CLASS=ChipExoFactory)
+        chipexo_data['gene'] = self.gene_record.pk
+        chipexo_data['tf'] = self.gene_record.pk
+        for attr in AUTO_ADD_FIELDS:
+            chipexo_data.pop(attr, None)
+        response = self.client.post(self.url, chipexo_data)
+        assert response.status_code == status.HTTP_201_CREATED
+
+        chipexo = ChipExo.objects.get(pk=response.data.get('id'))
+        assert chipexo.tf.pk == chipexo_data.get('tf')
+        assert chipexo.uploader.username == self.user.username
 
 
 @override_settings(DATABASES={'default':
