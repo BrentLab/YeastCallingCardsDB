@@ -2,6 +2,8 @@ import logging
 
 from rest_framework import serializers
 
+from callingcards.users.models import User
+
 from ..models import (QcMetrics,
                      QcManualReview,
                      QcR1ToR2Tf,
@@ -30,13 +32,20 @@ class QcMetricsSerializer(serializers.ModelSerializer):
 class QcManualReviewSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
     modifiedBy = serializers.CharField(
-        source='uploader.username',
+        source='modifiedBy.username',
         required=False)
 
     class Meta:
         model = QcManualReview  # noqa
         fields = '__all__'
 
+    def update(self, instance, validated_data):
+        modified_by_username = validated_data\
+                .pop('modifiedBy', {}).get('username')
+        if modified_by_username:
+            user = User.objects.get(username=modified_by_username)
+            instance.modifiedBy = user
+        return super().update(instance, validated_data)
 
 class QcR1ToR2TfSerializer(serializers.ModelSerializer):
     uploader = serializers.ReadOnlyField(source='uploader.username')
