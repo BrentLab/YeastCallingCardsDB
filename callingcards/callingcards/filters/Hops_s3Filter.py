@@ -9,10 +9,9 @@ class Hops_s3Filter(django_filters.FilterSet):
     tf_gene = django_filters.CharFilter(field_name="experiment__tf__tf__gene")
     experiment_id = django_filters.CharFilter(field_name="experiment__id")
     batch = django_filters.CharFilter(field_name="experiment__batch")
-    source = django_filters.CharFilter(field_name="source")
     hops_source = django_filters.CharFilter(field_name="source")
 
     class Meta:
         model = Hops_s3
         fields = ['tf_id', 'tf_locus_tag', 'tf_gene', 
-                  'experiment_id', 'batch', 'source', 'hops_source']
+                  'experiment_id', 'batch', 'hops_source']
