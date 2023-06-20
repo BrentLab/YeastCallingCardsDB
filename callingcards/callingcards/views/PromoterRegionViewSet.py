@@ -206,8 +206,8 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
                         'analysis',
                         CCExperiment.objects.get(pk=experiment_id).batch,
                         f'ccexperiment_{experiment_id}',
-                        f'{hops_source}',
-                        f'_{background_source}',
+                        f'{hops_source}'
+                        f'_{background_source}'
                         f'_{promoter_source}.csv.gz')
 
                     logger.debug("filepath: %s", filepath)
