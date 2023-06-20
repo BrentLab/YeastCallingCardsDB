@@ -245,10 +245,8 @@ class Hops_s3ViewSet(ListModelFieldsMixin,
             return Response({'error': 'Auth Token not found -- contact admin.'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        # validate the upload file
-        try:
-            uploaded_file = request.FILES.get('qbed')
-        except KeyError:
+        uploaded_file = request.FILES.get('qbed')
+        if uploaded_file is None:
             return Response({'error': 'Qbed file not provided.'},
                             status=status.HTTP_400_BAD_REQUEST)
 
@@ -329,8 +327,8 @@ class Hops_s3ViewSet(ListModelFieldsMixin,
                                                 token)
 
             request.data['experiment'] = experiment_id
-        
-        # check to see if a manaul review exists for this experiment. If it 
+
+        # check to see if a manaul review exists for this experiment. If it
         # does not, create one
         try:
             manual_review_id = create_manual_review(experiment_id,
@@ -351,4 +349,4 @@ class Hops_s3ViewSet(ListModelFieldsMixin,
             del request.data[key]
 
         # Call the parent create() method with the modified request
-        return super().create(request, *args, **kwargs) 
+        return super().create(request, *args, **kwargs)
