@@ -224,13 +224,13 @@ class Hops_s3ViewSet(ListModelFieldsMixin,
     permission_classes = [IsAuthenticated]
     filter_backends = (DjangoFilterBackend, SearchFilter)
     filterset_class = Hops_s3Filter
-    # search_fields = ('experiment__tf__tf__id',
-    #                  'experiment__tf__tf__locus_tag',
-    #                  'experiment__tf__tf__gene',
-    #                  'experiment_id',
-    #                  'batch',
-    #                  'batch_replicate',
-    #                  'modifiedBy', 'createdBy', 'created', 'modified')
+    search_fields = ('experiment__tf__tf__id',
+                     'experiment__tf__tf__locus_tag',
+                     'experiment__tf__tf__gene',
+                     'experiment_id',
+                     'batch',
+                     'batch_replicate',
+                     'modifiedBy', 'createdBy', 'created', 'modified')
 
     def create(self, request, *args, **kwargs):
 

@@ -1,5 +1,4 @@
 import django_filters
-from ..models.mixins.GenomicCoordinatesMixin import GenonomicCoordinatesMixin
 from ..models import CallingCardsSig
 
 
