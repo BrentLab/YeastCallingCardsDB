@@ -231,7 +231,9 @@ class Hops_s3ViewSet(ListModelFieldsMixin,
 
     def create(self, request, *args, **kwargs):
 
-        logger.debug('user: %s', request.user)
+        logger.debug('USER: %s', request.user)
+        logger.debug('TOKEN: %s', request.auth)
+        logger.debug('http_auth: ' + request.META.get('HTTP_AUTHORIZATION'))
 
         if not request.user.is_authenticated:
             return Response(
