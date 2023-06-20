@@ -231,6 +231,8 @@ class Hops_s3ViewSet(ListModelFieldsMixin,
 
     def create(self, request, *args, **kwargs):
 
+        logger.debug('user: %s', request.user)
+
         if not request.user.is_authenticated:
             return Response(
                 {"detail": "Authentication credentials were not provided."},
