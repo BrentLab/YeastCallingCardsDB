@@ -263,6 +263,9 @@ def experiment_data(query_params_dict):
         df.rename(columns={'chr': 'chr_id'}, inplace=True)
         df['experiment_id'] = experiment_id
 
+        # add hops_source
+        df['hops_source'] = record.source_id
+
         # Add the DataFrame to the list of DataFrames
         dataframes.append(df)
 
@@ -271,7 +274,8 @@ def experiment_data(query_params_dict):
             'experiment_total_hops': df.shape[0],
             'tf_id': record.experiment.tf.tf_id,
             'experiment_batch': record.experiment.batch,
-            'experiment_replicate': record.experiment.batch_replicate
+            'experiment_replicate': record.experiment.batch_replicate,
+            'hops_source': record.source_id,
         }
 
     # Convert experiment_counts_dict to a DataFrame
@@ -285,7 +289,7 @@ def experiment_data(query_params_dict):
 
     # Prepare filtered_experiment_df for merging with the background data
     filtered_experiment_df = filtered_experiment_df.merge(
-        experiment_counts_df, on='experiment_id', how='left')
+        experiment_counts_df, on=['experiment_id', 'hops_source'], how='left')
 
     return experiment_counts_df, filtered_experiment_df
 

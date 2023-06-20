@@ -72,13 +72,24 @@ class TestCallingCardsWithMetrics(APITestCase):
 
         query_params = {
             'experiment_id': response.json()['experiment'],
+            'hops_source': self.source_record.pk,
             'background_source': 'adh1',
             'promoter_source': 'yiming'
         }
 
         actual = callingcards_with_metrics(query_params)
 
-        assert 2 == 2
+        assert set(actual.columns) == {'experiment_id', 'tf_id',
+                                       'experiment_batch',
+                                       'experiment_replicate',
+                                       'hops_source', 'experiment_hops',
+                                       'experiment_total_hops',
+                                       'background_source', 'background_hops',
+                                       'background_total_hops',
+                                       'callingcards_enrichment',
+                                       'poisson_pval', 'hypergeometric_pval',
+                                       'promoter_id',
+                                       'promoter_source', 'target_gene_id'}
 
         # Expected result DataFrame
         # Replace with the expected values based on your test dataset
