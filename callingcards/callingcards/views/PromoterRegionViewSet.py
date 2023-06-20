@@ -25,7 +25,8 @@ from .mixins import (ListModelFieldsMixin,
                      UpdateModifiedMixin,
                      CustomValidateMixin)
 from ..models import (PromoterRegions, CallingCardsSig,
-                      CCExperiment, BackgroundSource,
+                      CCExperiment, HopsSource,
+                      BackgroundSource,
                       PromoterRegionsSource)
 from ..serializers import (PromoterRegionsSerializer,
                            PromoterRegionsTargetsOnlySerializer)
@@ -183,11 +184,13 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
                     continue
                 # cache the result in the database
                 grouped = result_df.groupby(['experiment_id',
+                                             'hops_source',
                                              'background_source',
                                              'promoter_source'])
                 for name, group in grouped:
                     logger.debug('processing group: {}'.format(name))
-                    experiment_id, background_source, promoter_source = name
+                    (experiment_id, hops_source,
+                     background_source, promoter_source) = name
 
                     # Compress the dataframe and write it to the buffer
                     compressed_buffer = io.BytesIO()
@@ -202,7 +205,9 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
                     filepath = os.path.join(
                         'analysis',
                         CCExperiment.objects.get(pk=experiment_id).batch,
-                        f'ccexperiment_{experiment_id}'
+                        f'ccexperiment_{experiment_id}',
+                        f'{hops_source}',
+                        f'_{background_source}',
                         f'_{promoter_source}.csv.gz')
 
                     logger.debug("filepath: %s", filepath)
@@ -221,6 +226,7 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
                         modified=datetime.datetime.now(),
                         modifiedBy=user,
                         experiment=CCExperiment.objects.get(pk=experiment_id),
+                        hops_source=HopsSource.objects.get(pk=hops_source),
                         background_source=BackgroundSource.objects.get(pk=background_source),  # noqa
                         promoter_source=PromoterRegionsSource.objects.get(pk=promoter_source),  # noqa
                         file=filepath)

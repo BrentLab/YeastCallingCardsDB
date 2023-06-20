@@ -31,9 +31,11 @@ class CallingCardsSig(BaseModel):
     class Meta:
         db_table = 'callingcardssig'
         unique_together = (('experiment', 
+                            'hops_source',
                             'promoter_source', 
                             'background_source'),)
-        ordering = ['experiment', 
+        ordering = ['experiment',
+                    'hops_source',
                     'promoter_source', 
                     'background_source']
         verbose_name = 'CallingCardsSig'
