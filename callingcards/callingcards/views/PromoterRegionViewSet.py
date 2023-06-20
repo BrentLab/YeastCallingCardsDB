@@ -151,8 +151,8 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
             logger.debug('working on experiment: {}'.format(experiment))
             cached_sig = CallingCardsSigFilter(
                 {'experiment_id': experiment,
-                 'qbed_source': self.request.query_params.get(
-                     'qbed_source', None),
+                 'hops_source': self.request.query_params.get(
+                     'hops_source', None),
                  'background_source': self.request.query_params.get(
                      'background_source', None),
                  'promoter_source': self.request.query_params.get(
@@ -167,8 +167,8 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
                 try:
                     result_df = callingcards_with_metrics(
                         {'experiment_id': experiment,
-                         'qbed_source': self.request.query_params
-                            .get('qbed_source', None),
+                         'hops_source': self.request.query_params
+                            .get('hops_source', None),
                          'background_source': self.request.query_params
                             .get('background_source', None),
                          'promoter_source': self.request.query_params

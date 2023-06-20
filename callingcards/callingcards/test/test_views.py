@@ -298,7 +298,10 @@ class TestPromoterRegionsViewSet(APITestCase):
         response = self.client.get(fields_url)
         assert response.status_code == status.HTTP_200_OK
         assert set(response.data.keys()) == \
-            {'readable', 'writable', 'automatically_generated', 'filter'}
+            {'readable', 
+             'writable', 
+             'automatically_generated', 
+             'filter'}
 
     def test_callingcards_endpoint(self):
         # Create a CCExperiment instance to have some data to test with
@@ -313,10 +316,14 @@ class TestPromoterRegionsViewSet(APITestCase):
         background_source = BackgroundSourceFactory.create(
             source='adh1'
         )
+        hops_source = HopsSourceFactory.create(
+            source='mitra'
+        )
 
         # Create a CallingCardsSig instance to have some data to test with
         callingcards_sig = CallingCardsSigFactory.create(
             experiment=experiment,
+            hops_source=hops_source,
             background_source=background_source,
             promoter_source=self.promoterregionssource,
             file=filepath)

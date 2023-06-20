@@ -8,7 +8,7 @@ class CallingCardsSigFilter(django_filters.FilterSet):
     tf_locus_tag = django_filters.CharFilter('experiment__tf__tf__locus_tag')
     tf_gene = django_filters.CharFilter('experiment__tf__tf__gene')
     experiment_id = django_filters.NumberFilter('experiment__id')
-    qbed_source_id = django_filters.CharFilter('qbed_source__id')
+    hops_source_id = django_filters.CharFilter('hops_source__id')
     background_source_id = django_filters.CharFilter('background__id')
     promoter_source_id = django_filters.CharFilter('promoter_source__id')
 
@@ -16,6 +16,6 @@ class CallingCardsSigFilter(django_filters.FilterSet):
         model = CallingCardsSig
         fields = ['experiment', 'experiment_id',
                   'tf_id', 'tf_locus_tag', 'tf_gene',
-                  'qbed_source', 'qbed_source_id',
+                  'hops_source', 'hops_source_id',
                   'background_source', 'background_source_id',
                   'promoter_source', 'promoter_source_id']

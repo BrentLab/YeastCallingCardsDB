@@ -381,6 +381,7 @@ class CallingCardsSigFactory(BaseModelFactoryMixin,
                              factory.django.DjangoModelFactory):
 
     experiment = factory.SubFactory(CCExperimentFactory)
+    hops_source = factory.SubFactory(HopsSourceFactory)
     background_source = factory.SubFactory(BackgroundSourceFactory)
     promoter_source = factory.SubFactory(PromoterRegionsSourceFactory)
     file = factory.django.FileField(
