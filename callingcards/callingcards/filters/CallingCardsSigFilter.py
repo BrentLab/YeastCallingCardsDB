@@ -8,9 +8,6 @@ class CallingCardsSigFilter(django_filters.FilterSet):
     tf_locus_tag = django_filters.CharFilter('experiment__tf__tf__locus_tag')
     tf_gene = django_filters.CharFilter('experiment__tf__tf__gene')
     experiment_id = django_filters.NumberFilter('experiment__id')
-    hops_source_id = django_filters.CharFilter('hops_source__id')
-    background_source_id = django_filters.CharFilter('background__id')
-    promoter_source_id = django_filters.CharFilter('promoter_source__id')
 
     class Meta:
         model = CallingCardsSig
