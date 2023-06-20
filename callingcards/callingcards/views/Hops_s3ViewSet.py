@@ -344,9 +344,7 @@ class Hops_s3ViewSet(ListModelFieldsMixin,
                                                 'source',
                                                 'experiment',
                                                 'qbed',
-                                                'notes',
-                                                'user',
-                                                'data'}
+                                                'notes'}
         for key in drop_keys:
             del request.data[key]
 

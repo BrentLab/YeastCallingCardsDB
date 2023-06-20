@@ -86,10 +86,15 @@ class CustomCreateMixin:
         """
         many_flag = True if isinstance(request.data, list) else False
 
+        logger.debug("User before assignment: %s, Type: %s",
+                     request.user, type(request.user))
+
         kwargs = {
             self.user_field: self.request.user,
             self.modifiedby_field: self.request.user
         }
+
+        logger.debug('kwargs: %s', kwargs)
 
         serializer = self.get_serializer(data=request.data, many=many_flag)
         serializer.is_valid(raise_exception=True)

@@ -200,6 +200,11 @@ class Common(Configuration):
                 'level': 'INFO',
                 'propagate': False,
             },
+            'callingcards.callingcards.views.mixins.CustomCreateMixin': {
+                'handlers': ['console', 'file'],
+                'level': 'DEBUG',
+                'propagate': False,
+            },
             'callingcards.callingcards.utils': {
                 'handlers': ['console', 'file'],
                 'level': 'INFO',
