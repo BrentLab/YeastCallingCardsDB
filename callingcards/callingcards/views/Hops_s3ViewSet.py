@@ -1,7 +1,7 @@
 # pylint: disable=W1203
 import logging
 from rest_framework import viewsets, status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.filters import SearchFilter
 from rest_framework.test import APIClient
@@ -218,7 +218,7 @@ class Hops_s3ViewSet(ListModelFieldsMixin,
     """
     queryset = Hops_s3.objects.all()
     serializer_class = Hops_s3Serializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     filter_backends = (DjangoFilterBackend, SearchFilter)
     filter_class = Hops_s3Filter
     search_fields = ('experiment__tf__tf__id',
