@@ -13,7 +13,7 @@ class ListModelFieldsMixin:
         writable = [field.source for field in
                     self.get_serializer()._writable_fields]
         automatically_generated = ['id',
-                                   'uploader',
+                                   'uploader.username',
                                    'uploadDate',
                                    'modified']
 
