@@ -231,6 +231,11 @@ class Hops_s3ViewSet(ListModelFieldsMixin,
 
     def create(self, request, *args, **kwargs):
 
+        if not request.user.is_authenticated:
+            return Response(
+                {"detail": "Authentication credentials were not provided."},
+                status=status.HTTP_401_UNAUTHORIZED)
+
         # Check that required fields for all upload methods are presen
         key_check_diff = {'chr_format', 'source'} - set(request.data.keys())
 
