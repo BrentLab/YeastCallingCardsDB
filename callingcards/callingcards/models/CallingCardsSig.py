@@ -19,6 +19,8 @@ logger = logging.getLogger(__name__)
 class CallingCardsSig(BaseModel):
     experiment = models.ForeignKey('CCExperiment',
                                    on_delete=models.CASCADE)
+    qbed_source = models.ForeignKey('HopsSource',
+                                    on_delete=models.CASCADE)
     background_source = models.ForeignKey('BackgroundSource',
                                           on_delete=models.CASCADE)
     promoter_source = models.ForeignKey('PromoterRegionsSource',

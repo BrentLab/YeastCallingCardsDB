@@ -36,9 +36,10 @@ from ..utils.callingcards_with_metrics import callingcards_with_metrics
 logger = logging.getLogger(__name__)
 
 # TODO: the callingcards endpoint should be moved to its own url, most likely.
-# otherwise, the logic in that endpoint needs to be split into functions and 
-# saved separately -- it is too long to read and manage. Hard to keep track of 
+# otherwise, the logic in that endpoint needs to be split into functions and
+# saved separately -- it is too long to read and manage. Hard to keep track of
 # the levels of indentation.
+
 
 class PromoterRegionsViewSet(ListModelFieldsMixin,
                              CustomCreateMixin,
@@ -150,6 +151,8 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
             logger.debug('working on experiment: {}'.format(experiment))
             cached_sig = CallingCardsSigFilter(
                 {'experiment_id': experiment,
+                 'qbed_source': self.request.query_params.get(
+                     'qbed_source', None),
                  'background_source': self.request.query_params.get(
                      'background_source', None),
                  'promoter_source': self.request.query_params.get(
@@ -164,14 +167,14 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
                 try:
                     result_df = callingcards_with_metrics(
                         {'experiment_id': experiment,
-                            'background_source':
-                            self.request.query_params
-                                .get('background_source', None),
-                            'promoter_source':
-                            self.request.query_params
-                                .get('promoter_source', None)})
+                         'qbed_source': self.request.query_params
+                            .get('qbed_source', None),
+                         'background_source': self.request.query_params
+                            .get('background_source', None),
+                         'promoter_source': self.request.query_params
+                            .get('promoter_source', None)})
                 except ValueError as err:
-                    # log the info and continue on to the next item in 
+                    # log the info and continue on to the next item in
                     # the experiment_id_list
                     logger.error('callingcards_with_metrics failed: '
                                  '{}'.format(err))
