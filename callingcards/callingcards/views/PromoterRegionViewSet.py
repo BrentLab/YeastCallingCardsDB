@@ -165,7 +165,8 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
 
             # if there are no cached files, calculate the metrics by replicate
             if len(cached_sig) == 0:
-                process_experiment.delay(
+                logger.debug('submitting to celery')
+                result = process_experiment.delay(
                     experiment,
                     user.id,
                     hops_source=self.request.query_params.get(
@@ -175,6 +176,8 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
                     promoter_source=self.request.query_params.get(
                         'promoter_source', None)
                 )
+
+                logger.info('celery task id: %s', result.task_id)
                 # if not, calculate
                 # try:
                 #     result_df = callingcards_with_metrics(
