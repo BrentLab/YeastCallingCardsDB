@@ -152,6 +152,7 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
         pool = multiprocessing.Pool(
             processes=max(1, multiprocessing.cpu_count() - 1))
         df_list = []
+        async_results_list = []
         for experiment in experiment_id_list:
             # check if the file exists in the cache
             logger.debug('working on experiment: {}'.format(experiment))
@@ -174,7 +175,7 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
                                                 args=(experiment, user.id),
                                                 kwds=self.request.query_params)
                 # Append the async result to a list for later retrieval
-                df_list.append(async_result)
+                async_results_list.append(async_result)
                 # # if not, calculate
                 # try:
                 #     result_df = callingcards_with_metrics(
@@ -263,6 +264,15 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
         # Close the worker pool and wait for all tasks to complete
         pool.close()
         pool.join()
+
+        # Now retrieve the actual results from the async calls
+        for async_result in async_results_list:
+            try:
+                result_df = async_result.get()
+                if result_df is not None:
+                    df_list.append(result_df)
+            except Exception as e:
+                logger.error(f"Error retrieving async result: {e}")
 
         start = time.time()
         # save the dataframe to file (compressed)
