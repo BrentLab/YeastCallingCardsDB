@@ -18,6 +18,7 @@ from django.core.files.base import ContentFile
 
 import pandas as pd
 
+from ..tasks import process_experiment
 from .mixins import (ListModelFieldsMixin,
                      CustomCreateMixin,
                      PageSizeModelMixin,
@@ -164,74 +165,84 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
 
             # if there are no cached files, calculate the metrics by replicate
             if len(cached_sig) == 0:
+                process_experiment.delay(
+                    experiment,
+                    user.id,
+                    hops_source=self.request.query_params.get(
+                        'hops_source', None),
+                    background_source=self.request.query_params.get(
+                        'background_source', None),
+                    promoter_source=self.request.query_params.get(
+                        'promoter_source', None)
+                )
                 # if not, calculate
-                try:
-                    result_df = callingcards_with_metrics(
-                        {'experiment_id': experiment,
-                         'hops_source': self.request.query_params
-                            .get('hops_source', None),
-                         'background_source': self.request.query_params
-                            .get('background_source', None),
-                         'promoter_source': self.request.query_params
-                            .get('promoter_source', None)})
-                except ValueError as err:
-                    # log the info and continue on to the next item in
-                    # the experiment_id_list
-                    logger.error('callingcards_with_metrics failed: '
-                                 '{}'.format(err))
-                    # do not continue with the rest of the curren iteration
-                    # TODO refactor to remove continue
-                    continue
-                # cache the result in the database
-                grouped = result_df.groupby(['experiment_id',
-                                             'hops_source',
-                                             'background_source',
-                                             'promoter_source'])
-                for name, group in grouped:
-                    logger.debug('processing group: {}'.format(name))
-                    (experiment_id, hops_source,
-                     background_source, promoter_source) = name
+                # try:
+                #     result_df = callingcards_with_metrics(
+                #         {'experiment_id': experiment,
+                #          'hops_source': self.request.query_params
+                #             .get('hops_source', None),
+                #          'background_source': self.request.query_params
+                #             .get('background_source', None),
+                #          'promoter_source': self.request.query_params
+                #             .get('promoter_source', None)})
+                # except ValueError as err:
+                #     # log the info and continue on to the next item in
+                #     # the experiment_id_list
+                #     logger.error('callingcards_with_metrics failed: '
+                #                  '{}'.format(err))
+                #     # do not continue with the rest of the curren iteration
+                #     # TODO refactor to remove continue
+                #     continue
+                # # cache the result in the database
+                # grouped = result_df.groupby(['experiment_id',
+                #                              'hops_source',
+                #                              'background_source',
+                #                              'promoter_source'])
+                # for name, group in grouped:
+                #     logger.debug('processing group: {}'.format(name))
+                #     (experiment_id, hops_source,
+                #      background_source, promoter_source) = name
 
-                    # Compress the dataframe and write it to the buffer
-                    compressed_buffer = io.BytesIO()
-                    with gzip.GzipFile(fileobj=compressed_buffer,
-                                       mode='wb') as gz:
-                        group.to_csv(gz, index=False, encoding='utf-8')
+                #     # Compress the dataframe and write it to the buffer
+                #     compressed_buffer = io.BytesIO()
+                #     with gzip.GzipFile(fileobj=compressed_buffer,
+                #                        mode='wb') as gz:
+                #         group.to_csv(gz, index=False, encoding='utf-8')
 
-                    # Reset the buffer's position to the beginning
-                    compressed_buffer.seek(0)
+                #     # Reset the buffer's position to the beginning
+                #     compressed_buffer.seek(0)
 
-                    # Save the file to Django's default storage
-                    filepath = os.path.join(
-                        'analysis',
-                        CCExperiment.objects.get(pk=experiment_id).batch,
-                        f'ccexperiment_{experiment_id}',
-                        f'{hops_source}'
-                        f'_{background_source}'
-                        f'_{promoter_source}.csv.gz')
+                #     # Save the file to Django's default storage
+                #     filepath = os.path.join(
+                #         'analysis',
+                #         CCExperiment.objects.get(pk=experiment_id).batch,
+                #         f'ccexperiment_{experiment_id}',
+                #         f'{hops_source}'
+                #         f'_{background_source}'
+                #         f'_{promoter_source}.csv.gz')
 
-                    logger.debug("filepath: %s", filepath)
+                #     logger.debug("filepath: %s", filepath)
 
-                    default_storage.save(
-                        filepath,
-                        ContentFile(compressed_buffer.read()))
+                #     default_storage.save(
+                #         filepath,
+                #         ContentFile(compressed_buffer.read()))
 
-                    # Close the buffer
-                    compressed_buffer.close()
+                #     # Close the buffer
+                #     compressed_buffer.close()
 
-                    # create the record in the database
-                    CallingCardsSig.objects.create(
-                        uploader=user,
-                        uploadDate=datetime.date.today(),
-                        modified=datetime.datetime.now(),
-                        modifiedBy=user,
-                        experiment=CCExperiment.objects.get(pk=experiment_id),
-                        hops_source=HopsSource.objects.get(pk=hops_source),
-                        background_source=BackgroundSource.objects.get(pk=background_source),  # noqa
-                        promoter_source=PromoterRegionsSource.objects.get(pk=promoter_source),  # noqa
-                        file=filepath)
+                #     # create the record in the database
+                #     CallingCardsSig.objects.create(
+                #         uploader=user,
+                #         uploadDate=datetime.date.today(),
+                #         modified=datetime.datetime.now(),
+                #         modifiedBy=user,
+                #         experiment=CCExperiment.objects.get(pk=experiment_id),
+                #         hops_source=HopsSource.objects.get(pk=hops_source),
+                #         background_source=BackgroundSource.objects.get(pk=background_source),  # noqa
+                #         promoter_source=PromoterRegionsSource.objects.get(pk=promoter_source),  # noqa
+                #         file=filepath)
 
-                df_list.append(result_df)
+                # df_list.append(result_df)
             # if there are records already in the database, get them, read
             # them in and append them to the list
             else:
@@ -249,31 +260,36 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
                     df_list.append(df)
                 logger.info('cached_sig time: {}'.format(time.time() - start))
 
-        start = time.time()
         # save the dataframe to file (compressed)
-        try:
-            df_concatenated = pd.concat(df_list, ignore_index=True)
-            # create a file-like buffer to receive the compressed data
-            compressed_buffer = io.BytesIO()
+        if len(df_list) > 0:
+            try:
+                df_concatenated = pd.concat(df_list, ignore_index=True)
+                # create a file-like buffer to receive the compressed data
+                compressed_buffer = io.BytesIO()
 
-            # compress the dataframe and write it to the buffer
-            with gzip.GzipFile(fileobj=compressed_buffer, mode='wb') as gz:
-                df_concatenated.to_csv(gz, index=False, encoding='utf-8')
+                # compress the dataframe and write it to the buffer
+                with gzip.GzipFile(fileobj=compressed_buffer, mode='wb') as gz:
+                    df_concatenated.to_csv(gz, index=False, encoding='utf-8')
 
-            logger.info('served data prep time: {}'
-                        .format(time.time() - start))
-            # create the response object and set its content
-            # and content type
-            response = HttpResponse(compressed_buffer.getvalue(),
-                                    content_type='application/gzip')
+                logger.info('served data prep time: {}'
+                            .format(time.time() - start))
+                # create the response object and set its content
+                # and content type
+                response = HttpResponse(compressed_buffer.getvalue(),
+                                        content_type='application/gzip')
 
-            # set the content encoding and filename
-            response['Content-Encoding'] = 'gzip'
-            response['Content-Disposition'] = \
-                'attachment; filename="data.csv.gz"'
+                # set the content encoding and filename
+                response['Content-Encoding'] = 'gzip'
+                response['Content-Disposition'] = \
+                    'attachment; filename="data.csv.gz"'
 
-            return response
-        except ValueError as err:
-            logger.error('ValueError: {}'.format(err))
-            return Response("ValueError: {}".format(err),
-                            status=status.HTTP_400_BAD_REQUEST)
+                return response
+            except ValueError as err:
+                logger.error('ValueError: {}'.format(err))
+                return Response("ValueError: {}".format(err),
+                                status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response("The following experiment_ids were submitted for "
+                            "processing: %s. Keep an eye on the task queue "
+                            "and retrieve them when they are finished.",
+                            status=status.HTTP_102_PROCESSING)
