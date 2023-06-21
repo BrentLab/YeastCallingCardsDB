@@ -1,5 +1,6 @@
 # pylint: disable=C0209,W1202
-import multiprocessing
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures.process import BrokenProcessPool
 import logging
 import os
 import gzip
@@ -149,33 +150,34 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
         # iterate over the experiment ids and either get the cached file
         # or calculate the dataframe
         # Create a pool of worker processes
-        pool = multiprocessing.Pool(
-            processes=max(1, multiprocessing.cpu_count() - 1))
         df_list = []
-        async_results_list = []
-        for experiment in experiment_id_list:
-            # check if the file exists in the cache
-            logger.debug('working on experiment: {}'.format(experiment))
-            cached_sig = CallingCardsSigFilter(
-                {'experiment_id': experiment,
-                 'hops_source': self.request.query_params.get(
-                     'hops_source', None),
-                 'background_source': self.request.query_params.get(
-                     'background_source', None),
-                 'promoter_source': self.request.query_params.get(
-                     'promoter_source', None)},
-                queryset=CallingCardsSig.objects.all()).qs
-            # log the length of the cached file
-            logger.debug('cached_sig len: {}'.format(len(cached_sig)))
+        # Use a process pool executor to parallelize the tasks
+        with ProcessPoolExecutor(max_workers=max(1, os.cpu_count() - 1)) \
+                as executor:
+            future_to_experiment = {}
+            for experiment in experiment_id_list:
+                # check if the file exists in the cache
+                logger.debug('working on experiment: {}'.format(experiment))
+                cached_sig = CallingCardsSigFilter(
+                    {'experiment_id': experiment,
+                     'hops_source': self.request.query_params.get(
+                         'hops_source', None),
+                     'background_source': self.request.query_params.get(
+                         'background_source', None),
+                     'promoter_source': self.request.query_params.get(
+                         'promoter_source', None)},
+                    queryset=CallingCardsSig.objects.all()).qs
+                # log the length of the cached file
+                logger.debug('cached_sig len: {}'.format(len(cached_sig)))
 
-            # if there are no cached files, calculate the metrics by replicate
-            if len(cached_sig) == 0:
-                # Submit the experiment to the worker pool
-                async_result = pool.apply_async(process_experiment,
-                                                args=(experiment, user.id),
-                                                kwds=self.request.query_params)
-                # Append the async result to a list for later retrieval
-                async_results_list.append(async_result)
+                # if there are no cached files, calculate the metrics by replicate
+                if len(cached_sig) == 0:
+                    # Submit the experiment to the worker pool
+                    future = executor.submit(
+                        process_experiment, experiment, user.id, **self.request.query_params
+                    )
+                    # Keep track of the future and the experiment it's associated with
+                    future_to_experiment[future] = experiment
                 # # if not, calculate
                 # try:
                 #     result_df = callingcards_with_metrics(
@@ -246,37 +248,36 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
                 # df_list.append(result_df)
             # if there are records already in the database, get them, read
             # them in and append them to the list
-            else:
-                start = time.time()
-                for significance_file in cached_sig:
-                    # Get the file field from the queryset
-                    file_field = significance_file.file
-                    # Open the file using the storage backend
-                    with default_storage.open(file_field.name, 'rb') as f:
-                        # Read the file content into a BytesIO buffer
-                        file_content = io.BytesIO(f.read())
-                    # Read the file content with pandas
-                    df = pd.read_csv(file_content, compression='gzip')
-                    # append it to the list
-                    df_list.append(df)
-                logger.info('cached_sig time: {}'.format(time.time() - start))
-
-        # Close the worker pool and wait for all tasks to complete
-        pool.close()
-        pool.join()
-
-        # Now retrieve the actual results from the async calls
-        for async_result in async_results_list:
-            try:
-                result_df = async_result.get()
-                if result_df is not None:
-                    df_list.append(result_df)
                 else:
-                    logger.error('callingcards_with_metrics async failed '
-                                 'to return a result for one of the '
-                                 'experiments')
-            except Exception as err:
-                logger.error("Error retrieving async result: %s", err)
+                    start = time.time()
+                    for significance_file in cached_sig:
+                        # Get the file field from the queryset
+                        file_field = significance_file.file
+                        # Open the file using the storage backend
+                        with default_storage.open(file_field.name, 'rb') as f:
+                            # Read the file content into a BytesIO buffer
+                            file_content = io.BytesIO(f.read())
+                        # Read the file content with pandas
+                        df = pd.read_csv(file_content, compression='gzip')
+                        # append it to the list
+                        df_list.append(df)
+                    logger.info('cached_sig time: {}'.format(
+                        time.time() - start))
+                    # Now retrieve the actual results from the async calls
+
+            for future in as_completed(future_to_experiment):
+                experiment = future_to_experiment[future]
+                try:
+                    result_df = future.result()
+                    if result_df is not None:
+                        df_list.append(result_df)
+                    else:
+                        logger.error(
+                            'callingcards_with_metrics async failed '
+                            'to return a result for experiment %s', experiment)
+                except BrokenProcessPool as err:
+                    logger.error("Error processing experiment %s: %s",
+                                 experiment, err)
 
         start = time.time()
         # save the dataframe to file (compressed)
