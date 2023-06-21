@@ -34,8 +34,8 @@ from ..serializers import (PromoterRegionsSerializer,
                            PromoterRegionsTargetsOnlySerializer)
 from ..filters import (PromoterRegionsFilter, CCExperimentFilter,
                        CallingCardsSigFilter)
-# from ..utils.callingcards_with_metrics import callingcards_with_metrics
-from ..utils.process_experiment import process_experiment
+from ..utils.callingcards_with_metrics import callingcards_with_metrics
+#from ..utils.process_experiment import process_experiment
 
 logger = logging.getLogger(__name__)
 
@@ -154,7 +154,7 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
         # Use a process pool executor to parallelize the tasks
         # with ProcessPoolExecutor(max_workers=max(1, os.cpu_count() - 1)) \
         #         as executor:
-            future_to_experiment = {}
+        #future_to_experiment = {}
         for experiment in experiment_id_list:
             # check if the file exists in the cache
             logger.debug('working on experiment: {}'.format(experiment))
