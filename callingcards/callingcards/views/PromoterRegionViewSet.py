@@ -1,4 +1,5 @@
 # pylint: disable=C0209,W1202
+import multiprocessing
 import logging
 import os
 import gzip
@@ -32,7 +33,8 @@ from ..serializers import (PromoterRegionsSerializer,
                            PromoterRegionsTargetsOnlySerializer)
 from ..filters import (PromoterRegionsFilter, CCExperimentFilter,
                        CallingCardsSigFilter)
-from ..utils.callingcards_with_metrics import callingcards_with_metrics
+# from ..utils.callingcards_with_metrics import callingcards_with_metrics
+from ..utils.process_experiment import process_experiment
 
 logger = logging.getLogger(__name__)
 
@@ -146,6 +148,9 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
 
         # iterate over the experiment ids and either get the cached file
         # or calculate the dataframe
+        # Create a pool of worker processes
+        pool = multiprocessing.Pool(
+            processes=max(1, multiprocessing.cpu_count() - 1))
         df_list = []
         for experiment in experiment_id_list:
             # check if the file exists in the cache
@@ -164,74 +169,80 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
 
             # if there are no cached files, calculate the metrics by replicate
             if len(cached_sig) == 0:
-                # if not, calculate
-                try:
-                    result_df = callingcards_with_metrics(
-                        {'experiment_id': experiment,
-                         'hops_source': self.request.query_params
-                            .get('hops_source', None),
-                         'background_source': self.request.query_params
-                            .get('background_source', None),
-                         'promoter_source': self.request.query_params
-                            .get('promoter_source', None)})
-                except ValueError as err:
-                    # log the info and continue on to the next item in
-                    # the experiment_id_list
-                    logger.error('callingcards_with_metrics failed: '
-                                 '{}'.format(err))
-                    # do not continue with the rest of the curren iteration
-                    # TODO refactor to remove continue
-                    continue
-                # cache the result in the database
-                grouped = result_df.groupby(['experiment_id',
-                                             'hops_source',
-                                             'background_source',
-                                             'promoter_source'])
-                for name, group in grouped:
-                    logger.debug('processing group: {}'.format(name))
-                    (experiment_id, hops_source,
-                     background_source, promoter_source) = name
+                # Submit the experiment to the worker pool
+                async_result = pool.apply_async(process_experiment,
+                                                args=(experiment, user.id),
+                                                kwds=self.request.query_params)
+                # Append the async result to a list for later retrieval
+                df_list.append(async_result)
+                # # if not, calculate
+                # try:
+                #     result_df = callingcards_with_metrics(
+                #         {'experiment_id': experiment,
+                #          'hops_source': self.request.query_params
+                #             .get('hops_source', None),
+                #          'background_source': self.request.query_params
+                #             .get('background_source', None),
+                #          'promoter_source': self.request.query_params
+                #             .get('promoter_source', None)})
+                # except ValueError as err:
+                #     # log the info and continue on to the next item in
+                #     # the experiment_id_list
+                #     logger.error('callingcards_with_metrics failed: '
+                #                  '{}'.format(err))
+                #     # do not continue with the rest of the curren iteration
+                #     # TODO refactor to remove continue
+                #     continue
+                # # cache the result in the database
+                # grouped = result_df.groupby(['experiment_id',
+                #                              'hops_source',
+                #                              'background_source',
+                #                              'promoter_source'])
+                # for name, group in grouped:
+                #     logger.debug('processing group: {}'.format(name))
+                #     (experiment_id, hops_source,
+                #      background_source, promoter_source) = name
 
-                    # Compress the dataframe and write it to the buffer
-                    compressed_buffer = io.BytesIO()
-                    with gzip.GzipFile(fileobj=compressed_buffer,
-                                       mode='wb') as gz:
-                        group.to_csv(gz, index=False, encoding='utf-8')
+                #     # Compress the dataframe and write it to the buffer
+                #     compressed_buffer = io.BytesIO()
+                #     with gzip.GzipFile(fileobj=compressed_buffer,
+                #                        mode='wb') as gz:
+                #         group.to_csv(gz, index=False, encoding='utf-8')
 
-                    # Reset the buffer's position to the beginning
-                    compressed_buffer.seek(0)
+                #     # Reset the buffer's position to the beginning
+                #     compressed_buffer.seek(0)
 
-                    # Save the file to Django's default storage
-                    filepath = os.path.join(
-                        'analysis',
-                        CCExperiment.objects.get(pk=experiment_id).batch,
-                        f'ccexperiment_{experiment_id}',
-                        f'{hops_source}'
-                        f'_{background_source}'
-                        f'_{promoter_source}.csv.gz')
+                #     # Save the file to Django's default storage
+                #     filepath = os.path.join(
+                #         'analysis',
+                #         CCExperiment.objects.get(pk=experiment_id).batch,
+                #         f'ccexperiment_{experiment_id}',
+                #         f'{hops_source}'
+                #         f'_{background_source}'
+                #         f'_{promoter_source}.csv.gz')
 
-                    logger.debug("filepath: %s", filepath)
+                #     logger.debug("filepath: %s", filepath)
 
-                    default_storage.save(
-                        filepath,
-                        ContentFile(compressed_buffer.read()))
+                #     default_storage.save(
+                #         filepath,
+                #         ContentFile(compressed_buffer.read()))
 
-                    # Close the buffer
-                    compressed_buffer.close()
+                #     # Close the buffer
+                #     compressed_buffer.close()
 
-                    # create the record in the database
-                    CallingCardsSig.objects.create(
-                        uploader=user,
-                        uploadDate=datetime.date.today(),
-                        modified=datetime.datetime.now(),
-                        modifiedBy=user,
-                        experiment=CCExperiment.objects.get(pk=experiment_id),
-                        hops_source=HopsSource.objects.get(pk=hops_source),
-                        background_source=BackgroundSource.objects.get(pk=background_source),  # noqa
-                        promoter_source=PromoterRegionsSource.objects.get(pk=promoter_source),  # noqa
-                        file=filepath)
+                #     # create the record in the database
+                #     CallingCardsSig.objects.create(
+                #         uploader=user,
+                #         uploadDate=datetime.date.today(),
+                #         modified=datetime.datetime.now(),
+                #         modifiedBy=user,
+                #         experiment=CCExperiment.objects.get(pk=experiment_id),
+                #         hops_source=HopsSource.objects.get(pk=hops_source),
+                #         background_source=BackgroundSource.objects.get(pk=background_source),  # noqa
+                #         promoter_source=PromoterRegionsSource.objects.get(pk=promoter_source),  # noqa
+                #         file=filepath)
 
-                df_list.append(result_df)
+                # df_list.append(result_df)
             # if there are records already in the database, get them, read
             # them in and append them to the list
             else:
@@ -248,6 +259,10 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
                     # append it to the list
                     df_list.append(df)
                 logger.info('cached_sig time: {}'.format(time.time() - start))
+
+        # Close the worker pool and wait for all tasks to complete
+        pool.close()
+        pool.join()
 
         start = time.time()
         # save the dataframe to file (compressed)
