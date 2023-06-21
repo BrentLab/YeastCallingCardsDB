@@ -271,8 +271,12 @@ class PromoterRegionsViewSet(ListModelFieldsMixin,
                 result_df = async_result.get()
                 if result_df is not None:
                     df_list.append(result_df)
-            except Exception as e:
-                logger.error(f"Error retrieving async result: {e}")
+                else:
+                    logger.error('callingcards_with_metrics async failed '
+                                 'to return a result for one of the '
+                                 'experiments')
+            except Exception as err:
+                logger.error("Error retrieving async result: %s", err)
 
         start = time.time()
         # save the dataframe to file (compressed)
