@@ -14,7 +14,8 @@ class Hops_s3(BaseModel):
     """
     CHR_FORMAT_CHOICES = [
         (x.name, x.name) for x in ChrMap._meta.fields if x.name not in
-        {'uploader', 'uploadDate', 'modified', 'modifiedBy', 'seqlength'}]
+        {'uploader', 'uploadDate', 'modified', 
+         'modifiedBy', 'seqlength', 'genomic'}]
 
     chr_format = models.CharField(max_length=25,
                                   choices=CHR_FORMAT_CHOICES,
