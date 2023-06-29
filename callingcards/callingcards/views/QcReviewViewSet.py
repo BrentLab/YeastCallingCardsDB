@@ -11,7 +11,7 @@ from .mixins import (ListModelFieldsMixin,
                      UpdateModifiedMixin,
                      CustomValidateMixin)
 from .constants import UNDETERMINED_LOCUS_TAG
-from ..models import Hops, QcR1ToR2Tf, QcR2ToR1Tf, Gene, QcManualReview
+from ..models import Hops_s3, QcR1ToR2Tf, QcR2ToR1Tf, Gene, QcManualReview
 from ..serializers import QcReviewSerializer, QcManualReviewSerializer
 from ..filters import CCExperimentFilter
 
@@ -32,11 +32,17 @@ class QcReviewViewSet(ListModelFieldsMixin,
 
     def get_queryset(self):
 
-        hop_count_subquery = Hops.objects\
+        genomic_hops_subquery = Hops_s3.objects\
             .filter(experiment_id=OuterRef('pk'))\
-            .values('experiment_id')\
-            .annotate(count=Count('experiment_id'))\
-            .values('count')
+            .values('genomic_hops')[:1]
+
+        mito_hops_subquery = Hops_s3.objects\
+            .filter(experiment_id=OuterRef('pk'))\
+            .values('mito_hops')[:1]
+
+        plasmid_hops_subquery = Hops_s3.objects\
+            .filter(experiment_id=OuterRef('pk'))\
+            .values('plasmid_hops')[:1]
 
         r1_r2_max_tally_edit_dist_subquery = QcR1ToR2Tf.objects.filter(
             experiment_id=OuterRef('pk')
@@ -70,7 +76,9 @@ class QcReviewViewSet(ListModelFieldsMixin,
                     F('qcmetrics__genome_mapped') / NullIf(
                         F('qcmetrics__unmapped'), 0), Value(0)
                 ),
-                num_hops=Subquery(hop_count_subquery),
+                genomic_hops=Subquery(genomic_hops_subquery),
+                mito_hops=Subquery(mito_hops_subquery),
+                plasmid_hops=Subquery(plasmid_hops_subquery),
                 rank_recall=F('qcmanualreview__rank_recall'),
                 chip_better=F('qcmanualreview__chip_better'),
                 data_usable=F('qcmanualreview__data_usable'),
@@ -80,8 +88,9 @@ class QcReviewViewSet(ListModelFieldsMixin,
             .order_by('tf_alias', 'batch', 'batch_replicate')
             .values('experiment_id', 'tf_alias', 'batch', 'batch_replicate',
                     'r1_r2_max_tally_edit_dist', 'r2_r1_max_tally_edit_dist',
-                    'map_unmap_ratio', 'num_hops', 'rank_recall',
-                    'chip_better', 'data_usable', 'passing_replicate', 'note')
+                    'map_unmap_ratio', 'genomic_hops', 'mito_hops',
+                    'plasmid_hops', 'rank_recall', 'chip_better',
+                    'data_usable', 'passing_replicate', 'note')
         )
 
         # for item in query:

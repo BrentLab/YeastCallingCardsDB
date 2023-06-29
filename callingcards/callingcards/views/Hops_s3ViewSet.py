@@ -361,6 +361,7 @@ class Hops_s3ViewSet(ListModelFieldsMixin,
         # add the hops to the request data
         request.data['genomic_hops'] = hops['genomic']
         request.data['plasmid_hops'] = hops['plasmid']
+        request.data['mito_hops'] = hops['mito']
 
         # drop unnecessary data from the request
         drop_keys = set(request.data.keys()) - {'chr_format',
