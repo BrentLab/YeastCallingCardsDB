@@ -22,6 +22,7 @@ from ..filters import Hops_s3Filter
 from ..utils.validate_qbed_upload import (validate_chromosomes,
                                           validate_coordinates,
                                           validate_strand)
+from ..utils.count_hops import count_hops
 
 
 logger = logging.getLogger(__name__)
@@ -254,7 +255,7 @@ class Hops_s3ViewSet(ListModelFieldsMixin,
         token = str(request.auth)
 
         if not token:
-            return Response({'error': 'Auth Token not found -- contact admin.'},
+            return Response({'error': 'Auth Token not found -- contact admin.'},  # noqa
                             status=status.HTTP_400_BAD_REQUEST)
 
         uploaded_file = request.FILES.get('qbed')
@@ -350,6 +351,16 @@ class Hops_s3ViewSet(ListModelFieldsMixin,
         except RuntimeError as exc:
             return Response({'error': str(exc)},
                             status=status.HTTP_400_BAD_REQUEST)
+        
+        # calculate the genomic and plasmid hops
+        try:
+            hops = count_hops(df, request.data.get('chr_format'))
+        except ValueError as exc:
+            return Response({'error': str(exc)},
+                            status=status.HTTP_400_BAD_REQUEST)
+        # add the hops to the request data
+        request.data['genomic_hops'] = hops['genomic']
+        request.data['plasmid_hops'] = hops['plasmid']
 
         # drop unnecessary data from the request
         drop_keys = set(request.data.keys()) - {'chr_format',

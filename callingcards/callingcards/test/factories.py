@@ -78,6 +78,7 @@ class ChrMapFactory(BaseModelFactoryMixin,
     numbered = 1
     chr = 'chr1'
     seqlength = 230218
+    genomic = True
 
 
 class GeneFactory(BaseModelFactoryMixin,
@@ -255,6 +256,8 @@ class Hops_s3Factory(BaseModelFactoryMixin, factory.django.DjangoModelFactory):
     experiment = factory.SubFactory(CCExperimentFactory)
     qbed = random_file_from_media_directory('qbed')
     notes = 'some notes'
+    genomic_hops = 100
+    plasmid_hops = 10
 
     @classmethod
     def _create(cls, model_class, *args, **kwargs):

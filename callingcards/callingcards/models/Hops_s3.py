@@ -24,6 +24,8 @@ class Hops_s3(BaseModel):
     experiment = models.ForeignKey('CCExperiment',
                                    on_delete=models.CASCADE)
     qbed = models.FileField(upload_to=qbed_filepath)
+    genomic_hops = models.PositiveIntegerField(default=0)
+    plasmid_hops = models.PositiveIntegerField(default=0)
     notes = models.CharField(max_length=50, default='none')
 
     def __str__(self):
