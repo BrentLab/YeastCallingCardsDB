@@ -47,6 +47,8 @@ class ChrMap(BaseModel):
         all_maps = ChrMap.objects.all()
 
     """
+    TYPE = [('genomic', 'genomic'), ('mito', 'mito'), ('plasmid', 'plasmid')]
+
     refseq = models.CharField(
         max_length=12)
     igenomes = models.CharField(
@@ -63,9 +65,12 @@ class ChrMap(BaseModel):
     )
     chr = models.CharField(
         max_length=12)
-    genomic = models.BooleanField(
-        default=True)
-    
+    type = models.CharField(
+        max_length=8,
+        choices=TYPE,
+        default='genomic'
+    )
+
     def __str__(self):
         return f'{self.ucsc}(chrID:{self.id}'  # pylint: disable=no-member
 

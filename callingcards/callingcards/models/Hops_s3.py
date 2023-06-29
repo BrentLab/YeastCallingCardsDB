@@ -15,7 +15,7 @@ class Hops_s3(BaseModel):
     CHR_FORMAT_CHOICES = [
         (x.name, x.name) for x in ChrMap._meta.fields if x.name not in
         {'uploader', 'uploadDate', 'modified', 
-         'modifiedBy', 'seqlength', 'genomic'}]
+         'modifiedBy', 'seqlength', 'type'}]
 
     chr_format = models.CharField(max_length=25,
                                   choices=CHR_FORMAT_CHOICES,
@@ -26,6 +26,7 @@ class Hops_s3(BaseModel):
                                    on_delete=models.CASCADE)
     qbed = models.FileField(upload_to=qbed_filepath)
     genomic_hops = models.PositiveIntegerField(default=0)
+    mito_hops = models.PositiveIntegerField(default=0)
     plasmid_hops = models.PositiveIntegerField(default=0)
     notes = models.CharField(max_length=50, default='none')
 

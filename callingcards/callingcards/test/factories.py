@@ -78,7 +78,7 @@ class ChrMapFactory(BaseModelFactoryMixin,
     numbered = 1
     chr = 'chr1'
     seqlength = 230218
-    genomic = True
+    type = 'genomic'
 
 
 class GeneFactory(BaseModelFactoryMixin,
