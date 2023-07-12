@@ -129,8 +129,9 @@ class QcReviewViewSet(ListModelFieldsMixin,
             partial=True)
         
         if serializer.is_valid():
-            logger.debug("validated serializer.data: %s", serializer.data)
             serializer.save()
+            logger.debug("validated serializer.data: %s",
+                         serializer.data)
             qc_review_combined_data.update(serializer.data)
             drop_keys_list = ['experiment', 'id']
             for key in drop_keys_list:
