@@ -111,6 +111,7 @@ class QcReviewViewSet(ListModelFieldsMixin,
 
         qc_review_combined = self.get_queryset().get(experiment_id=pk)
         qc_review_combined_data = QcReviewSerializer(qc_review_combined).data
+        logger.debug("qc_review_combined_data: %s", qc_review_combined_data)
 
         # Get the fields that are present in the QcManualReviewSerializer
         valid_fields = set(QcManualReviewSerializer().get_fields().keys())
@@ -127,9 +128,8 @@ class QcReviewViewSet(ListModelFieldsMixin,
             data=update_data,
             partial=True)
         
-        logger.debug("serializer_errors: %s", serializer.errors)
-
         if serializer.is_valid():
+            logger.debug("validated serializer.data: %s", serializer.data)
             serializer.save()
             qc_review_combined_data.update(serializer.data)
             drop_keys_list = ['experiment', 'id']
