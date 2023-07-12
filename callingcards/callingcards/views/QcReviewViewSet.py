@@ -106,7 +106,7 @@ class QcReviewViewSet(ListModelFieldsMixin,
 
     def update(self, request, pk=None):
 
-        manual_review = QcManualReview.objects.get(pk=pk)
+        manual_review = QcManualReview.objects.get(experiment__id=pk)
         logger.debug("manual_review: %s", manual_review)
 
         qc_review_combined = self.get_queryset().get(experiment_id=pk)
