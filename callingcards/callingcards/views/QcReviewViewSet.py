@@ -114,8 +114,11 @@ class QcReviewViewSet(ListModelFieldsMixin,
         # Get the data fields to update and filter out any invalid fields
         # TODO this expects a single dict, not a list. Should it accept a list?
         # unlisting and extracting the first item is what the [0] is doing
-        update_data = {key: value for key, value in
-                       request.data[0].items() if key in valid_fields}
+        # update_data = {key: value for key, value in
+        #                request.data[0].items() if key in valid_fields}
+        update_data = {key: value for key, value in request.data.items() 
+                       if key in valid_fields}
+
 
         serializer = QcManualReviewSerializer(
             manual_review,
