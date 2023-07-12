@@ -107,6 +107,7 @@ class QcReviewViewSet(ListModelFieldsMixin,
     def update(self, request, pk=None):
 
         manual_review = QcManualReview.objects.get(pk=pk)
+        logger.debug("manual_review: %s", manual_review)
 
         qc_review_combined = self.get_queryset().get(experiment_id=pk)
         qc_review_combined_data = QcReviewSerializer(qc_review_combined).data
@@ -125,6 +126,8 @@ class QcReviewViewSet(ListModelFieldsMixin,
             manual_review,
             data=update_data,
             partial=True)
+        
+        logger.debug("serializer_errors: %s", serializer.errors)
 
         if serializer.is_valid():
             serializer.save()
