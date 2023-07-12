@@ -1,4 +1,5 @@
-from django.db.models import (Count, Case, When, F, Value,
+import logging
+from django.db.models import (Case, When, F, Value,
                               CharField, OuterRef, Subquery)
 from django.db.models.functions import Coalesce, NullIf
 from django_filters import rest_framework as filters
@@ -14,6 +15,8 @@ from .constants import UNDETERMINED_LOCUS_TAG
 from ..models import Hops_s3, QcR1ToR2Tf, QcR2ToR1Tf, Gene, QcManualReview
 from ..serializers import QcReviewSerializer, QcManualReviewSerializer
 from ..filters import CCExperimentFilter
+
+logger = logging.getLogger(__name__)
 
 
 class QcReviewViewSet(ListModelFieldsMixin,
@@ -114,11 +117,9 @@ class QcReviewViewSet(ListModelFieldsMixin,
         # Get the data fields to update and filter out any invalid fields
         # TODO this expects a single dict, not a list. Should it accept a list?
         # unlisting and extracting the first item is what the [0] is doing
-        # update_data = {key: value for key, value in
-        #                request.data[0].items() if key in valid_fields}
-        update_data = {key: value for key, value in request.data.items() 
-                       if key in valid_fields}
-
+        logger.debug("request.data: %s", request.data)
+        update_data = {key: value for key, value in
+                       request.data[0].items() if key in valid_fields}
 
         serializer = QcManualReviewSerializer(
             manual_review,
