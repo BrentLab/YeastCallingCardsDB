@@ -9,7 +9,7 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from .BaseModel import BaseModel
 from .constants import (P_VAL_DECIMAL_PLACES, P_VAL_MAX_DIGITS,
-                      EFFECT_DECIMAL_PLACES, EFFECT_MAX_DIGITS)
+                        EFFECT_DECIMAL_PLACES, EFFECT_MAX_DIGITS)
 
 
 class McIsaacZEV(BaseModel):
