@@ -35,11 +35,25 @@ def close_value(value, min_diff=0.0001, max_diff=0.01):
     return round(value + sign * diff, 5)
 
 
-def random_file_from_media_directory(dir):
-    media_directory = default_storage.location
-    files = [f for f in default_storage.listdir(dir)[1]
-             if default_storage.exists(dir+'/'+f)]
-    return os.path.join(dir, random.choice(files))
+def random_file_from_media_directory(dir_name):
+    # Assuming 'factories.py' is in the root of your test
+    # directory and 'data' is a subdirectory of 'test'.
+    test_data_directory = os.path.join(
+        os.path.dirname(__file__),
+        'data',
+        dir_name)
+
+    # Ensuring the directory exists
+    if not os.path.exists(test_data_directory):
+        raise FileNotFoundError(
+            f"Directory does not exist: {test_data_directory}")
+
+    # List files in the specified directory within 'test/data'
+    files = [f for f in os.listdir(test_data_directory)
+             if os.path.isfile(os.path.join(test_data_directory, f))]
+
+    # Return a random file path from the directory
+    return os.path.join(test_data_directory, random.choice(files))
 
 
 class BaseModelFactoryMixin(factory.django.DjangoModelFactory):
@@ -170,6 +184,20 @@ class McIsaacZEVFactory(BaseModelFactoryMixin,
     gene = factory.SubFactory(GeneFactory)
     effect = factory.LazyFunction(lambda: round(random.uniform(-5, 5), 2))
     tf = factory.SubFactory(GeneFactory)
+
+
+class McIsaacZEV_s3Factory(BaseModelFactoryMixin,
+                           factory.django.DjangoModelFactory):
+    class Meta:
+        model = 'callingcards.McIsaacZEV_s3'
+
+    tf = factory.SubFactory(GeneFactory)
+    strain = 'unknown'
+    date = '2023-11-07'
+    restriction = 'P'
+    mechanism = 'ZEV'
+    time = '0'
+    file = random_file_from_media_directory('mcisaac')
 
 
 class BackgroundSourceFactory(BaseModelFactoryMixin,

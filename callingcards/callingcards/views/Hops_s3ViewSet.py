@@ -1,7 +1,8 @@
 # pylint: disable=W1203
 import logging
+import gzip
 from rest_framework import viewsets, status
-from rest_framework.authentication import (SessionAuthentication, 
+from rest_framework.authentication import (SessionAuthentication,
                                            TokenAuthentication)
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -263,17 +264,21 @@ class Hops_s3ViewSet(ListModelFieldsMixin,
             return Response({'error': 'Qbed file not provided.'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        if uploaded_file.name.endswith('.gz') \
-            | uploaded_file.name.endswith('.gzip') \
-                | uploaded_file.name.endswith('.zip'):
-            df = pd.read_csv(uploaded_file,
-                             sep='\t',
-                             compression='gzip',
-                             index_col=False)
-        else:
-            df = pd.read_csv(uploaded_file,
-                             sep='\t',
-                             index_col=False)
+        try:
+            if uploaded_file.name.endswith('.gz') \
+                    or uploaded_file.name.endswith('.gzip'):
+                with gzip.open(uploaded_file, 'rt') as f:
+                    df = pd.read_csv(f, sep='\t', index_col=False)
+            else:
+                df = pd.read_csv(uploaded_file,
+                                 sep='\t',
+                                 index_col=False)
+        except UnicodeDecodeError as exc:
+            return Response({'error': f'UNCRECOGNIZED EXTENSION. must be '
+                             f'either a csv or a gzipped csv with extension '
+                            f'.[.gz,.gzip] {exc}'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
         if list(df.columns) != ['chr', 'start', 'end', 'depth', 'strand']:
             return Response({'error': ('Qbed must have the following columns, '
                                        'in order:'
@@ -351,7 +356,7 @@ class Hops_s3ViewSet(ListModelFieldsMixin,
         except RuntimeError as exc:
             return Response({'error': str(exc)},
                             status=status.HTTP_400_BAD_REQUEST)
-        
+
         # calculate the genomic and plasmid hops
         try:
             hops = count_hops(df, request.data.get('chr_format'))

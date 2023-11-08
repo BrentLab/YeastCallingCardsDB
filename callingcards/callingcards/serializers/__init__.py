@@ -16,6 +16,7 @@ from .HopsSerializers import HopsSerializer
 from .KemmerenTFKOSerializers import KemmerenTFKOSerializer
 from .LabSerializers import LabSerializer
 from .McIsaacZEVSerializers import McIsaacZEVSerializer
+from .McisaacZEV_s3_serializer import McIsaacZEV_s3Serializer
 from .PromoterRegionsSerializers import (PromoterRegionsSerializer,
                                          PromoterRegionsTargetsOnlySerializer,
                                          PromoterRegionsCallingCardsSerializer)

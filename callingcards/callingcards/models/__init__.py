@@ -15,6 +15,7 @@ from .HopsSource import HopsSource
 from .KemmerenTFKO import KemmerenTFKO
 from .Lab import Lab
 from .McIsaacZEV import McIsaacZEV
+from .McIsaacZEV_s3 import McIsaacZEV_s3
 from .PromoterRegions import PromoterRegions
 from .PromoterRegionsSource import PromoterRegionsSource
 from .QcManualReview import QcManualReview

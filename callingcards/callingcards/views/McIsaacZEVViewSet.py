@@ -12,6 +12,7 @@ from ..models import McIsaacZEV
 from ..serializers import McIsaacZEVSerializer
 from ..filters import McIsaacZevFilter
 
+
 class McIsaacZEVViewSet(ListModelFieldsMixin,
                         CustomCreateMixin,
                         CustomValidateMixin,

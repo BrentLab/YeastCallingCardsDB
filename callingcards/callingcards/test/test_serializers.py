@@ -1,12 +1,15 @@
+import os
+from django.test import override_settings
 from django.test import TestCase
 from django.forms.models import model_to_dict
-
 from callingcards.users.test.factories import UserFactory
 from .factories import (ChrMapFactory, GeneFactory, PromoterRegionsFactory,
                         PromoterRegionsSourceFactory,
                         ChipExoFactory,
                         HarbisonChIPFactory, KemmerenTFKOFactory,
-                        McIsaacZEVFactory, BackgroundFactory, CCTFFactory,
+                        McIsaacZEVFactory,
+                        McIsaacZEV_s3Factory,
+                        BackgroundFactory, CCTFFactory,
                         CCExperimentFactory, HopsFactory,
                         LabFactory,
                         QcMetricsFactory,
@@ -20,6 +23,7 @@ from ..serializers import (ChrMapSerializer, GeneSerializer,
                            HarbisonChIPSerializer,
                            HarbisonChIPAnnotatedSerializer,
                            KemmerenTFKOSerializer, McIsaacZEVSerializer,
+                           McIsaacZEV_s3Serializer,
                            BackgroundSerializer, CCTFSerializer,
                            LabSerializer,
                            CCTFListSerializer,
@@ -30,6 +34,8 @@ from ..serializers import (ChrMapSerializer, GeneSerializer,
                            ExpressionViewSetSerializer)
 
 from ..models import HarbisonChIP, PromoterRegions, ChipExo
+
+TEST_MEDIA_ROOT = os.path.join(os.path.dirname(__file__), 'test', 'data')
 
 
 class TestCreateChrMap(TestCase):
@@ -211,6 +217,21 @@ class TestMcIsaacZEV(TestCase):
             data=model_to_dict(self.factory.create()))
         assert serializer.is_valid() is True
 
+@override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
+class TestMcIsaacZEV_s3(TestCase):
+
+    def setUp(self):
+        self.serializer = McIsaacZEV_s3Serializer
+        self.factory = McIsaacZEV_s3Factory
+
+    def test_serializer_with_empty_data(self):
+        serializer = self.serializer(data={})  # noqa
+        assert serializer.is_valid() is False
+
+    def test_serializer_with_valid_data(self):
+        serializer = self.serializer(
+            data=model_to_dict(self.factory.create()))
+        assert serializer.is_valid() is True
 
 class TestBackground(TestCase):
 

@@ -17,6 +17,7 @@ from .callingcards.views import (ChrMapViewSet,
                                  HarbisonChIPViewSet,
                                  KemmerenTFKOViewSet,
                                  McIsaacZEVViewSet,
+                                 McIsaacZEV_s3ViewSet,
                                  BackgroundViewSet,
                                  CCTFViewSet,
                                  CCExperimentViewSet,
@@ -62,6 +63,9 @@ router.register(r'kemmerentfko',
 router.register(r'mcisaaczev',
                 McIsaacZEVViewSet,
                 basename='mcisaaczev')
+router.register(r'mcisaaczev_s3',
+                McIsaacZEV_s3ViewSet,
+                basename='mcisaaczevs3')
 router.register(r'background',
                 BackgroundViewSet,
                 basename='background')

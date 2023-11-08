@@ -27,8 +27,9 @@ from callingcards.users.test.factories import UserFactory
 from callingcards.callingcards.models import (ChrMap, Gene, PromoterRegions,
                                               ChipExo,
                                               HarbisonChIP, KemmerenTFKO,
-                                              McIsaacZEV, Background, CCTF,
-                                              CCExperiment, Hops, Hops_s3,
+                                              McIsaacZEV, McIsaacZEV_s3,
+                                              Background, CCTF,
+                                              CCExperiment, Hops_s3,
                                               QcMetrics,
                                               QcR1ToR2Tf, QcR2ToR1Tf,
                                               QcTfToTransposon)
@@ -39,7 +40,8 @@ from callingcards.callingcards.serializers import (HarbisonChIPSerializer,
 from .factories import (ChrMapFactory, GeneFactory, PromoterRegionsFactory,
                         ChipExoFactory,
                         HarbisonChIPFactory, KemmerenTFKOFactory,
-                        McIsaacZEVFactory, BackgroundFactory,
+                        McIsaacZEVFactory, McIsaacZEV_s3Factory,
+                        BackgroundFactory,
                         BackgroundSourceFactory, CCTFFactory,
                         CCExperimentFactory,
                         LabFactory,
@@ -298,9 +300,9 @@ class TestPromoterRegionsViewSet(APITestCase):
         response = self.client.get(fields_url)
         assert response.status_code == status.HTTP_200_OK
         assert set(response.data.keys()) == \
-            {'readable', 
-             'writable', 
-             'automatically_generated', 
+            {'readable',
+             'writable',
+             'automatically_generated',
              'filter'}
 
     def test_callingcards_endpoint(self):
@@ -639,6 +641,46 @@ class TestMcIsaacZEV(APITestCase):
         assert mcisaac_zev.uploader.username == self.user.username
 
 
+class TestMcIsaacZEV_s3(APITestCase):
+    """
+    Tests /mcisaac_zev detail operations.
+    """
+
+    def setUp(self):
+        logging.basicConfig(level=logging.DEBUG)
+        self.user = UserFactory.create()
+        self.gene_record = GeneFactory.create()
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
+        self.mcisaac_s3_zev_data = factory.build(
+            dict, FACTORY_CLASS=McIsaacZEV_s3Factory)
+        self.mcisaac_s3_zev_data['tf'] = self.gene_record.pk
+        for attr in AUTO_ADD_FIELDS:
+            self.mcisaac_s3_zev_data.pop(attr, None)
+        self.url = reverse('mcisaaczevs3-list')
+        settings.DEBUG = True
+
+    def test_post_fail(self):
+        response = self.client.post(self.url, {})
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_get_url(self):
+        response = self.client.get(self.url)
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_put_single(self):
+        with open(self.mcisaac_s3_zev_data.get('file'), 'rb') as file:
+            self.mcisaac_s3_zev_data['file'] = file
+            response = self.client.post(self.url,
+                                        self.mcisaac_s3_zev_data,
+                                        format='multipart')
+        assert response.status_code == status.HTTP_201_CREATED
+
+        actual = McIsaacZEV_s3.objects.get(pk=response.data.get('id'))
+        assert actual.tf.pk == self.mcisaac_s3_zev_data.get('tf')
+        assert actual.uploader.username == self.user.username
+
+
 class TestBackground(APITestCase):
     """
     Tests /background detail operations.
@@ -781,12 +823,9 @@ class TestHops_s3(APITestCase):
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_create_hops_s3_with_ccexpr(self):
-        media_directory = default_storage.location
         qbed_file = random_file_from_media_directory('qbed')
 
-        upload_file = os.path.join(media_directory, qbed_file)
-
-        with open(upload_file, 'rb') as f:
+        with open(qbed_file, 'rb') as f:
             post_data = {
                 'chr_format': 'mitra',
                 'source': self.source_record.pk,
@@ -799,14 +838,14 @@ class TestHops_s3(APITestCase):
             response = self.client.post(self.url,
                                         post_data,
                                         format='multipart')
-            
+
         assert response.status_code == status.HTTP_201_CREATED
 
         hops_s3 = Hops_s3.objects.get(pk=response.data.get('id'))
         assert hops_s3.source.pk == post_data.get('source')
         assert hops_s3.experiment.pk == post_data.get('experiment')
         assert hops_s3.notes == post_data.get('notes')
-    
+
     def test_create_hops_s3_no_ccexpr_gene(self):
         media_directory = default_storage.location
         qbed_file = random_file_from_media_directory('qbed')
@@ -829,7 +868,7 @@ class TestHops_s3(APITestCase):
             response = self.client.post(self.url,
                                         post_data,
                                         format='multipart')
-            
+
         assert response.status_code == status.HTTP_201_CREATED
 
         hops_s3 = Hops_s3.objects.get(pk=response.data.get('id'))
@@ -859,7 +898,7 @@ class TestHops_s3(APITestCase):
             response = self.client.post(self.url,
                                         post_data,
                                         format='multipart')
-            
+
         assert response.status_code == status.HTTP_201_CREATED
 
         hops_s3 = Hops_s3.objects.get(pk=response.data.get('id'))
@@ -904,6 +943,7 @@ class TestQcTfToTransposon(APITestCase):
         assert qctftotransposon.experiment.pk == \
             self.qctftotransposon_data.get('experiment')
         assert qctftotransposon.uploader.username == self.user.username
+
 
 class TestLabViewSet(APITestCase):
     """
