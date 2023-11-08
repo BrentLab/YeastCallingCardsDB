@@ -1,4 +1,6 @@
+import logging
 import os
+from django.conf import settings
 from django.test import override_settings
 from django.test import TestCase
 from django.forms.models import model_to_dict
@@ -32,10 +34,11 @@ from ..serializers import (ChrMapSerializer, GeneSerializer,
                            QcR1ToR2TfSerializer,
                            QcTfToTransposonSerializer,
                            ExpressionViewSetSerializer)
-
 from ..models import HarbisonChIP, PromoterRegions, ChipExo
 
-TEST_MEDIA_ROOT = os.path.join(os.path.dirname(__file__), 'test', 'data')
+logger = logging.getLogger(__name__)
+
+TEST_MEDIA_ROOT = os.path.join(os.path.dirname(__file__), 'data')
 
 
 class TestCreateChrMap(TestCase):
@@ -229,6 +232,7 @@ class TestMcIsaacZEV_s3(TestCase):
         assert serializer.is_valid() is False
 
     def test_serializer_with_valid_data(self):
+        logger.debug('MEDIA_ROOT = %s', settings.MEDIA_ROOT)
         serializer = self.serializer(
             data=model_to_dict(self.factory.create()))
         assert serializer.is_valid() is True

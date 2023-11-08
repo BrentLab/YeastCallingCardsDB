@@ -48,8 +48,9 @@ class TestCallingCardsWithMetrics(APITestCase):
         self.gene_record = GeneFactory.create(gene='INO2')
 
     def test_callingcards_with_metrics(self):
-        media_directory = default_storage.location
-        qbed_file = 'qbed/run_6437/INO2_chrI.ccf'
+        #media_directory = default_storage.location
+        media_directory = os.path.join(os.path.dirname(__file__), 'data')
+        qbed_file = 'qbed/INO2_chrI.ccf'
 
         upload_file = os.path.join(media_directory, qbed_file)
 
