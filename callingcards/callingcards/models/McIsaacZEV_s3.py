@@ -40,11 +40,6 @@ class McIsaacZEV_s3(BaseModel):
         # get all McIsaacZEV records
         all_records = McIsaacZEV.objects.all()
     """
-    CHR_FORMAT_CHOICES = [
-        (x.name, x.name) for x in ChrMap._meta.fields if x.name not in
-        {'uploader', 'uploadDate', 'modified',
-         'modifiedBy', 'seqlength', 'type'}]
-
     RESTRICTION_CHOICES = [('P', 'P'),
                            ('M', 'M'),
                            ('N', 'N')]
@@ -119,4 +114,4 @@ class McIsaacZEV_s3(BaseModel):
 def remove_file_from_s3(sender, instance, using, **kwargs):
     # note that if the directory (and all subdirectories) are empty, the
     # directory will also be removed
-    instance.qbed.delete(save=False)
+    instance.file.delete(save=False)
