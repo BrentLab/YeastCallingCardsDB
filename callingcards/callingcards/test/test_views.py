@@ -46,6 +46,7 @@ from .factories import (ChrMapFactory, GeneFactory, PromoterRegionsFactory,
                         CCExperimentFactory,
                         LabFactory,
                         HopsSourceFactory, HopsFactory,
+                        Hops_s3Factory,
                         QcMetricsFactory,
                         QcManualReviewFactory,
                         QcR1ToR2TfFactory, QcR2ToR1TfFactory,
@@ -814,6 +815,8 @@ class TestHops_s3(APITestCase):
             lab=self.lab_record)
         self.tf_gene = GeneFactory.create(gene='TFGENE')
         self.tf_locus_tag = GeneFactory.create(locus_tag='TFLOCUSTAG')
+        self.hops_s3_data = factory.build(
+            dict, FACTORY_CLASS=Hops_s3Factory)
         self.client.credentials(
             HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
         self.url = reverse('hopss3-list')
@@ -823,9 +826,9 @@ class TestHops_s3(APITestCase):
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_create_hops_s3_with_ccexpr(self):
-        qbed_file = random_file_from_media_directory('qbed')
+        #qbed_file = random_file_from_media_directory('qbed')
 
-        with open(qbed_file, 'rb') as f:
+        with open(self.hops_s3_data.get('qbed'), 'rb') as f:
             post_data = {
                 'chr_format': 'mitra',
                 'source': self.source_record.pk,

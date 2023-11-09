@@ -50,7 +50,7 @@ class TestCallingCardsWithMetrics(APITestCase):
     def test_callingcards_with_metrics(self):
         #media_directory = default_storage.location
         media_directory = os.path.join(os.path.dirname(__file__), 'data')
-        qbed_file = 'qbed/INO2_chrI.ccf'
+        qbed_file = 'qbed/ccf/INO2_chrI.ccf'
 
         upload_file = os.path.join(media_directory, qbed_file)
 
