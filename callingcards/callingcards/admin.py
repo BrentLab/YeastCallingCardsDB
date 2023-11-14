@@ -12,7 +12,7 @@ from callingcards.callingcards import models
     models.ChrMap,
     models.Gene,
     models.HarbisonChIP,
-    models.Hops_s3,
+    models.CallingCards_s3,
     models.Hops,
     models.HopsSource,
     models.KemmerenTFKO,

@@ -8,7 +8,7 @@ from .filepaths.qbed_filepath import qbed_filepath
 logger = logging.getLogger(__name__)
 
 
-class Hops_s3(BaseModel):
+class CallingCards_s3(BaseModel):
     """
     Store qbed file by experiment id 
     """
@@ -45,7 +45,7 @@ class Hops_s3(BaseModel):
 # upon inception, there did not exist any images which were not referenced. So,
 # if unreferenced files are ever found, that should indicate that these files
 # are erroneous and can be safely deleted
-@receiver(models.signals.post_delete, sender=Hops_s3)
+@receiver(models.signals.post_delete, sender=CallingCards_s3)
 def remove_file_from_s3(sender, instance, using, **kwargs):
     # note that if the directory (and all subdirectories) are empty, the
     # directory will also be removed

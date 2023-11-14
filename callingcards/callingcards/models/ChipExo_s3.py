@@ -18,17 +18,19 @@ logger = logging.getLogger(__name__)
 
 class ChipExo_s3(BaseModel):
     """
-    A model for storing ChipExo ZEV data along with the target gene and
-    transcription factor.
+    A model for storing ChipExo data from yeastepigenome.org
 
     Fields:
-        - gene: ForeignKey to the `Gene` model, representing the target gene.
-        - effect: DecimalField with the effect size of the transcription factor
-          knockout on the target gene.
-        - pval: DecimalField with the p-value of the Z-test for the
-          transcription factor knockout on the target gene.
-        - tf: ForeignKey to the `Gene` model, representing the transcription
-          factor that was knocked out.
+        - tf: the TF assayed in the ChipExo data
+        - chipexo_id: the unique identifier for the ChipExo data from
+            yeastepigenome.org
+        - condition: the condition under which the ChipExo data was collected
+        - parent_condition: the parent condition under which the ChipExo data
+            was collected
+        - file: the path to the file containing the ChipExo data. The fields
+            are: `chr`   `coord`  `YPD_Sig` `YPD_Ctrl` `YPD_log2Fold`
+            `YPD_log2P` `ActiveConds`, where `chr` and `coord` are created
+            from the original `Point` column, split on the `:` character
 
     Example usage:
 
@@ -62,7 +64,12 @@ class ChipExo_s3(BaseModel):
         null=False,
         blank=False,
         choices=CONDITION_CHOICES)
-    file = models.FileField(upload_to=chipexo_filepath)
+    file = models.FileField(upload_to=chipexo_filepath,
+                            help_text="The allevents tsv file from the "
+                            "the Pugh yeastepigenome site. The file will "
+                            "have the headers `chr`   `coord`  `YPD_Sig` "
+                            "`YPD_Ctrl` `YPD_log2Fold` `YPD_log2P` "
+                            "`ActiveConds`")
 
     class Meta:
         managed = True

@@ -9,7 +9,7 @@ from .factories import (PromoterRegionsFactory,
                         LabFactory,
                         CCExperimentFactory,
                         HopsSourceFactory,
-                        Hops_s3Factory,
+                        CallingCards_s3Factory,
                         BackgroundFactory,
                         BackgroundSourceFactory,
                         PromoterRegionsSourceFactory,
@@ -21,6 +21,8 @@ from ..utils.callingcards_with_metrics import (enrichment,
                                                poisson_pval,
                                                hypergeom_pval,
                                                callingcards_with_metrics)
+from ..utils.get_chr_format import get_chr_format
+from ..utils.validate_bed6_df import validate_bed6_df
 
 
 class TestCallingCardsWithMetrics(APITestCase):
@@ -40,7 +42,7 @@ class TestCallingCardsWithMetrics(APITestCase):
         for i in range(10):
             ccexperiment = CCExperimentFactory.create(
                 lab=self.lab_record)
-            Hops_s3Factory.create(experiment=ccexperiment)
+            CallingCards_s3Factory.create(experiment=ccexperiment)
 
         self.backgrounds = BackgroundFactory.create_batch(
             10,
@@ -48,7 +50,7 @@ class TestCallingCardsWithMetrics(APITestCase):
         self.gene_record = GeneFactory.create(gene='INO2')
 
     def test_callingcards_with_metrics(self):
-        #media_directory = default_storage.location
+        # media_directory = default_storage.location
         media_directory = os.path.join(os.path.dirname(__file__), 'data')
         qbed_file = 'qbed/ccf/INO2_chrI.ccf'
 
@@ -109,6 +111,14 @@ class TestCallingCardsWithMetrics(APITestCase):
         # })
         # Compare the resulting DataFrame with the expected result
         # pdt.assert_frame_equal(actual, expected, check_dtype=False)
+    def test_get_chr_format(self):
+        actual = get_chr_format({'I', 'II'})
+        expected = 'igenomes'
+
+        assert actual == expected
+    
+    def test_validate_bed6_format(self):
+        pass
 
 
 def test_enrichment():

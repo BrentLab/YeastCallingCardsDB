@@ -29,8 +29,8 @@ from django.db.utils import NotSupportedError
 import scipy.stats as scistat
 import pandas as pd
 
-from ..models import (ChrMap, PromoterRegions, Background, Hops_s3)
-from ..filters import PromoterRegionsFilter, Hops_s3Filter, BackgroundFilter
+from ..models import (ChrMap, PromoterRegions, Background, CallingCards_s3)
+from ..filters import PromoterRegionsFilter, CallingCards_s3Filter, BackgroundFilter
 
 logger = logging.getLogger(__name__)
 
@@ -209,9 +209,9 @@ def translate_chr_to_id(df, chr_format):
 def experiment_data(query_params_dict):
 
     # filter the Hops (calling cards experiments) model objects
-    filtered_experiment_queryset = Hops_s3Filter(
+    filtered_experiment_queryset = CallingCards_s3Filter(
         query_params_dict,
-        queryset=Hops_s3.objects.all())\
+        queryset=CallingCards_s3.objects.all())\
         .qs\
         .select_related('experiment')\
         .exclude(experiment__tf__tf__locus_tag='undetermined')

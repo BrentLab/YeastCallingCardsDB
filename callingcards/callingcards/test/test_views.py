@@ -29,7 +29,7 @@ from callingcards.callingcards.models import (ChrMap, Gene, PromoterRegions,
                                               HarbisonChIP, KemmerenTFKO,
                                               McIsaacZEV, McIsaacZEV_s3,
                                               Background, CCTF,
-                                              CCExperiment, Hops_s3,
+                                              CCExperiment, CallingCards_s3,
                                               QcMetrics,
                                               QcR1ToR2Tf, QcR2ToR1Tf,
                                               QcTfToTransposon)
@@ -46,7 +46,7 @@ from .factories import (ChrMapFactory, GeneFactory, PromoterRegionsFactory,
                         CCExperimentFactory,
                         LabFactory,
                         HopsSourceFactory, HopsFactory,
-                        Hops_s3Factory,
+                        CallingCards_s3Factory,
                         QcMetricsFactory,
                         QcManualReviewFactory,
                         QcR1ToR2TfFactory, QcR2ToR1TfFactory,
@@ -801,7 +801,7 @@ class TestCCExperiment(APITestCase):
         assert ccexperiment.uploader.username == self.user.username
 
 
-class TestHops_s3(APITestCase):
+class TestCallingCards_s3(APITestCase):
     """
     Tests /hops_s3 detail operations.
     """
@@ -816,7 +816,7 @@ class TestHops_s3(APITestCase):
         self.tf_gene = GeneFactory.create(gene='TFGENE')
         self.tf_locus_tag = GeneFactory.create(locus_tag='TFLOCUSTAG')
         self.hops_s3_data = factory.build(
-            dict, FACTORY_CLASS=Hops_s3Factory)
+            dict, FACTORY_CLASS=CallingCards_s3Factory)
         self.client.credentials(
             HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
         self.url = reverse('hopss3-list')
@@ -844,7 +844,7 @@ class TestHops_s3(APITestCase):
 
         assert response.status_code == status.HTTP_201_CREATED
 
-        hops_s3 = Hops_s3.objects.get(pk=response.data.get('id'))
+        hops_s3 = CallingCards_s3.objects.get(pk=response.data.get('id'))
         assert hops_s3.source.pk == post_data.get('source')
         assert hops_s3.experiment.pk == post_data.get('experiment')
         assert hops_s3.notes == post_data.get('notes')
@@ -874,7 +874,7 @@ class TestHops_s3(APITestCase):
 
         assert response.status_code == status.HTTP_201_CREATED
 
-        hops_s3 = Hops_s3.objects.get(pk=response.data.get('id'))
+        hops_s3 = CallingCards_s3.objects.get(pk=response.data.get('id'))
         assert hops_s3.source.pk == post_data.get('source')
         assert hops_s3.experiment.pk != post_data.get('experiment')
         assert hops_s3.notes == post_data.get('notes')
@@ -904,7 +904,7 @@ class TestHops_s3(APITestCase):
 
         assert response.status_code == status.HTTP_201_CREATED
 
-        hops_s3 = Hops_s3.objects.get(pk=response.data.get('id'))
+        hops_s3 = CallingCards_s3.objects.get(pk=response.data.get('id'))
         assert hops_s3.source.pk == post_data.get('source')
         assert hops_s3.experiment.pk != post_data.get('experiment')
         assert hops_s3.notes == post_data.get('notes')

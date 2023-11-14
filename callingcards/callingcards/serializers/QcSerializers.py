@@ -8,7 +8,7 @@ from ..models import (QcMetrics,
                      QcR2ToR1Tf,
                      QcTfToTransposon)
 
-logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 

@@ -12,7 +12,7 @@ from .mixins import (ListModelFieldsMixin,
                      UpdateModifiedMixin,
                      CustomValidateMixin)
 from .constants import UNDETERMINED_LOCUS_TAG
-from ..models import Hops_s3, QcR1ToR2Tf, QcR2ToR1Tf, Gene, QcManualReview
+from ..models import CallingCards_s3, QcR1ToR2Tf, QcR2ToR1Tf, Gene, QcManualReview
 from ..serializers import QcReviewSerializer, QcManualReviewSerializer
 from ..filters import CCExperimentFilter
 
@@ -35,15 +35,15 @@ class QcReviewViewSet(ListModelFieldsMixin,
 
     def get_queryset(self):
 
-        genomic_hops_subquery = Hops_s3.objects\
+        genomic_hops_subquery = CallingCards_s3.objects\
             .filter(experiment_id=OuterRef('pk'))\
             .values('genomic_hops')[:1]
 
-        mito_hops_subquery = Hops_s3.objects\
+        mito_hops_subquery = CallingCards_s3.objects\
             .filter(experiment_id=OuterRef('pk'))\
             .values('mito_hops')[:1]
 
-        plasmid_hops_subquery = Hops_s3.objects\
+        plasmid_hops_subquery = CallingCards_s3.objects\
             .filter(experiment_id=OuterRef('pk'))\
             .values('plasmid_hops')[:1]
 

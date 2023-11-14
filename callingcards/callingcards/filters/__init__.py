@@ -4,10 +4,11 @@ from .BackgroundFilter import BackgroundFilter
 from .CallingCardsSigFilter import CallingCardsSigFilter
 from .CCExperimentFilter import CCExperimentFilter
 from .ChipExoFilter import ChipExoFilter
+from .ChipExo_s3Filter import ChipExo_s3Filter
 from .GeneFilter import GeneFilter
 from .HarbisonChIPFilter import HarbisonChIPFilter
 from .HopsSourceFilter import HopsSourceFilter
-from .Hops_s3Filter import Hops_s3Filter
+from .CallingCards_s3Filter import CallingCards_s3Filter
 from .HopsFilter import HopsFilter
 from .KemmerenTfkoFilter import KemmerenTfkoFilter
 from .LabFilter import LabFilter

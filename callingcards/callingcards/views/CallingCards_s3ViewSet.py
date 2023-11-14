@@ -17,9 +17,9 @@ from .mixins import (ListModelFieldsMixin,
                      CountModelMixin,
                      UpdateModifiedMixin,
                      CustomValidateMixin)
-from ..models import Hops_s3, CCTF, CCExperiment, Gene, QcManualReview
-from ..serializers import (Hops_s3Serializer,)
-from ..filters import Hops_s3Filter
+from ..models import CallingCards_s3, CCTF, CCExperiment, Gene, QcManualReview
+from ..serializers import (CallingCards_s3Serializer,)
+from ..filters import CallingCards_s3Filter
 from ..utils.validate_qbed_upload import (validate_chromosomes,
                                           validate_coordinates,
                                           validate_strand)
@@ -210,7 +210,7 @@ def create_manual_review(experiment_id: int, user_auth_token: str) -> int:
                                f"{api_url}: {response.data}") from exc
 
 
-class Hops_s3ViewSet(ListModelFieldsMixin,
+class CallingCards_s3ViewSet(ListModelFieldsMixin,
                      CustomCreateMixin,
                      PageSizeModelMixin,
                      CountModelMixin,
@@ -218,14 +218,14 @@ class Hops_s3ViewSet(ListModelFieldsMixin,
                      CustomValidateMixin,
                      viewsets.ModelViewSet):
     """
-    API endpoint that allows Hops_s3 to be viewed or edited.
+    API endpoint that allows CallingCards_s3 to be viewed or edited.
     """
-    queryset = Hops_s3.objects.all()
-    serializer_class = Hops_s3Serializer
+    queryset = CallingCards_s3.objects.all()
+    serializer_class = CallingCards_s3Serializer
     authentication_classes = [SessionAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
     filter_backends = (DjangoFilterBackend, SearchFilter)
-    filterset_class = Hops_s3Filter
+    filterset_class = CallingCards_s3Filter
     search_fields = ('experiment__tf__tf__id',
                      'experiment__tf__tf__locus_tag',
                      'experiment__tf__tf__gene',

@@ -275,9 +275,9 @@ class HopsSourceFactory(BaseModelFactoryMixin,
             return cls.create(**kwargs)
 
 
-class Hops_s3Factory(BaseModelFactoryMixin, factory.django.DjangoModelFactory):
+class CallingCards_s3Factory(BaseModelFactoryMixin, factory.django.DjangoModelFactory):
     class Meta:
-        model = 'callingcards.Hops_s3'
+        model = 'callingcards.CallingCards_s3'
 
     chr_format = 'mitra'
     source = factory.SubFactory(HopsSourceFactory)
