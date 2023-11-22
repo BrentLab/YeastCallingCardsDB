@@ -20,8 +20,8 @@ from .BaseModel import BaseModel
 
 class QcManualReview(BaseModel):
     """
-    A model for storing information related to the manual quality control review
-    of calling card experiments.
+    A model for storing information related to the manual quality control
+    review of calling card experiments.
 
     Fields:
         - experiment: ForeignKey to the `CCExperiment` model, representing the

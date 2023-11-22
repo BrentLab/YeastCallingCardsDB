@@ -263,20 +263,16 @@ class CallingCards_s3ViewSet(ListModelFieldsMixin,
         if uploaded_file is None:
             return Response({'error': 'Qbed file not provided.'},
                             status=status.HTTP_400_BAD_REQUEST)
+        if not uploaded_file.name.endswith('.qbed.gz'):
+            return Response({'error': 'File must be a gzipped and have '
+                             'extension `.qbed.gz`'},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            if uploaded_file.name.endswith('.gz') \
-                    or uploaded_file.name.endswith('.gzip'):
-                with gzip.open(uploaded_file, 'rt') as f:
-                    df = pd.read_csv(f, sep='\t', index_col=False)
-            else:
-                df = pd.read_csv(uploaded_file,
-                                 sep='\t',
-                                 index_col=False)
-        except UnicodeDecodeError as exc:
-            return Response({'error': f'UNCRECOGNIZED EXTENSION. must be '
-                             f'either a csv or a gzipped csv with extension '
-                            f'.[.gz,.gzip] {exc}'},
+            with gzip.open(uploaded_file, 'rt') as f:
+                df = pd.read_csv(f, sep='\t', index_col=False)
+        except (UnicodeDecodeError, gzip.BadGzipFile) as exc:
+            return Response({'error': f'Could not open qbed file: {exc}'},
                             status=status.HTTP_400_BAD_REQUEST)
 
         if list(df.columns) != ['chr', 'start', 'end', 'depth', 'strand']:
@@ -346,7 +342,7 @@ class CallingCards_s3ViewSet(ListModelFieldsMixin,
 
             request.data['experiment'] = experiment_id
 
-        # check to see if a manaul review exists for this experiment. If it
+        # check to see if a manual review exists for this experiment. If it
         # does not, create one
         try:
             manual_review_id = create_manual_review(experiment_id,
@@ -373,7 +369,10 @@ class CallingCards_s3ViewSet(ListModelFieldsMixin,
                                                 'source',
                                                 'experiment',
                                                 'qbed',
-                                                'notes'}
+                                                'notes',
+                                                'genomic_hops',
+                                                'plasmid_hops',
+                                                'mito_hops'}
         for key in drop_keys:
             del request.data[key]
 

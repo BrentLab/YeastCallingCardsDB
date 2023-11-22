@@ -14,7 +14,8 @@ class CustomValidateMixin:
 
     .. code-block:: python
 
-        class YourSerializer(ValidateModifiedByMixin, serializers.ModelSerializer):
+        class YourSerializer(ValidateModifiedByMixin,
+                             serializers.ModelSerializer):
             ...
 
             def validate(self, data):

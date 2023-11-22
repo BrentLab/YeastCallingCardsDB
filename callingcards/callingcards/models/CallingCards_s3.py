@@ -1,14 +1,16 @@
 import logging
 from django.db import models  # pylint: disable=import-error # noqa # type: ignore
 from django.dispatch import receiver
+from django.core.files.storage import default_storage
 from .BaseModel import BaseModel
+from .mixins.FileUploadWithIdMixin import FileUploadMixin
 from .ChrMap import ChrMap
-from .filepaths.qbed_filepath import qbed_filepath
+#from .filepaths.qbed_filepath import qbed_filepath
 
 logger = logging.getLogger(__name__)
 
 
-class CallingCards_s3(BaseModel):
+class CallingCards_s3(BaseModel, FileUploadMixin):
     """
     Store qbed file by experiment id 
     """
@@ -24,18 +26,29 @@ class CallingCards_s3(BaseModel):
                                on_delete=models.CASCADE)
     experiment = models.ForeignKey('CCExperiment',
                                    on_delete=models.CASCADE)
-    qbed = models.FileField(upload_to=qbed_filepath)
+    qbed = models.FileField(upload_to='temp',
+                            help_text="A qbed file for a given experiment")
     genomic_hops = models.PositiveIntegerField(default=0)
     mito_hops = models.PositiveIntegerField(default=0)
     plasmid_hops = models.PositiveIntegerField(default=0)
     notes = models.CharField(max_length=50, default='none')
 
     def __str__(self):
-        return str(self.qbed)
+        return f'{self.experiment}_{self.source}'
 
     class Meta:
         db_table = 'hops_s3'
 
+    def save(self, *args, **kwargs):
+        # Store the old file path
+        old_file_name = self.qbed.name if self.qbed else None
+        super().save(*args, **kwargs)
+        self.update_file_name('qbed', 'callingcards/qbed', 'qbed.gz')
+        new_file_name = self.qbed.name
+        super().save(update_fields=['qbed'])
+        # If the file name changed, delete the old file
+        if old_file_name and old_file_name != new_file_name:
+            default_storage.delete(old_file_name)
 
 # Signals
 # this is a post_delete signal. Hence, if the delete command is successful,

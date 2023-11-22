@@ -9,15 +9,17 @@ stored in S3 and the path to the file is stored in the database.
 """
 import logging
 from django.db import models  # pylint: disable=import-error # noqa # type: ignore
+from django.core.files.storage import default_storage
 from django.dispatch import receiver
 from django.core.validators import MinValueValidator, MaxValueValidator  # pylint: disable=import-error # noqa # type: ignore
 from .BaseModel import BaseModel
+from .mixins.FileUploadWithIdMixin import FileUploadMixin
 from .filepaths.chipexo_filepath import chipexo_filepath
 
 logger = logging.getLogger(__name__)
 
 
-class ChipExo_s3(BaseModel):
+class ChipExo_s3(BaseModel, FileUploadMixin):
     """
     A model for storing ChipExo data from yeastepigenome.org
 
@@ -49,7 +51,7 @@ class ChipExo_s3(BaseModel):
     # the gene table
     regulator = models.ForeignKey(
         'Regulator',
-        models.PROTECT,
+        models.CASCADE,
         related_name='chipexo_s3_regulator',
         db_index=True)
     chipexo_id = models.CharField(
@@ -91,7 +93,7 @@ class ChipExo_s3(BaseModel):
         validators=[MinValueValidator(0), MaxValueValidator(1)],
         max_digits=6,
         decimal_places=5)
-    file = models.FileField(upload_to=chipexo_filepath,
+    file = models.FileField(upload_to='temp',
                             help_text="The allevents tsv file from the "
                             "the Pugh yeastepigenome site. The file will "
                             "have the headers `chr`   `coord`  `YPD_Sig` "
@@ -101,6 +103,17 @@ class ChipExo_s3(BaseModel):
     class Meta:
         managed = True
         db_table = 'chipexo_s3'
+
+    def save(self, *args, **kwargs):
+        # Store the old file path
+        old_file_name = self.file.name if self.file else None
+        super().save(*args, **kwargs)
+        self.update_file_name('file', 'chipexo/chexmix', 'tsv.gz')
+        new_file_name = self.file.name
+        super().save(update_fields=['file'])
+        # If the file name changed, delete the old file
+        if old_file_name and old_file_name != new_file_name:
+            default_storage.delete(old_file_name)
 
 
 @receiver(models.signals.post_delete, sender=ChipExo_s3)
