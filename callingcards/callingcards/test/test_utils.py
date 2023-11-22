@@ -1,5 +1,5 @@
 import pytest
-# import pandas as pd
+import pandas as pd
 # import pandas.testing as pdt
 import os
 from django.core.files.storage import default_storage
@@ -22,7 +22,10 @@ from ..utils.callingcards_with_metrics import (enrichment,
                                                hypergeom_pval,
                                                callingcards_with_metrics)
 from ..utils.get_chr_format import get_chr_format
+from ..utils.check_chr_format import check_chr_format
 from ..utils.validate_bed6_df import validate_bed6_df
+
+TEST_MEDIA_ROOT = os.path.join(os.path.dirname(__file__), 'data')
 
 
 class TestCallingCardsWithMetrics(APITestCase):
@@ -112,13 +115,23 @@ class TestCallingCardsWithMetrics(APITestCase):
         # Compare the resulting DataFrame with the expected result
         # pdt.assert_frame_equal(actual, expected, check_dtype=False)
     def test_get_chr_format(self):
-        actual = get_chr_format({'I', 'II'})
+        actual = get_chr_format({'I'})
         expected = 'igenomes'
 
         assert actual == expected
+
+    def test_check_chr_format(self):
+        actual = check_chr_format({'I'}, 'igenomes')
+
+        assert actual == True
     
     def test_validate_bed6_format(self):
-        pass
+        bed_file = os.path.join(TEST_MEDIA_ROOT,
+                                'promoter_regions/yiming.bed.gz')
+        df = pd.read_csv(bed_file, sep='\t')
+        actual = validate_bed6_df(df, 'numbered')
+
+        assert actual == True
 
 
 def test_enrichment():

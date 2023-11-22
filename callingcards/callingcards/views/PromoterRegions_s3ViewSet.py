@@ -15,9 +15,10 @@ from .mixins import (ListModelFieldsMixin,
                      CountModelMixin,
                      UpdateModifiedMixin,
                      CustomValidateMixin)
-from ..models import PromoterRegions
+from ..models import PromoterRegions_s3
 from ..serializers import (PromoterRegions_s3Serializer,)
 from ..filters import PromoterRegions_s3Filter
+from ..utils.validate_bed6_df import validate_bed6_df
 
 
 logger = logging.getLogger(__name__)
@@ -31,9 +32,9 @@ class PromoterRegions_s3ViewSet(ListModelFieldsMixin,
                                 CustomValidateMixin,
                                 viewsets.ModelViewSet):
     """
-    API endpoint that allows PromoterRegions to be viewed or edited.
+    API endpoint that allows PromoterRegions_s3 to be viewed or edited.
     """
-    queryset = PromoterRegions.objects.all().order_by('id')
+    queryset = PromoterRegions_s3.objects.all().order_by('id')
     serializer_class = PromoterRegions_s3Serializer
     authentication_classes = [SessionAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
@@ -53,13 +54,16 @@ class PromoterRegions_s3ViewSet(ListModelFieldsMixin,
                 status=status.HTTP_401_UNAUTHORIZED)
 
         # Check that required fields for all upload methods are present
-        key_check_diff = {'tf', 'chipexo_id',
-                          'condition', 'parent_condition',
-                          'file'} - set(request.data.keys())
+        required_fields = set(field.name for field in
+                              PromoterRegions_s3._meta.get_fields()
+                              if field.concrete and field.name not in
+                              ['id', 'uploader', 'uploadDate',
+                               'modified', 'modifiedBy'])
 
-        if key_check_diff:
+        if not set(request.data.keys()).issubset(required_fields):
             return Response({'error': 'Missing required field(s): {}'
-                             .format(', '.join(key_check_diff))},
+                             .format(', '.join(required_fields -
+                                               set(required_fields)))},
                             status=status.HTTP_400_BAD_REQUEST)
 
         token = str(request.auth)
@@ -72,8 +76,8 @@ class PromoterRegions_s3ViewSet(ListModelFieldsMixin,
         if uploaded_file is None:
             return Response({'error': 'file file not provided.'},
                             status=status.HTTP_400_BAD_REQUEST)
-        if not uploaded_file.name.endswith('.tsv.gz'):
-            return Response({'error': 'file must be a .tsv.gz file.'},
+        if not uploaded_file.name.endswith('.bed.gz'):
+            return Response({'error': 'file must be a .bed.gz file.'},
                             status=status.HTTP_400_BAD_REQUEST)
 
         try:
@@ -83,12 +87,10 @@ class PromoterRegions_s3ViewSet(ListModelFieldsMixin,
             return Response({'error': f'Error decoding file: {exc}'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        required_columns = {'chr', 'coord', 'YPD_Sig', 'YPD_Ctrl',
-                            'YPD_log2Fold', 'YPD_log2P', 'ActiveConds'}
-        if not all(column in df.columns for column in required_columns):
-            missing = required_columns - set(df.columns)
-            return Response({'error': f'Missing required '
-                             f'column(s): {", ".join(missing)}'},
+        try:
+            validate_bed6_df(df, request.data['chr_format'])
+        except ValueError as exc:
+            return Response({'error': f'Error validating file: {exc}'},
                             status=status.HTTP_400_BAD_REQUEST)
 
         # Call the parent create() method with the modified request

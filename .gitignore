@@ -1,7 +1,6 @@
 migrations/
 tmp/*
-media/qbed/
-media/mcisaac/
+media/
 *.sqlite-shm
 *.sqlite-wal
 *.sqlite

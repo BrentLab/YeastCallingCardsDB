@@ -24,36 +24,56 @@ from callingcards.callingcards.tasks import process_upload
 
 from callingcards.users.test.factories import UserFactory
 
-from callingcards.callingcards.models import (ChrMap, Gene, PromoterRegions,
+from callingcards.callingcards.models import (Background,
+                                              CallingCards_s3,
+                                              CCExperiment,
+                                              CCTF,
+                                              ChrMap,
                                               ChipExo,
-                                              HarbisonChIP, KemmerenTFKO,
-                                              McIsaacZEV, McIsaacZEV_s3,
-                                              Background, CCTF,
-                                              CCExperiment, CallingCards_s3,
+                                              Gene,
+                                              HarbisonChIP,
+                                              KemmerenTFKO,
+                                              McIsaacZEV_s3,
+                                              McIsaacZEV,
+                                              PromoterRegions,
                                               QcMetrics,
-                                              QcR1ToR2Tf, QcR2ToR1Tf,
+                                              QcR1ToR2Tf,
+                                              QcR2ToR1Tf,
                                               QcTfToTransposon)
 
-from callingcards.callingcards.serializers import (HarbisonChIPSerializer,
-                                                   HarbisonChIPAnnotatedSerializer)  # noqa
+from callingcards.callingcards.serializers import (
+    HarbisonChIPSerializer, HarbisonChIPAnnotatedSerializer)
 
-from .factories import (ChrMapFactory, GeneFactory, PromoterRegionsFactory,
-                        ChipExoFactory,
-                        HarbisonChIPFactory, KemmerenTFKOFactory,
-                        McIsaacZEVFactory, McIsaacZEV_s3Factory,
-                        BackgroundFactory,
-                        BackgroundSourceFactory, CCTFFactory,
-                        CCExperimentFactory,
-                        LabFactory,
-                        HopsSourceFactory, HopsFactory,
-                        CallingCards_s3Factory,
-                        QcMetricsFactory,
-                        QcManualReviewFactory,
-                        QcR1ToR2TfFactory, QcR2ToR1TfFactory,
-                        QcTfToTransposonFactory,
-                        CallingCardsSigFactory,
-                        PromoterRegionsSourceFactory,
-                        random_file_from_media_directory)
+from .factories import (
+    BackgroundFactory,
+    BackgroundSourceFactory,
+    CallingCards_s3Factory,
+    CallingCardsSigFactory,
+    CCExperimentFactory,
+    CCTFFactory,
+    ChipExo_s3Factory,
+    ChipExoFactory,
+    ChrMapFactory,
+    GeneFactory,
+    HarbisonChIPFactory,
+    HopsFactory,
+    HopsSourceFactory,
+    KemmerenTFKO_s3Factory,
+    KemmerenTFKOFactory,
+    LabFactory,
+    McIsaacZEV_s3Factory,
+    McIsaacZEVFactory,
+    PromoterRegions_s3Factory,
+    PromoterRegionsFactory,
+    PromoterRegionsSourceFactory,
+    QcManualReviewFactory,
+    QcMetricsFactory,
+    QcR1ToR2TfFactory,
+    QcR2ToR1TfFactory,
+    QcTfToTransposonFactory,
+    RegulatorFactory)
+
+from .utils import random_file_from_media_directory
 
 from ..views import ExpressionViewSet
 
@@ -62,6 +82,254 @@ from ..filters import HarbisonChIPFilter
 fake = Faker()
 
 AUTO_ADD_FIELDS = ['uploader', 'uploadDate', 'modified', 'modifiedBy']
+
+
+class TestBackground(APITestCase):
+    """
+    Tests /background detail operations.
+    """
+
+    def setUp(self):
+        self.user = UserFactory.create()
+        self.chr_record = ChrMapFactory.create()
+        self.backgroundsource = BackgroundSourceFactory.create()
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
+        self.url = reverse('background-list')
+
+    def test_post_fail(self):
+        response = self.client.post(self.url, {})
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_get_url(self):
+        response = self.client.get(self.url)
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_put_single(self):
+        background_data = factory.build(
+            dict, FACTORY_CLASS=BackgroundFactory)
+        background_data['chr'] = self.chr_record.pk
+        background_data['source'] = self.backgroundsource.pk
+        for attr in AUTO_ADD_FIELDS:
+            background_data.pop(attr, None)
+        response = self.client.post(self.url, background_data)
+        assert response.status_code == status.HTTP_201_CREATED
+
+        background = Background.objects.get(pk=response.data.get('id'))
+        assert background.chr.pk == background_data.get('chr')
+        assert background.uploader.username == self.user.username
+
+
+class TestCallingCards_s3(APITestCase):
+    """
+    Tests /hops_s3 detail operations.
+    """
+
+    def setUp(self):
+        logging.basicConfig(level=logging.DEBUG)
+        self.user = UserFactory.create()
+        self.source_record = HopsSourceFactory.create()
+        self.lab_record = LabFactory.create()
+        self.experiment_record = CCExperimentFactory.create(
+            lab=self.lab_record)
+        self.tf_gene = GeneFactory.create(gene='TFGENE')
+        self.tf_locus_tag = GeneFactory.create(locus_tag='TFLOCUSTAG')
+        self.hops_s3_data = factory.build(
+            dict, FACTORY_CLASS=CallingCards_s3Factory)
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
+        self.url = reverse('hopss3-list')
+
+    def test_post_fail(self):
+        response = self.client.post(self.url, {})
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_create_hops_s3_with_ccexpr(self):
+        # qbed_file = random_file_from_media_directory('qbed')
+
+        with open(self.hops_s3_data.get('qbed'), 'rb') as f:
+            post_data = {
+                'chr_format': 'mitra',
+                'source': self.source_record.pk,
+                'experiment': self.experiment_record.pk,
+                'qbed': f,
+                'notes': 'some notes'
+            }
+
+            # Test the create() method
+            response = self.client.post(self.url,
+                                        post_data,
+                                        format='multipart')
+
+        assert response.status_code == status.HTTP_201_CREATED
+
+        hops_s3 = CallingCards_s3.objects.get(pk=response.data.get('id'))
+        assert hops_s3.source.pk == post_data.get('source')
+        assert hops_s3.experiment.pk == post_data.get('experiment')
+        assert hops_s3.notes == post_data.get('notes')
+
+    def test_create_hops_s3_no_ccexpr_gene(self):
+        media_directory = default_storage.location
+        qbed_file = random_file_from_media_directory('qbed')
+
+        upload_file = os.path.join(media_directory, qbed_file)
+
+        with open(upload_file, 'rb') as f:
+            post_data = {
+                'chr_format': 'mitra',
+                'tf_gene': 'TFGENE',
+                'batch': 'run_1234',
+                'batch_replicate': 1,
+                'source': self.source_record.pk,
+                'lab': self.lab_record.pk,
+                'qbed': f,
+                'notes': 'some notes'
+            }
+
+            # Test the create() method
+            response = self.client.post(self.url,
+                                        post_data,
+                                        format='multipart')
+
+        assert response.status_code == status.HTTP_201_CREATED
+
+        hops_s3 = CallingCards_s3.objects.get(pk=response.data.get('id'))
+        assert hops_s3.source.pk == post_data.get('source')
+        assert hops_s3.experiment.pk != post_data.get('experiment')
+        assert hops_s3.notes == post_data.get('notes')
+
+    def test_create_hops_s3_no_ccexpr_locus_tag(self):
+        media_directory = default_storage.location
+        qbed_file = random_file_from_media_directory('qbed')
+
+        upload_file = os.path.join(media_directory, qbed_file)
+
+        with open(upload_file, 'rb') as f:
+            post_data = {
+                'chr_format': 'mitra',
+                'tf_locus_tag': 'TFLOCUSTAG',
+                'batch': 'run_1234',
+                'batch_replicate': 1,
+                'source': self.source_record.pk,
+                'lab': self.lab_record.pk,
+                'qbed': f,
+                'notes': 'some notes'
+            }
+
+            # Test the create() method
+            response = self.client.post(self.url,
+                                        post_data,
+                                        format='multipart')
+
+        assert response.status_code == status.HTTP_201_CREATED
+
+        hops_s3 = CallingCards_s3.objects.get(pk=response.data.get('id'))
+        assert hops_s3.source.pk == post_data.get('source')
+        assert hops_s3.experiment.pk != post_data.get('experiment')
+        assert hops_s3.notes == post_data.get('notes')
+
+
+class TestCallingCardsSig(APITestCase):
+    def setUp(self):
+        logging.basicConfig(level=logging.DEBUG)
+        self.user = UserFactory.create()
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
+        self.callingcardssig_data = factory.build(
+            dict, FACTORY_CLASS=CallingCardsSigFactory)
+        for field in AUTO_ADD_FIELDS:
+            self.callingcardssig_data.pop(field, None)
+        self.url = reverse('callingcardssig-list')
+
+    def test_post_fail(self):
+        response = self.client.post(self.url, {})
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_create_callingcardsig_s3(self):
+        with open(self.callingcardssig_data.get('file'), 'rb') as f:
+            self.callingcardssig_data['file'] = f
+
+            # Test the create() method
+            response = self.client.post(self.url,
+                                        self.callingcardssig_data,
+                                        format='multipart')
+
+        assert response.status_code == status.HTTP_201_CREATED
+
+
+class TestChipExo_s3(APITestCase):
+    """
+    Tests /chipexo_s3 detail operations.
+    """
+
+    def setUp(self):
+        logging.basicConfig(level=logging.DEBUG)
+        self.user = UserFactory.create()
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
+        self.chipexo_s3_data = factory.build(
+            dict, FACTORY_CLASS=ChipExo_s3Factory)
+        for attr in AUTO_ADD_FIELDS:
+            self.chipexo_s3_data.pop(attr, None)
+        self.url = reverse('chipexos3-list')
+
+    def test_post_fail(self):
+        response = self.client.post(self.url, {})
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_create_chipexo_s3_with_ccexpr(self):
+        with open(self.chipexo_s3_data.get('file'), 'rb') as f:
+            self.chipexo_s3_data['file'] = f
+
+            # Test the create() method
+            response = self.client.post(self.url,
+                                        self.chipexo_s3_data,
+                                        format='multipart')
+
+        assert response.status_code == status.HTTP_201_CREATED
+
+
+class TestChipExo(APITestCase):
+    """
+    Tests /chipexo detail operations.
+    """
+
+    def setUp(self):
+        logging.basicConfig(level=logging.DEBUG)
+        self.user = UserFactory.create()
+        self.gene_record = GeneFactory.create()
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
+        ChipExoFactory.create(
+            uploader=self.user,
+            gene=self.gene_record,
+            tf=self.gene_record
+        )
+        self.url = reverse('chipexo-list')
+        settings.DEBUG = True
+
+    def test_post_fail(self):
+        response = self.client.post(self.url, {})
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_get_url(self):
+        response = self.client.get(self.url)
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_put_single(self):
+        chipexo_data = factory.build(
+            dict,
+            FACTORY_CLASS=ChipExoFactory)
+        chipexo_data['gene'] = self.gene_record.pk
+        chipexo_data['tf'] = self.gene_record.pk
+        for attr in AUTO_ADD_FIELDS:
+            chipexo_data.pop(attr, None)
+        response = self.client.post(self.url, chipexo_data)
+        assert response.status_code == status.HTTP_201_CREATED
+
+        chipexo = ChipExo.objects.get(pk=response.data.get('id'))
+        assert chipexo.tf.pk == chipexo_data.get('tf')
+        assert chipexo.uploader.username == self.user.username
 
 
 class TestChrMapViewSet(APITestCase):
@@ -227,6 +495,40 @@ class TestGeneViewSet(APITestCase):
         #      'serializer_class_path': 'myapp.serializers.GeneSerializer'})
 
 
+class TestPromoterRegions_s3ViewSet(APITestCase):
+    """
+    Tests /promoter_regions_s3 detail operations.
+    """
+
+    def setUp(self):
+        logging.basicConfig(level=logging.DEBUG)
+        self.user = UserFactory.create()
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
+        self.promoter_regions_s3_data = factory.build(
+            dict,
+            FACTORY_CLASS=PromoterRegions_s3Factory)
+        for attr in AUTO_ADD_FIELDS:
+            self.promoter_regions_s3_data.pop(attr, None)
+        self.url = reverse('promoterregionss3-list')
+        settings.DEBUG = True
+
+    def test_post_fail(self):
+        response = self.client.post(self.url, {})
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_post_success(self):
+        with open(self.promoter_regions_s3_data.get('file'), 'rb') as f:
+            self.promoter_regions_s3_data['file'] = f
+
+            # Test the create() method
+            response = self.client.post(self.url,
+                                        self.promoter_regions_s3_data,
+                                        format='multipart')
+
+        assert response.status_code == status.HTTP_201_CREATED
+
+
 class TestPromoterRegionsViewSet(APITestCase):
     """
     Tests /promoter_regions detail operations.
@@ -305,47 +607,6 @@ class TestPromoterRegionsViewSet(APITestCase):
              'writable',
              'automatically_generated',
              'filter'}
-
-    def test_callingcards_endpoint(self):
-        # Create a CCExperiment instance to have some data to test with
-        filepath = os.path.join(
-            'analysis',
-            'run_5690',
-            'ccexperiment_75_yiming.csv.gz')
-        experiment = CCExperimentFactory.create(
-            id=75,
-            uploader=self.user,
-            batch='run_5690')
-        background_source = BackgroundSourceFactory.create(
-            source='adh1'
-        )
-        hops_source = HopsSourceFactory.create(
-            source='mitra'
-        )
-
-        # Create a CallingCardsSig instance to have some data to test with
-        callingcards_sig = CallingCardsSigFactory.create(
-            experiment=experiment,
-            hops_source=hops_source,
-            background_source=background_source,
-            promoter_source=self.promoterregionssource,
-            file=filepath)
-
-        callingcards_url = reverse('promoterregions-callingcards')
-        response = self.client.get(callingcards_url)
-
-        # Check the response status code
-        assert response.status_code == status.HTTP_200_OK
-
-        # Check the content type
-        assert response['Content-Type'] == 'application/gzip'
-
-        # Check the content encoding
-        assert response['Content-Encoding'] == 'gzip'
-
-        # Check the content disposition
-        assert response['Content-Disposition'] == \
-            'attachment; filename="data.csv.gz"'
 
 
 class TestHarbisonChIP(APITestCase):
@@ -482,49 +743,6 @@ class TestHarbisonChIP(APITestCase):
         assert response.data['results'] == expected_data
 
 
-class TestChipExo(APITestCase):
-    """
-    Tests /chipexo detail operations.
-    """
-
-    def setUp(self):
-        logging.basicConfig(level=logging.DEBUG)
-        self.user = UserFactory.create()
-        self.gene_record = GeneFactory.create()
-        self.client.credentials(
-            HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
-        ChipExoFactory.create(
-            uploader=self.user,
-            gene=self.gene_record,
-            tf=self.gene_record
-        )
-        self.url = reverse('chipexo-list')
-        settings.DEBUG = True
-
-    def test_post_fail(self):
-        response = self.client.post(self.url, {})
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    def test_get_url(self):
-        response = self.client.get(self.url)
-        assert response.status_code == status.HTTP_200_OK
-
-    def test_put_single(self):
-        chipexo_data = factory.build(
-            dict,
-            FACTORY_CLASS=ChipExoFactory)
-        chipexo_data['gene'] = self.gene_record.pk
-        chipexo_data['tf'] = self.gene_record.pk
-        for attr in AUTO_ADD_FIELDS:
-            chipexo_data.pop(attr, None)
-        response = self.client.post(self.url, chipexo_data)
-        assert response.status_code == status.HTTP_201_CREATED
-
-        chipexo = ChipExo.objects.get(pk=response.data.get('id'))
-        assert chipexo.tf.pk == chipexo_data.get('tf')
-        assert chipexo.uploader.username == self.user.username
-
-
 @override_settings(DATABASES={'default':
                               {'ENGINE':
                                'django.db.backends.postgresql_psycopg2'}})
@@ -605,6 +823,39 @@ class TestKemmerenTFKO(APITestCase):
             assert record.modified is not None
 
 
+class TestKemmerenTFKO_s3(APITestCase):
+    """
+    Tests /kemmeren_tfko_s3 detail operations.
+    """
+
+    def setUp(self):
+        logging.basicConfig(level=logging.DEBUG)
+        self.user = UserFactory.create()
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
+        self.kemmeren_tfko_s3_data = factory.build(
+            dict, FACTORY_CLASS=KemmerenTFKO_s3Factory)
+        for attr in AUTO_ADD_FIELDS:
+            self.kemmeren_tfko_s3_data.pop(attr, None)
+        self.url = reverse('kemmerentfkos3-list')
+        settings.DEBUG = True
+
+    def test_post_fail(self):
+        response = self.client.post(self.url, {})
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_post_success(self):
+        with open(self.kemmeren_tfko_s3_data.get('file'), 'rb') as f:
+            self.kemmeren_tfko_s3_data['file'] = f
+
+            # Test the create() method
+            response = self.client.post(self.url,
+                                        self.kemmeren_tfko_s3_data,
+                                        format='multipart')
+
+        assert response.status_code == status.HTTP_201_CREATED
+
+
 class TestMcIsaacZEV(APITestCase):
     """
     Tests /mcisaac_zev detail operations.
@@ -680,42 +931,6 @@ class TestMcIsaacZEV_s3(APITestCase):
         actual = McIsaacZEV_s3.objects.get(pk=response.data.get('id'))
         assert actual.tf.pk == self.mcisaac_s3_zev_data.get('tf')
         assert actual.uploader.username == self.user.username
-
-
-class TestBackground(APITestCase):
-    """
-    Tests /background detail operations.
-    """
-
-    def setUp(self):
-        self.user = UserFactory.create()
-        self.chr_record = ChrMapFactory.create()
-        self.backgroundsource = BackgroundSourceFactory.create()
-        self.client.credentials(
-            HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
-        self.url = reverse('background-list')
-
-    def test_post_fail(self):
-        response = self.client.post(self.url, {})
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    def test_get_url(self):
-        response = self.client.get(self.url)
-        assert response.status_code == status.HTTP_200_OK
-
-    def test_put_single(self):
-        background_data = factory.build(
-            dict, FACTORY_CLASS=BackgroundFactory)
-        background_data['chr'] = self.chr_record.pk
-        background_data['source'] = self.backgroundsource.pk
-        for attr in AUTO_ADD_FIELDS:
-            background_data.pop(attr, None)
-        response = self.client.post(self.url, background_data)
-        assert response.status_code == status.HTTP_201_CREATED
-
-        background = Background.objects.get(pk=response.data.get('id'))
-        assert background.chr.pk == background_data.get('chr')
-        assert background.uploader.username == self.user.username
 
 
 class TestCCTF(APITestCase):
@@ -799,115 +1014,6 @@ class TestCCExperiment(APITestCase):
         ccexperiment = CCExperiment.objects.get(pk=response.data.get('id'))
         assert ccexperiment.tf.pk == self.ccexperiment_data.get('tf')
         assert ccexperiment.uploader.username == self.user.username
-
-
-class TestCallingCards_s3(APITestCase):
-    """
-    Tests /hops_s3 detail operations.
-    """
-
-    def setUp(self):
-        logging.basicConfig(level=logging.DEBUG)
-        self.user = UserFactory.create()
-        self.source_record = HopsSourceFactory.create()
-        self.lab_record = LabFactory.create()
-        self.experiment_record = CCExperimentFactory.create(
-            lab=self.lab_record)
-        self.tf_gene = GeneFactory.create(gene='TFGENE')
-        self.tf_locus_tag = GeneFactory.create(locus_tag='TFLOCUSTAG')
-        self.hops_s3_data = factory.build(
-            dict, FACTORY_CLASS=CallingCards_s3Factory)
-        self.client.credentials(
-            HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
-        self.url = reverse('hopss3-list')
-
-    def test_post_fail(self):
-        response = self.client.post(self.url, {})
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    def test_create_hops_s3_with_ccexpr(self):
-        #qbed_file = random_file_from_media_directory('qbed')
-
-        with open(self.hops_s3_data.get('qbed'), 'rb') as f:
-            post_data = {
-                'chr_format': 'mitra',
-                'source': self.source_record.pk,
-                'experiment': self.experiment_record.pk,
-                'qbed': f,
-                'notes': 'some notes'
-            }
-
-            # Test the create() method
-            response = self.client.post(self.url,
-                                        post_data,
-                                        format='multipart')
-
-        assert response.status_code == status.HTTP_201_CREATED
-
-        hops_s3 = CallingCards_s3.objects.get(pk=response.data.get('id'))
-        assert hops_s3.source.pk == post_data.get('source')
-        assert hops_s3.experiment.pk == post_data.get('experiment')
-        assert hops_s3.notes == post_data.get('notes')
-
-    def test_create_hops_s3_no_ccexpr_gene(self):
-        media_directory = default_storage.location
-        qbed_file = random_file_from_media_directory('qbed')
-
-        upload_file = os.path.join(media_directory, qbed_file)
-
-        with open(upload_file, 'rb') as f:
-            post_data = {
-                'chr_format': 'mitra',
-                'tf_gene': 'TFGENE',
-                'batch': 'run_1234',
-                'batch_replicate': 1,
-                'source': self.source_record.pk,
-                'lab': self.lab_record.pk,
-                'qbed': f,
-                'notes': 'some notes'
-            }
-
-            # Test the create() method
-            response = self.client.post(self.url,
-                                        post_data,
-                                        format='multipart')
-
-        assert response.status_code == status.HTTP_201_CREATED
-
-        hops_s3 = CallingCards_s3.objects.get(pk=response.data.get('id'))
-        assert hops_s3.source.pk == post_data.get('source')
-        assert hops_s3.experiment.pk != post_data.get('experiment')
-        assert hops_s3.notes == post_data.get('notes')
-
-    def test_create_hops_s3_no_ccexpr_locus_tag(self):
-        media_directory = default_storage.location
-        qbed_file = random_file_from_media_directory('qbed')
-
-        upload_file = os.path.join(media_directory, qbed_file)
-
-        with open(upload_file, 'rb') as f:
-            post_data = {
-                'chr_format': 'mitra',
-                'tf_locus_tag': 'TFLOCUSTAG',
-                'batch': 'run_1234',
-                'batch_replicate': 1,
-                'source': self.source_record.pk,
-                'lab': self.lab_record.pk,
-                'qbed': f,
-                'notes': 'some notes'
-            }
-
-            # Test the create() method
-            response = self.client.post(self.url,
-                                        post_data,
-                                        format='multipart')
-
-        assert response.status_code == status.HTTP_201_CREATED
-
-        hops_s3 = CallingCards_s3.objects.get(pk=response.data.get('id'))
-        assert hops_s3.source.pk == post_data.get('source')
-        assert hops_s3.experiment.pk != post_data.get('experiment')
-        assert hops_s3.notes == post_data.get('notes')
 
 
 class TestQcTfToTransposon(APITestCase):
@@ -1256,3 +1362,31 @@ class TestExpressionViewSet(APITestCase):
         url = reverse('expression-fields')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class TestRegulatorViewSet(APITestCase):
+    """Test Regulator ViewSet"""
+
+    def setUp(self):
+        self.user = UserFactory.create()
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Token {self.user.auth_token}')
+        self.url = reverse('regulator-list')
+
+    def test_post_fail(self):
+        response = self.client.post(self.url, {})
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_get_url(self):
+        response = self.client.get(self.url)
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_put_single(self):
+        regulator_data = factory.build(
+            dict, FACTORY_CLASS=RegulatorFactory)
+        for attr in AUTO_ADD_FIELDS:
+            regulator_data.pop(attr, None)
+        regulator_data['regulator'] = regulator_data.get('regulator').pk
+        response = self.client.post(self.url, regulator_data)
+
+        assert response.status_code == status.HTTP_201_CREATED

@@ -2,9 +2,8 @@ import os
 import random
 from math import floor
 import factory
-from django.core.files.storage import default_storage
 from django.core.exceptions import ObjectDoesNotExist
-from ..models import HopsSource, Lab
+from ..models import HopsSource, CCExperiment, BackgroundSource
 
 
 from callingcards.users.test.factories import UserFactory
@@ -79,6 +78,156 @@ class BaseModelFactoryMixin(factory.django.DjangoModelFactory):
         self.save()
 
 
+class BackgroundSourceFactory(BaseModelFactoryMixin,
+                              factory.django.DjangoModelFactory):
+    source = 'adh1'
+    providence = 'some_providence'
+    notes = 'none'
+
+    class Meta:
+        model = 'callingcards.BackgroundSource'
+
+class BackgroundFactory(BaseModelFactoryMixin,
+                        factory.django.DjangoModelFactory):
+
+    class Meta:
+        model = 'callingcards.Background'
+
+    chr = factory.SubFactory(ChrMapFactory)
+    source = factory.SubFactory(BackgroundSourceFactory)
+    start = 1
+    end = 100
+    depth = 100
+    source = factory.SubFactory(BackgroundSourceFactory)
+
+
+class CallingCards_s3Factory(BaseModelFactoryMixin,
+                             factory.django.DjangoModelFactory):
+    class Meta:
+        model = 'callingcards.CallingCards_s3'
+
+    chr_format = 'mitra'
+    source = factory.SubFactory(HopsSourceFactory)
+    experiment = factory.SubFactory(CCExperimentFactory)
+    qbed = random_file_from_media_directory('qbed')
+    notes = 'some notes'
+    genomic_hops = 100
+    plasmid_hops = 10
+
+    @classmethod
+    def _create(cls, model_class, *args, **kwargs):
+        source = kwargs.get('source')
+        if source:
+            try:
+                source = HopsSource.objects.get(source=source)
+            except ObjectDoesNotExist:
+                source = HopsSourceFactory.create(source=source)
+            kwargs['source'] = source
+        return super()._create(model_class, *args, **kwargs)
+
+
+class CallingCardsSigFactory(BaseModelFactoryMixin,
+                             factory.django.DjangoModelFactory):
+
+    experiment = factory.SubFactory(CCExperimentFactory)
+    hops_source = factory.SubFactory(HopsSourceFactory)
+    background_source = factory.SubFactory(BackgroundSourceFactory)
+    promoter_source = factory.SubFactory(PromoterRegionsSourceFactory)
+    file = random_file_from_media_directory('callingcardssig')
+    notes = factory.Faker('text', max_nb_chars=50)
+
+    class Meta:
+        model = 'callingcards.callingcardssig'
+
+    @classmethod
+    def _create(cls, model_class, *args, **kwargs):
+        hops_source = kwargs.get('hops_source')
+        experiment = kwargs.get('experiment')
+        background_source = kwargs.get('background_source')
+        if hops_source:
+            try:
+                hops_source = HopsSource.objects.get(source=hops_source)
+            except ObjectDoesNotExist:
+                hops_source = HopsSourceFactory.create(source=hops_source)
+            kwargs['hops_source'] = hops_source
+        if experiment:
+            try:
+                experiment = CCExperiment.objects.get(experiment=experiment)
+            except ObjectDoesNotExist:
+                experiment = CCExperimentFactory.create(experiment=experiment)
+            kwargs['experiment'] = experiment
+        if background_source:
+            try:
+                background_source = BackgroundSource.objects.get(
+                    source=background_source)
+            except ObjectDoesNotExist:
+                background_source = BackgroundSourceFactory.create(
+                    source=background_source)
+            kwargs['background_source'] = background_source
+
+        return super()._create(model_class, *args, **kwargs)
+    
+    
+class CCExperimentFactory(BaseModelFactoryMixin,
+                          factory.django.DjangoModelFactory):
+
+    class Meta:
+        model = 'callingcards.CCExperiment'
+
+    tf = factory.SubFactory(CCTFFactory)
+    batch = factory.Sequence(lambda n: f'run_{n}')
+    batch_replicate = 1
+    lab = factory.SubFactory(LabFactory)
+
+class CCTFFactory(BaseModelFactoryMixin,
+                  factory.django.DjangoModelFactory):
+
+    class Meta:
+        model = 'callingcards.CCTF'
+
+    tf = factory.SubFactory(GeneFactory)
+    strain = 'unknown'
+    under_development = True
+    notes = 'none'
+
+class ChipExo_s3Factory(BaseModelFactoryMixin,
+                        factory.django.DjangoModelFactory):
+    class Meta:
+        model = 'callingcards.ChipExo_s3'
+
+    regulator = factory.SubFactory(RegulatorFactory)
+    chipexo_id = 1234
+    replicate = 1
+    accession = 'SRR1234567'
+    sra_accession = 'SRA1234567'
+    condition = 'YPD'
+    parent_condition = 'YPD'
+    sig_count = 100
+    control_count = 100
+    sig_fraction = .5
+    sig_ctrl_scaling = .5
+    file = random_file_from_media_directory('chipexo')
+
+
+class ChipExoSigFactory(BaseModelFactoryMixin,
+                        factory.django.DjangoModelFactory):
+    class Meta:
+        model = 'callingcards.ChipExoSig'
+
+    chipexodata_id = factory.SubFactory(ChipExo_s3Factory)
+    promoterregions_id = factory.SubFactory(PromoterRegions_s3Factory)
+    file = random_file_from_media_directory('chipexosig')
+
+
+class ChipExoFactory(BaseModelFactoryMixin,
+                     factory.django.DjangoModelFactory):
+
+    class Meta:
+        model = 'callingcards.ChipExo'
+
+    gene = factory.SubFactory(GeneFactory)
+    tf = factory.SubFactory(GeneFactory)
+    strength = factory.LazyFunction(lambda: round(random.random(), 3))
 class ChrMapFactory(BaseModelFactoryMixin,
                     factory.django.DjangoModelFactory):
     class Meta:
@@ -141,15 +290,14 @@ class PromoterRegionsFactory(BaseModelFactoryMixin,
     source = factory.SubFactory(PromoterRegionsSourceFactory)
 
 
-class ChipExoFactory(BaseModelFactoryMixin,
-                     factory.django.DjangoModelFactory):
-
+class PromoterRegions_s3Factory(BaseModelFactoryMixin,
+                                factory.django.DjangoModelFactory):
     class Meta:
-        model = 'callingcards.ChipExo'
+        model = 'callingcards.PromoterRegions_s3'
 
-    gene = factory.SubFactory(GeneFactory)
-    tf = factory.SubFactory(GeneFactory)
-    strength = factory.LazyFunction(lambda: round(random.random(), 3))
+    chr_format = 'igenomes'
+    source = factory.SubFactory(PromoterRegionsSourceFactory)
+    file = random_file_from_media_directory('promoter_regions')
 
 
 class HarbisonChIPFactory(BaseModelFactoryMixin,
@@ -161,6 +309,35 @@ class HarbisonChIPFactory(BaseModelFactoryMixin,
     gene = factory.SubFactory(GeneFactory)
     tf = factory.SubFactory(GeneFactory)
     pval = factory.LazyFunction(lambda: round(random.random(), 3))
+
+
+class HarbisonChIP_s3Factory(BaseModelFactoryMixin,
+                             factory.django.DjangoModelFactory):
+    class Meta:
+        model = 'callingcards.HarbisonChIP_s3'
+
+    regulator = factory.SubFactory(RegulatorFactory)
+    condition = 'YPD'
+    file = random_file_from_media_directory('harbisonchip')
+
+
+class Hu_s3Factory(BaseModelFactoryMixin,
+                   factory.django.DjangoModelFactory):
+    class Meta:
+        model = 'callingcards.Hu_s3'
+
+    regulator = factory.SubFactory(RegulatorFactory)
+    file = random_file_from_media_directory('hu')
+
+
+class KemmerenTFKO_s3Factory(BaseModelFactoryMixin,
+                             factory.django.DjangoModelFactory):
+    class Meta:
+        model = 'callingcards.KemmerenTFKO_s3'
+
+    regulator = factory.SubFactory(RegulatorFactory)
+    reference = 'wt'
+    file = random_file_from_media_directory('chipexo')
 
 
 class KemmerenTFKOFactory(BaseModelFactoryMixin,
@@ -199,43 +376,6 @@ class McIsaacZEV_s3Factory(BaseModelFactoryMixin,
     time = '0'
     file = random_file_from_media_directory('mcisaac')
 
-
-class BackgroundSourceFactory(BaseModelFactoryMixin,
-                              factory.django.DjangoModelFactory):
-    source = 'adh1'
-    providence = 'some_providence'
-    notes = 'none'
-
-    class Meta:
-        model = 'callingcards.BackgroundSource'
-
-
-class BackgroundFactory(BaseModelFactoryMixin,
-                        factory.django.DjangoModelFactory):
-
-    class Meta:
-        model = 'callingcards.Background'
-
-    chr = factory.SubFactory(ChrMapFactory)
-    source = factory.SubFactory(BackgroundSourceFactory)
-    start = 1
-    end = 100
-    depth = 100
-    source = factory.SubFactory(BackgroundSourceFactory)
-
-
-class CCTFFactory(BaseModelFactoryMixin,
-                  factory.django.DjangoModelFactory):
-
-    class Meta:
-        model = 'callingcards.CCTF'
-
-    tf = factory.SubFactory(GeneFactory)
-    strain = 'unknown'
-    under_development = True
-    notes = 'none'
-
-
 class LabFactory(BaseModelFactoryMixin,
                  factory.django.DjangoModelFactory):
 
@@ -244,19 +384,6 @@ class LabFactory(BaseModelFactoryMixin,
 
     lab = 'brent'
     notes = 'none'
-
-
-class CCExperimentFactory(BaseModelFactoryMixin,
-                          factory.django.DjangoModelFactory):
-
-    class Meta:
-        model = 'callingcards.CCExperiment'
-
-    tf = factory.SubFactory(CCTFFactory)
-    batch = factory.Sequence(lambda n: f'run_{n}')
-    batch_replicate = 1
-    lab = factory.SubFactory(LabFactory)
-
 
 class HopsSourceFactory(BaseModelFactoryMixin,
                         factory.django.DjangoModelFactory):
@@ -273,30 +400,6 @@ class HopsSourceFactory(BaseModelFactoryMixin,
             return HopsSource.objects.get(**kwargs)
         except HopsSource.DoesNotExist:
             return cls.create(**kwargs)
-
-
-class CallingCards_s3Factory(BaseModelFactoryMixin, factory.django.DjangoModelFactory):
-    class Meta:
-        model = 'callingcards.CallingCards_s3'
-
-    chr_format = 'mitra'
-    source = factory.SubFactory(HopsSourceFactory)
-    experiment = factory.SubFactory(CCExperimentFactory)
-    qbed = random_file_from_media_directory('qbed')
-    notes = 'some notes'
-    genomic_hops = 100
-    plasmid_hops = 10
-
-    @classmethod
-    def _create(cls, model_class, *args, **kwargs):
-        source = kwargs.get('source')
-        if source:
-            try:
-                source = HopsSource.objects.get(source=source)
-            except ObjectDoesNotExist:
-                source = HopsSourceFactory.create(source=source)
-            kwargs['source'] = source
-        return super()._create(model_class, *args, **kwargs)
 
 
 class HopsFactory(BaseModelFactoryMixin,
@@ -408,20 +511,11 @@ class QcTfToTransposonFactory(BaseModelFactoryMixin,
     note = 'some notes'
 
 
-class CallingCardsSigFactory(BaseModelFactoryMixin,
-                             factory.django.DjangoModelFactory):
-
-    experiment = factory.SubFactory(CCExperimentFactory)
-    hops_source = factory.SubFactory(HopsSourceFactory)
-    background_source = factory.SubFactory(BackgroundSourceFactory)
-    promoter_source = factory.SubFactory(PromoterRegionsSourceFactory)
-    file = factory.django.FileField(
-        from_path=os.path.join(
-            'media',
-            'analysis',
-            'run_5690',
-            'ccexperiment_75_yiming.csv.gz'))
-    notes = factory.Faker('text', max_nb_chars=50)
+class RegulatorFactory(BaseModelFactoryMixin,
+                       factory.django.DjangoModelFactory):
 
     class Meta:
-        model = 'callingcards.callingcardssig'
+        model = 'callingcards.Regulator'
+
+    regulator = factory.SubFactory(GeneFactory)
+    notes = 'none'

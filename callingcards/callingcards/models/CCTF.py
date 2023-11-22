@@ -57,6 +57,11 @@ class CCTF(BaseModel):
     """
     objects = CCTFQuerySet.as_manager()
 
+    # regulator = models.ForeignKey(
+    #     'Regulator',
+    #     models.CASCADE,
+    #     db_index=True)
+    
     tf = models.ForeignKey(
         'Gene',
         models.PROTECT,

@@ -1,4 +1,4 @@
 def chipexosigregions_filepath(instance, filename):
-    chipexo_id = instance.chipexo_id
-    promoterregion_id = instance.promoterregions_id
-    return f'chipexo/{chipexo_id}_{promoterregion_id}.tsv.gz'
+    instance_id = instance.id
+    source = instance.promoterregions_source
+    return f'chipexo/{source}/{instance_id}.tsv.gz'

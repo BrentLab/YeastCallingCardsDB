@@ -211,12 +211,12 @@ def create_manual_review(experiment_id: int, user_auth_token: str) -> int:
 
 
 class CallingCards_s3ViewSet(ListModelFieldsMixin,
-                     CustomCreateMixin,
-                     PageSizeModelMixin,
-                     CountModelMixin,
-                     UpdateModifiedMixin,
-                     CustomValidateMixin,
-                     viewsets.ModelViewSet):
+                             CustomCreateMixin,
+                             PageSizeModelMixin,
+                             CountModelMixin,
+                             UpdateModifiedMixin,
+                             CustomValidateMixin,
+                             viewsets.ModelViewSet):
     """
     API endpoint that allows CallingCards_s3 to be viewed or edited.
     """

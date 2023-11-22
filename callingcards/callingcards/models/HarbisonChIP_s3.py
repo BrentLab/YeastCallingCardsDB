@@ -31,15 +31,32 @@ class HarbisonChIP_s3(BaseModel):
         all_records = HarbisonChIP_s3.objects.all()
     """
 
-    CONDITION_CHOICES = [('YPD', 'YPD')]
+    CONDITION_CHOICES = [("YPD", "YPD"),
+                         ("SM", "SM"),
+                         ("RAPA", "RAPA"),
+                         ("H2O2Hi", "H2O2Hi"),
+                         ("H2O2Lo", "H2O2Lo"),
+                         ("Acid", "Acid"),
+                         ("Alpha", "Alpha"),
+                         ("BUT14", "BUT14"),
+                         ("BUT90", "BUT90"),
+                         ("Thi-", "Thi-"),
+                         ("GAL", "GAL"),
+                         ("HEAT", "HEAT"),
+                         ("Pi-", "Pi-"),
+                         ("RAFF", "RAFF")]
 
-    # the TF which was overexpressed. This foreign keys to
+    # the regulator which was overexpressed. This foreign keys to
     # the gene table
-    tf = models.ForeignKey(
-        'Gene',
+    regulator = models.ForeignKey(
+        'Regulator',
         models.PROTECT,
-        related_name='harbisonchip_s3_tf',
+        related_name='harbisonchip_s3_regulator',
         db_index=True)
+    condition = models.CharField(max_length=7,
+                                 help_text="Harbison ChIP sample condition",
+                                 choices=CONDITION_CHOICES,
+                                 db_index=True)
     file = models.FileField(upload_to=harbisonchip_filepath,
                             help_text="")
 

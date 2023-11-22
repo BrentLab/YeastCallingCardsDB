@@ -17,7 +17,7 @@ from .mixins import (ListModelFieldsMixin,
                      CustomValidateMixin)
 from ..models import ChipExoSig
 from ..serializers import (ChipExoSigSerializer,)
-from ..filters import ChipExoSigregionsFilter
+from ..filters import ChipExoSigFilter
 from ..utils import validate_bed6_df
 
 
@@ -25,12 +25,12 @@ logger = logging.getLogger(__name__)
 
 
 class ChipExoSigViewSet(ListModelFieldsMixin,
-                               CustomCreateMixin,
-                               PageSizeModelMixin,
-                               CountModelMixin,
-                               UpdateModifiedMixin,
-                               CustomValidateMixin,
-                               viewsets.ModelViewSet):
+                        CustomCreateMixin,
+                        PageSizeModelMixin,
+                        CountModelMixin,
+                        UpdateModifiedMixin,
+                        CustomValidateMixin,
+                        viewsets.ModelViewSet):
     """
     API endpoint that allows ChipExoSig to be viewed or edited.
     """

@@ -9,4 +9,4 @@ class PromoterRegions_s3Filter(django_filters.FilterSet):
 
     class Meta:
         model = PromoterRegions_s3
-        fields = ['tf_locus_tag', 'tf_gene']
+        fields = ['source']

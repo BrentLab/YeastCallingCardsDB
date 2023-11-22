@@ -18,13 +18,15 @@ def get_chr_format(unique_chr_values_set: set) -> str:
         ChrMap Fields
     """
     chrmap_fields = [field.name for field in ChrMap._meta.get_fields()
-                     if field.name not in ['id', 'seqlength', 'type']]
+                     if field.concrete and field.name not in
+                     ['id', 'seqlength', 'type', 'uploader', 'uploadDate',
+                      'modified', 'modifiedBy']]
 
     chr_map_records = ChrMap.objects.all()
 
     # Check each field in ChrMap
     for field in chrmap_fields:
-        chr_map_values = set(record.getattr(field)
+        chr_map_values = set(getattr(record, field)
                              for record in chr_map_records)
         if unique_chr_values_set.issubset(chr_map_values):
             return field

@@ -7,6 +7,13 @@ from django.forms.models import model_to_dict
 from callingcards.users.test.factories import UserFactory
 from .factories import (ChrMapFactory, GeneFactory, PromoterRegionsFactory,
                         PromoterRegionsSourceFactory,
+                        PromoterRegions_s3Factory,
+                        RegulatorFactory,
+                        ChipExo_s3Factory,
+                        ChipExoSigFactory,
+                        HarbisonChIP_s3Factory,
+                        Hu_s3Factory,
+                        KemmerenTFKO_s3Factory,
                         ChipExoFactory,
                         HarbisonChIPFactory, KemmerenTFKOFactory,
                         McIsaacZEVFactory,
@@ -20,6 +27,13 @@ from .factories import (ChrMapFactory, GeneFactory, PromoterRegionsFactory,
 
 from ..serializers import (ChrMapSerializer, GeneSerializer,
                            PromoterRegionsSerializer,
+                           PromoterRegions_s3Serializer,
+                           RegulatorSerializer,
+                           ChipExo_s3Serializer,
+                           ChipExoSigSerializer,
+                           HarbisonChIP_s3Serializer,
+                           Hu_s3Serializer,
+                           KemmerenTFKO_s3Serializer,
                            PromoterRegionsTargetsOnlySerializer,
                            ChipExoSerializer, ChipExoAnnotatedSerializer,
                            HarbisonChIPSerializer,
@@ -96,6 +110,23 @@ class TestCreatePromoterRegions(TestCase):
         assert serializer.is_valid() is True
 
 
+class TestCreatePromoterRegions_s3(TestCase):
+
+    def setUp(self):
+        self.serializer = PromoterRegions_s3Serializer
+        self.factory = PromoterRegions_s3Factory
+
+    def test_serializer_with_empty_data(self):
+        serializer = self.serializer(data={})  # noqa
+        assert serializer.is_valid() is False
+
+    @override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
+    def test_serializer_with_valid_data(self):
+        serializer = self.serializer(
+            data=model_to_dict(self.factory.create()))
+        assert serializer.is_valid() is True
+
+
 class TestPromoterRegionsTargetsOnly(TestCase):
 
     def setUp(self):
@@ -160,6 +191,73 @@ class TestHarbisonChIP(TestCase):
         assert serializer.is_valid() is True
 
 
+class TestHarbisonChIP_s3(TestCase):
+
+    def setUp(self):
+        self.serializer = HarbisonChIP_s3Serializer
+        self.factory = HarbisonChIP_s3Factory
+
+    def test_serializer_with_empty_data(self):
+        serializer = self.serializer(data={})  # noqa
+        assert serializer.is_valid() is False
+
+    @override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
+    def test_serializer_with_valid_data(self):
+        serializer = self.serializer(
+            data=model_to_dict(self.factory.create()))
+        assert serializer.is_valid() is True
+
+
+class TestHu_s3(TestCase):
+
+    def setUp(self):
+        self.serializer = Hu_s3Serializer
+        self.factory = Hu_s3Factory
+
+    def test_serializer_with_empty_data(self):
+        serializer = self.serializer(data={})  # noqa
+        assert serializer.is_valid() is False
+
+    @override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
+    def test_serializer_with_valid_data(self):
+        serializer = self.serializer(
+            data=model_to_dict(self.factory.create()))
+        assert serializer.is_valid() is True
+
+
+class TestChipExo_s3(TestCase):
+
+    def setUp(self):
+        self.serializer = ChipExo_s3Serializer
+        self.factory = ChipExo_s3Factory
+
+    def test_serializer_with_empty_data(self):
+        serializer = self.serializer(data={})  # noqa
+        assert serializer.is_valid() is False
+
+    def test_serializer_with_valid_data(self):
+        serializer = self.serializer(
+            data=model_to_dict(self.factory.create()))
+        assert serializer.is_valid() is True
+
+
+class TestChipExo_s3(TestCase):
+
+    def setUp(self):
+        self.serializer = ChipExoSigSerializer
+        self.factory = ChipExoSigFactory
+
+    def test_serializer_with_empty_data(self):
+        serializer = self.serializer(data={})  # noqa
+        assert serializer.is_valid() is False
+
+    @override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
+    def test_serializer_with_valid_data(self):
+        serializer = self.serializer(
+            data=model_to_dict(self.factory.create()))
+        assert serializer.is_valid() is True
+
+
 class TestChipExo(TestCase):
 
     def setUp(self):
@@ -186,6 +284,23 @@ class TestChipExo(TestCase):
         annotated_data = ChipExo.objects.with_annotations()\
             .get(pk=self.chipexo_record.pk)
         serializer = ChipExoAnnotatedSerializer(data=annotated_data)
+        assert serializer.is_valid() is True
+
+
+class TestKemmerenTFKO_s3(TestCase):
+
+    def setUp(self):
+        self.serializer = KemmerenTFKO_s3Serializer
+        self.factory = KemmerenTFKO_s3Factory
+
+    def test_serializer_with_empty_data(self):
+        serializer = self.serializer(data={})  # noqa
+        assert serializer.is_valid() is False
+
+    @override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
+    def test_serializer_with_valid_data(self):
+        serializer = self.serializer(
+            data=model_to_dict(self.factory.create()))
         assert serializer.is_valid() is True
 
 
@@ -220,6 +335,7 @@ class TestMcIsaacZEV(TestCase):
             data=model_to_dict(self.factory.create()))
         assert serializer.is_valid() is True
 
+
 @override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
 class TestMcIsaacZEV_s3(TestCase):
 
@@ -232,10 +348,10 @@ class TestMcIsaacZEV_s3(TestCase):
         assert serializer.is_valid() is False
 
     def test_serializer_with_valid_data(self):
-        logger.debug('MEDIA_ROOT = %s', settings.MEDIA_ROOT)
         serializer = self.serializer(
             data=model_to_dict(self.factory.create()))
         assert serializer.is_valid() is True
+
 
 class TestBackground(TestCase):
 
@@ -258,6 +374,22 @@ class TestCCTF(TestCase):
     def setUp(self):
         self.serializer = CCTFSerializer
         self.factory = CCTFFactory
+
+    def test_serializer_with_empty_data(self):
+        serializer = self.serializer(data={})  # noqa
+        assert serializer.is_valid() is False
+
+    def test_serializer_with_valid_data(self):
+        serializer = self.serializer(
+            data=model_to_dict(self.factory.create()))
+        assert serializer.is_valid() is True
+
+
+class TestRegulator(TestCase):
+
+    def setUp(self):
+        self.serializer = RegulatorSerializer
+        self.factory = RegulatorFactory
 
     def test_serializer_with_empty_data(self):
         serializer = self.serializer(data={})  # noqa
