@@ -1,5 +1,6 @@
 import factory
-from ..utils import random_file_from_media_directory
+from django.core.files.uploadedfile import SimpleUploadedFile
+from ..utils import random_file_from_media_directory, get_file_content
 from django.core.exceptions import ObjectDoesNotExist
 from .BaseModelFactoryMixin import BaseModelFactoryMixin
 from .RegulatorFactory import RegulatorFactory
@@ -13,7 +14,14 @@ class KemmerenTFKO_s3Factory(BaseModelFactoryMixin,
 
     regulator = factory.SubFactory(RegulatorFactory)
     reference = 'wt'
-    file = random_file_from_media_directory('chipexo')
+    replicate = '1'
+    file = factory.LazyAttribute(
+        lambda _: SimpleUploadedFile(
+            name='test_kemmeren.csv.gz',
+            content=get_file_content(random_file_from_media_directory('kemmeren_tfko')),  # noqa
+            content_type='application/gzip'
+        )
+    )
 
     @classmethod
     def _build(cls, model_class, *args, **kwargs):

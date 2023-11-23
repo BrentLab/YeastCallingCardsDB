@@ -7,6 +7,7 @@ class ChrMapFactory(BaseModelFactoryMixin,
                     factory.django.DjangoModelFactory):
     class Meta:
         model = 'callingcards.ChrMap'
+        skip_postgeneration_save = True
 
     refseq = 'NC_001133.9'
     igenomes = 'I'

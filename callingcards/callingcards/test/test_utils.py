@@ -51,30 +51,27 @@ class TestCallingCardsWithMetrics(APITestCase):
             10,
             source=background_source)
         self.gene_record = GeneFactory.create(gene='INO2')
+        self.hops_s3_record = CallingCards_s3Factory.build()
 
     def test_callingcards_with_metrics(self):
-        # media_directory = default_storage.location
-        media_directory = os.path.join(os.path.dirname(__file__), 'data')
-        qbed_file = 'qbed/ccf/INO2_chrI.ccf'
 
-        upload_file = os.path.join(media_directory, qbed_file)
+        post_data = {
+            'chr_format': 'mitra',
+            'tf_gene': 'INO2',
+            'batch': 'run_6437',
+            'batch_replicate': 1,
+            'lab': self.lab_record.pk,
+            'source': self.source_record.pk,
+            'qbed': self.hops_s3_record.qbed,
+            'notes': 'some notes'
+        }
 
-        with open(upload_file, 'rb') as f:
-            post_data = {
-                'chr_format': 'ucsc',
-                'tf_gene': 'INO2',
-                'batch': 'run_6437',
-                'batch_replicate': 1,
-                'lab': self.lab_record.pk,
-                'source': self.source_record.pk,
-                'qbed': f,
-                'notes': 'some notes'
-            }
-
-            # Test the create() method
-            response = self.client.post(reverse('hopss3-list'),
-                                        post_data,
-                                        format='multipart')
+        # Test the create() method
+        response = self.client.post(reverse('hopss3-list'),
+                                    post_data,
+                                    format='multipart')
+        
+        assert response.status_code == 201, response.content
 
         query_params = {
             'experiment_id': response.json()['experiment'],

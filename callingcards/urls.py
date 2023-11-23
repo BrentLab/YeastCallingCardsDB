@@ -22,6 +22,7 @@ from .callingcards.views import (
     ChrMapViewSet,
     ExpressionViewSet,
     GeneViewSet,
+	Hu_s3ViewSet,
     HarbisonChIP_s3ViewSet,
     HarbisonChIPViewSet,
     HopsSourceViewSet,
@@ -95,6 +96,9 @@ router.register(r'hops_source',
 router.register(r'hops',
                 HopsViewSet,
                 basename='hops')
+router.register(r'hu_s3',
+                Hu_s3ViewSet,
+                basename='hus3')
 router.register(r'kemmerentfko_s3',
                 KemmerenTFKO_s3ViewSet,
                 basename='kemmerentfkos3')

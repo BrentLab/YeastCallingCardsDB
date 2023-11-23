@@ -8,7 +8,7 @@ class GeneFactory(BaseModelFactoryMixin,
 
     class Meta:
         model = 'callingcards.Gene'
-        #django_get_or_create = ('locus_tag',)
+        skip_postgeneration_save = True
 
     chr = factory.SubFactory(ChrMapFactory)
     start = factory.Sequence(lambda n: n * 100)

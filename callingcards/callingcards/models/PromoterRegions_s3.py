@@ -6,15 +6,16 @@ This table defines the promoter regions, stored by file
 """
 import logging
 from django.db import models  # pylint: disable=import-error # noqa # type: ignore
+from django.core.files.storage import default_storage
 from django.dispatch import receiver
 from .BaseModel import BaseModel
 from .ChrMap import ChrMap
-from .filepaths.promoterregions_filepath import promoterregions_filepath
+from .mixins.FileUploadWithIdMixin import FileUploadMixin
 
 logger = logging.getLogger(__name__)
 
 
-class PromoterRegions_s3(BaseModel):
+class PromoterRegions_s3(BaseModel, FileUploadMixin):
     """
     A model for storing PromoterRegions bed files
 
@@ -52,7 +53,7 @@ class PromoterRegions_s3(BaseModel):
         help_text="The source (name) of a given set of promoter regions. "
         "Foreign keyed to the PromoterSource table")
 
-    file = models.FileField(upload_to=promoterregions_filepath,
+    file = models.FileField(upload_to='temp',
                             help_text="A bed file describing promoter "
                             "regions. The name field contains the Gene table "
                             "ID to which a given promoter region is "
@@ -64,6 +65,17 @@ class PromoterRegions_s3(BaseModel):
     class Meta:
         managed = True
         db_table = 'promoterregions_s3'
+
+    def save(self, *args, **kwargs):
+        # Store the old file path
+        old_file_name = self.file.name if self.file else None
+        super().save(*args, **kwargs)
+        self.update_file_name('file', 'promoter_regions', 'csv.gz')
+        new_file_name = self.file.name
+        super().save(update_fields=['file'])
+        # If the file name changed, delete the old file
+        if old_file_name and old_file_name != new_file_name:
+            default_storage.delete(old_file_name)
 
 
 @receiver(models.signals.post_delete, sender=PromoterRegions_s3)

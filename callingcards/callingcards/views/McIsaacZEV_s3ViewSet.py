@@ -53,14 +53,16 @@ class McIsaacZEV_s3ViewSet(ListModelFieldsMixin,
                 status=status.HTTP_401_UNAUTHORIZED)
 
         # Check that required fields for all upload methods are present
-        key_check_diff = {'tf', 'strain',
-                          'date', 'restriction',
-                          'mechanism', 'time',
-                          'file'} - set(request.data.keys())
-
-        if key_check_diff:
+        required_fields = set(field.name for field in
+                              McIsaacZEV_s3._meta.get_fields()
+                              if field.concrete and field.name not in
+                              ['id', 'uploader', 'uploadDate',
+                               'modified', 'modifiedBy'])
+                               
+        if not set(request.data.keys()).issubset(required_fields):
             return Response({'error': 'Missing required field(s): {}'
-                             .format(', '.join(key_check_diff))},
+                             .format(', '.join(required_fields -
+                                               set(required_fields)))},
                             status=status.HTTP_400_BAD_REQUEST)
 
         token = str(request.auth)
@@ -91,7 +93,13 @@ class McIsaacZEV_s3ViewSet(ListModelFieldsMixin,
                             f'.csv[.gz,.gzip] {exc}'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        required_columns = {'tf_id', 'target_id'}
+        required_columns = {'gene_id',
+                            'log2_ratio',
+                            'log2_cleaned_ratio',
+                            'log2_noise_model',
+                            'log2_cleaned_ratio_zth2d',
+                            'log2_selected_timecourses',
+                            'log2_shrunken_timecourses'}
         if not all(column in df.columns for column in required_columns):
             missing = required_columns - set(df.columns)
             return Response({'error': f'Missing required '

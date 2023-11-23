@@ -80,20 +80,19 @@ class KemmerenTFKO_s3ViewSet(ListModelFieldsMixin,
             return Response({'error': 'file must be a .csv.gz file.'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        # try:
-        #     with gzip.open(uploaded_file, 'rt') as f:
-        #         df = pd.read_csv(f, sep="\t", index_col=False)
-        # except UnicodeDecodeError as exc:
-        #     return Response({'error': f'Error decoding file: {exc}'},
-        #                     status=status.HTTP_400_BAD_REQUEST)
+        try:
+            with gzip.open(uploaded_file, 'rt') as f:
+                df = pd.read_csv(f, index_col=False)
+        except (UnicodeDecodeError, gzip.BadGzipFile) as exc:
+            return Response({'error': f'Error decoding file: {exc}'},
+                            status=status.HTTP_400_BAD_REQUEST)
 
-        # required_columns = {'chr', 'coord', 'YPD_Sig', 'YPD_Ctrl',
-        #                     'YPD_log2Fold', 'YPD_log2P', 'ActiveConds'}
-        # if not all(column in df.columns for column in required_columns):
-        #     missing = required_columns - set(df.columns)
-        #     return Response({'error': f'Missing required '
-        #                      f'column(s): {", ".join(missing)}'},
-        #                     status=status.HTTP_400_BAD_REQUEST)
+        required_columns = {'gene_id', 'reporterId', 'M', 'Madj', 'A', 'pval'}
+        if not all(column in df.columns for column in required_columns):
+            missing = required_columns - set(df.columns)
+            return Response({'error': f'Missing required '
+                             f'column(s): {", ".join(missing)}'},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         # Call the parent create() method with the modified request
         return super().create(request, *args, **kwargs)

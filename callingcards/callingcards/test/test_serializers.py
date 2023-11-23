@@ -1,29 +1,36 @@
 import logging
 import os
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.conf import settings
 from django.test import override_settings
 from django.test import TestCase
 from django.forms.models import model_to_dict
 from callingcards.users.test.factories import UserFactory
-from .factories import (ChrMapFactory, GeneFactory, PromoterRegionsFactory,
-                        PromoterRegionsSourceFactory,
-                        PromoterRegions_s3Factory,
-                        RegulatorFactory,
-                        ChipExo_s3Factory,
-                        ChipExoSigFactory,
-                        HarbisonChIP_s3Factory,
-                        Hu_s3Factory,
-                        KemmerenTFKO_s3Factory,
+from .factories import (BackgroundFactory,
+                        CCExperimentFactory,
+                        CCTFFactory,
                         ChipExoFactory,
-                        HarbisonChIPFactory, KemmerenTFKOFactory,
+                        ChipExoSigFactory,
+                        ChipExo_s3Factory,
+                        ChrMapFactory,
+                        GeneFactory,
+                        HarbisonChIPFactory,
+                        HarbisonChIP_s3Factory,
+                        HopsFactory,
+                        Hu_s3Factory,
+                        KemmerenTFKOFactory,
+                        KemmerenTFKO_s3Factory,
+                        LabFactory,
                         McIsaacZEVFactory,
                         McIsaacZEV_s3Factory,
-                        BackgroundFactory, CCTFFactory,
-                        CCExperimentFactory, HopsFactory,
-                        LabFactory,
+                        PromoterRegionsFactory,
+                        PromoterRegionsSourceFactory,
+                        PromoterRegions_s3Factory,
+                        QcManualReviewFactory,
                         QcMetricsFactory,
-                        QcManualReviewFactory, QcR1ToR2TfFactory,
-                        QcTfToTransposonFactory)
+                        QcR1ToR2TfFactory,
+                        QcTfToTransposonFactory,
+                        RegulatorFactory)
 
 from ..serializers import (ChrMapSerializer, GeneSerializer,
                            PromoterRegionsSerializer,
@@ -120,11 +127,22 @@ class TestCreatePromoterRegions_s3(TestCase):
         serializer = self.serializer(data={})  # noqa
         assert serializer.is_valid() is False
 
-    @override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
     def test_serializer_with_valid_data(self):
-        serializer = self.serializer(
-            data=model_to_dict(self.factory.create()))
-        assert serializer.is_valid() is True
+        # Create a mock file
+        file_content = b'Test file content'
+        file_name = 'testfile.csv.gz'
+        mock_file = SimpleUploadedFile(
+            file_name, file_content, content_type='application/gzip')
+
+        # Create an instance using the factory without the file
+        promoter_region_instance = self.factory.create()
+        data = model_to_dict(promoter_region_instance, exclude=['file'])
+
+        # Add the mock file to the data
+        data['file'] = mock_file
+
+        serializer = self.serializer(data=data)
+        assert serializer.is_valid(), serializer.errors
 
 
 class TestPromoterRegionsTargetsOnly(TestCase):
@@ -201,11 +219,22 @@ class TestHarbisonChIP_s3(TestCase):
         serializer = self.serializer(data={})  # noqa
         assert serializer.is_valid() is False
 
-    @override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
     def test_serializer_with_valid_data(self):
-        serializer = self.serializer(
-            data=model_to_dict(self.factory.create()))
-        assert serializer.is_valid() is True
+        # Create a mock file
+        file_content = b'Test file content'
+        file_name = 'testfile.csv.gz'
+        mock_file = SimpleUploadedFile(
+            file_name, file_content, content_type='application/gzip')
+
+        # Create an instance using the factory without the file
+        instance = self.factory.create()
+        data = model_to_dict(instance, exclude=['file'])
+
+        # Add the mock file to the data
+        data['file'] = mock_file
+
+        serializer = self.serializer(data=data)
+        assert serializer.is_valid(), serializer.errors
 
 
 class TestHu_s3(TestCase):
@@ -218,11 +247,22 @@ class TestHu_s3(TestCase):
         serializer = self.serializer(data={})  # noqa
         assert serializer.is_valid() is False
 
-    @override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
     def test_serializer_with_valid_data(self):
-        serializer = self.serializer(
-            data=model_to_dict(self.factory.create()))
-        assert serializer.is_valid() is True
+        # Create a mock file
+        file_content = b'Test file content'
+        file_name = 'testfile.csv.gz'
+        mock_file = SimpleUploadedFile(
+            file_name, file_content, content_type='application/gzip')
+
+        # Create an instance using the factory without the file
+        instance = self.factory.create()
+        data = model_to_dict(instance, exclude=['file'])
+
+        # Add the mock file to the data
+        data['file'] = mock_file
+
+        serializer = self.serializer(data=data)
+        assert serializer.is_valid(), serializer.errors
 
 
 class TestChipExo_s3(TestCase):
@@ -251,11 +291,22 @@ class TestChipExo_s3(TestCase):
         serializer = self.serializer(data={})  # noqa
         assert serializer.is_valid() is False
 
-    @override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
     def test_serializer_with_valid_data(self):
-        serializer = self.serializer(
-            data=model_to_dict(self.factory.create()))
-        assert serializer.is_valid() is True
+        # Create a mock file
+        file_content = b'Test file content'
+        file_name = 'testfile.csv.gz'
+        mock_file = SimpleUploadedFile(
+            file_name, file_content, content_type='application/gzip')
+
+        # Create an instance using the factory without the file
+        instance = self.factory.create()
+        data = model_to_dict(instance, exclude=['file'])
+
+        # Add the mock file to the data
+        data['file'] = mock_file
+
+        serializer = self.serializer(data=data)
+        assert serializer.is_valid(), serializer.errors
 
 
 class TestChipExo(TestCase):
@@ -297,11 +348,22 @@ class TestKemmerenTFKO_s3(TestCase):
         serializer = self.serializer(data={})  # noqa
         assert serializer.is_valid() is False
 
-    @override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
     def test_serializer_with_valid_data(self):
-        serializer = self.serializer(
-            data=model_to_dict(self.factory.create()))
-        assert serializer.is_valid() is True
+        # Create a mock file
+        file_content = b'Test file content'
+        file_name = 'testfile.csv.gz'
+        mock_file = SimpleUploadedFile(
+            file_name, file_content, content_type='application/gzip')
+
+        # Create an instance using the factory without the file
+        instance = self.factory.create()
+        data = model_to_dict(instance, exclude=['file'])
+
+        # Add the mock file to the data
+        data['file'] = mock_file
+
+        serializer = self.serializer(data=data)
+        assert serializer.is_valid(), serializer.errors
 
 
 class TestKemmerenTFKO(TestCase):
@@ -348,9 +410,21 @@ class TestMcIsaacZEV_s3(TestCase):
         assert serializer.is_valid() is False
 
     def test_serializer_with_valid_data(self):
-        serializer = self.serializer(
-            data=model_to_dict(self.factory.create()))
-        assert serializer.is_valid() is True
+        # Create a mock file
+        file_content = b'Test file content'
+        file_name = 'testfile.csv.gz'
+        mock_file = SimpleUploadedFile(
+            file_name, file_content, content_type='application/gzip')
+
+        # Create an instance using the factory without the file
+        instance = self.factory.create()
+        data = model_to_dict(instance, exclude=['file'])
+
+        # Add the mock file to the data
+        data['file'] = mock_file
+
+        serializer = self.serializer(data=data)
+        assert serializer.is_valid(), serializer.errors
 
 
 class TestBackground(TestCase):

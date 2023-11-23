@@ -1,10 +1,10 @@
 import factory
 from django.core.exceptions import ObjectDoesNotExist
-from ..utils import random_file_from_media_directory
+from django.core.files.uploadedfile import SimpleUploadedFile
+from ..utils import random_file_from_media_directory, get_file_content
 from .BaseModelFactoryMixin import BaseModelFactoryMixin
 from .PromoterRegionsSourceFactory import PromoterRegionsSourceFactory
 from .ChrMapFactory import ChrMapFactory
-from ...models import PromoterRegionsSource
 
 
 class PromoterRegions_s3Factory(BaseModelFactoryMixin,
@@ -14,7 +14,13 @@ class PromoterRegions_s3Factory(BaseModelFactoryMixin,
 
     chr_format = 'numbered'
     source = factory.SubFactory(PromoterRegionsSourceFactory)
-    file = random_file_from_media_directory('promoter_regions')
+    file = factory.LazyAttribute(
+        lambda _: SimpleUploadedFile(
+            name='test_promoter_regions.bed.gz',
+            content=get_file_content(random_file_from_media_directory('promoter_regions')), # noqa
+            content_type='application/gzip'
+        )
+    )
 
     @classmethod
     def _build(cls, model_class, *args, **kwargs):

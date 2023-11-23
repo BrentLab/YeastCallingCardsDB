@@ -1,6 +1,7 @@
 import factory
 from django.core.exceptions import ObjectDoesNotExist
-from ..utils import random_file_from_media_directory
+from django.core.files.uploadedfile import SimpleUploadedFile
+from ..utils import random_file_from_media_directory, get_file_content
 from .BaseModelFactoryMixin import BaseModelFactoryMixin
 from .HopsSourceFactory import HopsSourceFactory
 from .CCExperimentFactory import CCExperimentFactory
@@ -15,7 +16,13 @@ class CallingCards_s3Factory(BaseModelFactoryMixin,
     chr_format = 'mitra'
     source = factory.SubFactory(HopsSourceFactory)
     experiment = factory.SubFactory(CCExperimentFactory)
-    qbed = random_file_from_media_directory('qbed')
+    qbed = factory.LazyAttribute(
+        lambda _: SimpleUploadedFile(
+            name='test.qbed.gz',
+            content=get_file_content(random_file_from_media_directory('qbed')),  # noqa
+            content_type='application/gzip'
+        )
+    )
     notes = 'some notes'
     genomic_hops = 100
     plasmid_hops = 10

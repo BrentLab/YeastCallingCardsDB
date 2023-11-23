@@ -53,11 +53,16 @@ class HarbisonChIP_s3ViewSet(ListModelFieldsMixin,
                 status=status.HTTP_401_UNAUTHORIZED)
 
         # Check that required fields for all upload methods are present
-        key_check_diff = {'tf', 'file'} - set(request.data.keys())
-
-        if key_check_diff:
+        required_fields = set(field.name for field in
+                              HarbisonChIP_s3._meta.get_fields()
+                              if field.concrete and field.name not in
+                              ['id', 'uploader', 'uploadDate',
+                               'modified', 'modifiedBy'])
+                               
+        if not set(request.data.keys()).issubset(required_fields):
             return Response({'error': 'Missing required field(s): {}'
-                             .format(', '.join(key_check_diff))},
+                             .format(', '.join(required_fields -
+                                               set(required_fields)))},
                             status=status.HTTP_400_BAD_REQUEST)
 
         token = str(request.auth)
@@ -71,24 +76,23 @@ class HarbisonChIP_s3ViewSet(ListModelFieldsMixin,
         if uploaded_file is None:
             return Response({'error': 'file file not provided.'},
                             status=status.HTTP_400_BAD_REQUEST)
-        if not uploaded_file.name.endswith('.tsv.gz'):
-            return Response({'error': 'file must be a .tsv.gz file.'},
+        if not uploaded_file.name.endswith('.csv.gz'):
+            return Response({'error': 'file must be a .csv.gz file.'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        # try:
-        #     with gzip.open(uploaded_file, 'rt') as f:
-        #         df = pd.read_csv(f, sep="\t", index_col=False)
-        # except UnicodeDecodeError as exc:
-        #     return Response({'error': f'Error decoding file: {exc}'},
-        #                     status=status.HTTP_400_BAD_REQUEST)
+        try:
+            with gzip.open(uploaded_file, 'rt') as f:
+                df = pd.read_csv(f, index_col=False)
+        except (UnicodeDecodeError, gzip.BadGzipFile) as exc:
+            return Response({'error': f'Error decoding file: {exc}'},
+                            status=status.HTTP_400_BAD_REQUEST)
 
-        # required_columns = {'chr', 'coord', 'YPD_Sig', 'YPD_Ctrl',
-        #                     'YPD_log2Fold', 'YPD_log2P', 'ActiveConds'}
-        # if not all(column in df.columns for column in required_columns):
-        #     missing = required_columns - set(df.columns)
-        #     return Response({'error': f'Missing required '
-        #                      f'column(s): {", ".join(missing)}'},
-        #                     status=status.HTTP_400_BAD_REQUEST)
+        required_columns = {'gene_id', 'binding_ratio', 'pval'}
+        if not all(column in df.columns for column in required_columns):
+            missing = required_columns - set(df.columns)
+            return Response({'error': f'Missing required '
+                             f'column(s): {", ".join(missing)}'},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         # Call the parent create() method with the modified request
         return super().create(request, *args, **kwargs)

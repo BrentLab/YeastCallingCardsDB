@@ -11,6 +11,7 @@ class RegulatorFactory(BaseModelFactoryMixin,
     class Meta:
         model = 'callingcards.Regulator'
         django_get_or_create = ('regulator',)
+        skip_postgeneration_save = True
 
     regulator = factory.SubFactory(GeneFactory)
     notes = 'none'

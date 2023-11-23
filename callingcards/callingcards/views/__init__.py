@@ -18,6 +18,7 @@ from .HarbisonChIP_s3ViewSet import HarbisonChIP_s3ViewSet
 from .HarbisonChIPViewSet import HarbisonChIPViewSet
 from .HopsSourceViewSet import HopsSourceViewSet
 from .HopsViewSet import HopsViewSet
+from .Hu_s3ViewSet import Hu_s3ViewSet
 from .KemmerenTFKO_s3ViewSet import KemmerenTFKO_s3ViewSet
 from .KemmerenTFKOViewSet import KemmerenTFKOViewSet
 from .LabViewSet import LabViewSet
